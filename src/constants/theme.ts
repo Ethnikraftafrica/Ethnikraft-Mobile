@@ -6,7 +6,7 @@ export const Colors = {
   secondary: '#556B2F', // Olive Earth
   
   // Surfaces & Backgrounds
-  background: '#FFFCF4', // Warm Ivory
+  background: '#FAF6F0', // Warm African Artisan Parchment
   surface: '#FFFFFF', // Pure White Card
   surfaceSubtle: '#FCF4E1', // Sand Warm
   surfaceMuted: '#F5EBD5', // Linen
@@ -67,3 +67,35 @@ export const Radius = {
   xl: 24,
   full: 9999,
 };
+
+export const Shadows = {
+  sm: {
+    shadowColor: '#361300',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  md: {
+    shadowColor: '#361300',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.09,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  lg: {
+    shadowColor: '#361300',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.14,
+    shadowRadius: 18,
+    elevation: 8,
+  },
+  navBar: {
+    shadowColor: '#361300',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+};
+
