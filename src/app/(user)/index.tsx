@@ -17,7 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { WebParityHeader } from '@/components/common/WebParityHeader';
 import { BrandStoryModal } from '@/components/common/BrandStoryModal';
 import { AuthPromptModal } from '@/components/common/AuthPromptModal';
-import { CartFloatingButton } from '@/components/common/CartFloatingButton';
+import { CartFloatingButton, CartFloatingButtonRef } from '@/components/common/CartFloatingButton';
 import { RoleSwitchBanner } from '@/components/common/RoleSwitchBanner';
 import { Colors, FontFamily, Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useAppSelector } from '@/store';
@@ -186,6 +186,8 @@ export default function UserHomeScreen() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
+  const [isCartExpanded, setIsCartExpanded] = useState(false);
+  const cartFabRef = useRef<CartFloatingButtonRef>(null);
 
   // ─── SLIDE ANIMATION REFS ──────────────────────────────────
   const heritageScrollRef = useRef<ScrollView>(null);
@@ -670,9 +672,19 @@ export default function UserHomeScreen() {
         <View style={{ height: Spacing.xxl }} />
       </ScrollView>
 
-      {/* ─── DRAGGABLE FLOATING ACTION BUTTONS (FABs) ────────────── */}
+      {/* Outside Dismiss Backdrop for Expanded Cart FAB */}
+      {isCartExpanded && (
+        <TouchableOpacity
+          style={styles.cartBackdropDismiss}
+          activeOpacity={1}
+          onPress={() => cartFabRef.current?.collapse()}
+        />
+      )}
+
       {/* 1. Bag / Checkout FAB (draggable) */}
       <CartFloatingButton
+        ref={cartFabRef}
+        onExpandChange={setIsCartExpanded}
         onRequireAuth={() => setIsAuthModalOpen(true)}
       />
 
@@ -1126,5 +1138,10 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: FontFamily.poppinsBold,
     color: '#E8BA7A',
+  },
+  cartBackdropDismiss: {
+    ...StyleSheet.absoluteFill,
+    zIndex: 115,
+    backgroundColor: 'transparent',
   },
 });

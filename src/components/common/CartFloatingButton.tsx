@@ -1,4 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  forwardRef,
+  useImperativeHandle,
+} from 'react';
 import {
   StyleSheet,
   Text,
@@ -19,13 +25,21 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const COLLAPSED_WIDTH = 54;
 const EXPANDED_WIDTH = Math.min(SCREEN_WIDTH - 48, 280);
 
-interface CartFloatingButtonProps {
-  onRequireAuth?: () => void;
+export interface CartFloatingButtonRef {
+  collapse: () => void;
+  expand: () => void;
+  isExpanded: boolean;
 }
 
-export const CartFloatingButton: React.FC<CartFloatingButtonProps> = ({
-  onRequireAuth,
-}) => {
+export interface CartFloatingButtonProps {
+  onRequireAuth?: () => void;
+  onExpandChange?: (expanded: boolean) => void;
+}
+
+export const CartFloatingButton = forwardRef<
+  CartFloatingButtonRef,
+  CartFloatingButtonProps
+>(({ onRequireAuth, onExpandChange }, ref) => {
   const router = useRouter();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -53,6 +67,7 @@ export const CartFloatingButton: React.FC<CartFloatingButtonProps> = ({
   const expandBag = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     setIsExpanded(true);
+    onExpandChange?.(true);
     clearCollapseTimer();
 
     Animated.spring(expandAnim, {
@@ -79,8 +94,15 @@ export const CartFloatingButton: React.FC<CartFloatingButtonProps> = ({
       useNativeDriver: false,
     }).start(() => {
       setIsExpanded(false);
+      onExpandChange?.(false);
     });
   };
+
+  useImperativeHandle(ref, () => ({
+    collapse: collapseBag,
+    expand: expandBag,
+    isExpanded,
+  }));
 
   const handlePress = () => {
     if (isExpanded) {
@@ -147,7 +169,7 @@ export const CartFloatingButton: React.FC<CartFloatingButtonProps> = ({
             { width: animatedWidth },
           ]}
         >
-          {/* Main Bubble / Left Anchor */}
+          {/* Main Bubble / Left Anchor (overflow visible so counter stacks without clipping) */}
           <View style={styles.cartBubble}>
             <Ionicons name="cart" size={18} color="#FFF5DE" />
             <View style={styles.badgeMini}>
@@ -197,7 +219,9 @@ export const CartFloatingButton: React.FC<CartFloatingButtonProps> = ({
       </TouchableOpacity>
     </DraggableFAB>
   );
-};
+});
+
+CartFloatingButton.displayName = 'CartFloatingButton';
 
 const styles = StyleSheet.create({
   fabContainer: {
@@ -209,7 +233,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 4,
-    overflow: 'hidden',
+    overflow: 'visible', // Ensure counter badge stacks properly without any clipping
     shadowColor: '#C46C27',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
@@ -225,22 +249,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
     marginLeft: 1,
+    overflow: 'visible', // Stacks counter outside boundary
   },
   badgeMini: {
     position: 'absolute',
-    top: -3,
-    right: -3,
+    top: -4,
+    right: -4,
     backgroundColor: '#1C0D05',
-    width: 17,
-    height: 17,
-    borderRadius: 8.5,
-    borderWidth: 1.2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.4,
     borderColor: '#E8BA7A',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 3,
+    zIndex: 50,
+    elevation: 8,
   },
   badgeMiniText: {
-    fontSize: 9,
+    fontSize: 9.5,
     fontFamily: FontFamily.poppinsBold,
     color: '#FFF',
   },
