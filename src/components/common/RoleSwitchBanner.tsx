@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { toggleRole } from '@/store/slices/authSlice';
-import { Colors, Radius, Shadows, Spacing, Typography } from '@/constants/theme';
+import { Colors, FontFamily, Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 
 export const RoleSwitchBanner = () => {
   const router = useRouter();
@@ -102,13 +102,13 @@ const styles = StyleSheet.create({
   },
   roleLabel: {
     fontSize: 9,
-    fontWeight: '800',
+    fontFamily: FontFamily.poppinsBold,
     color: Colors.textMuted,
     letterSpacing: 0.8,
   },
   roleTitle: {
     fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.bold,
+    fontFamily: FontFamily.poppinsBold,
     color: Colors.textPrimary,
   },
   switchButton: {
@@ -124,6 +124,6 @@ const styles = StyleSheet.create({
   switchButtonText: {
     color: Colors.textInverse,
     fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.bold,
+    fontFamily: FontFamily.poppinsBold,
   },
 });

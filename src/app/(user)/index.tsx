@@ -18,9 +18,8 @@ import { WebParityHeader } from '@/components/common/WebParityHeader';
 import { BrandStoryModal } from '@/components/common/BrandStoryModal';
 import { AuthPromptModal } from '@/components/common/AuthPromptModal';
 import { CartFloatingButton } from '@/components/common/CartFloatingButton';
-import { StudioFloatingButton } from '@/components/common/StudioFloatingButton';
 import { RoleSwitchBanner } from '@/components/common/RoleSwitchBanner';
-import { Colors, Radius, Shadows, Spacing, Typography } from '@/constants/theme';
+import { Colors, FontFamily, Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useAppSelector } from '@/store';
 
 const { width } = Dimensions.get('window');
@@ -672,13 +671,8 @@ export default function UserHomeScreen() {
       </ScrollView>
 
       {/* ─── DRAGGABLE FLOATING ACTION BUTTONS (FABs) ────────────── */}
-      {/* 1. Bag / Checkout FAB (repositioned from hero body) */}
+      {/* 1. Bag / Checkout FAB (draggable) */}
       <CartFloatingButton
-        onRequireAuth={() => setIsAuthModalOpen(true)}
-      />
-
-      {/* 2. Custom Studio FAB (from Ethnikraft-User dashboard) */}
-      <StudioFloatingButton
         onRequireAuth={() => setIsAuthModalOpen(true)}
       />
 
@@ -726,17 +720,18 @@ const styles = StyleSheet.create({
   },
   headlineLine: {
     fontSize: 34,
-    fontWeight: '800',
+    fontFamily: FontFamily.cormorantBold,
     color: '#FFF8EA',
     letterSpacing: -0.5,
     lineHeight: 40,
   },
   headlineHighlight: {
-    fontStyle: 'italic',
+    fontFamily: FontFamily.cormorantItalic,
     color: '#D96225', // Terracotta Brand Accent
   },
   heroSubtitle: {
     fontSize: 13,
+    fontFamily: FontFamily.latoRegular,
     color: '#E8DAC8',
     lineHeight: 20,
     marginBottom: Spacing.lg,
@@ -766,7 +761,7 @@ const styles = StyleSheet.create({
   primaryCtaText: {
     color: '#FFFFFF',
     fontSize: Typography.fontSize.sm,
-    fontWeight: '800',
+    fontFamily: FontFamily.poppinsBold,
   },
   secondaryCtaBtn: {
     flexDirection: 'row',
@@ -782,7 +777,7 @@ const styles = StyleSheet.create({
   secondaryCtaText: {
     color: '#FFF5DE',
     fontSize: Typography.fontSize.xs,
-    fontWeight: '700',
+    fontFamily: FontFamily.poppinsSemiBold,
   },
   playIconBubble: {
     width: 26,
@@ -814,18 +809,18 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   heritageTitle: {
-    fontSize: 19,
-    fontWeight: '700',
+    fontSize: 20,
+    fontFamily: FontFamily.cormorantBold,
     color: '#FFF2DF',
     letterSpacing: -0.2,
   },
   heritageTitleAccent: {
-    fontStyle: 'italic',
+    fontFamily: FontFamily.cormorantItalic,
     color: '#E06A2A',
   },
   seeAllHeritageText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FontFamily.poppinsSemiBold,
     color: '#E8BA7A',
   },
   heritageCardsScroll: {
@@ -849,14 +844,14 @@ const styles = StyleSheet.create({
   },
   heritageCardTitle: {
     fontSize: 15,
-    fontWeight: '800',
+    fontFamily: FontFamily.cormorantBold,
     color: '#FFF8EA',
     marginBottom: 2,
   },
   heritageCardCopy: {
     fontSize: 11,
+    fontFamily: FontFamily.latoRegular,
     color: '#E0D0BF',
-    fontWeight: '500',
     lineHeight: 15,
   },
   progressBarWrapper: {
@@ -898,12 +893,13 @@ const styles = StyleSheet.create({
   },
   sectionEditorialTitle: {
     fontSize: 22,
-    fontWeight: '800',
+    fontFamily: FontFamily.cormorantBold,
     color: Colors.primaryDark,
     letterSpacing: -0.3,
   },
   sectionEditorialSubtitle: {
     fontSize: Typography.fontSize.xs,
+    fontFamily: FontFamily.latoRegular,
     color: Colors.textSecondary,
     marginTop: 2,
     maxWidth: width * 0.7,
@@ -913,7 +909,7 @@ const styles = StyleSheet.create({
   },
   viewAllOrange: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FontFamily.poppinsSemiBold,
     color: '#C46C27',
   },
   productsGrid: {
@@ -951,7 +947,7 @@ const styles = StyleSheet.create({
   },
   badgePillText: {
     fontSize: 9,
-    fontWeight: '800',
+    fontFamily: FontFamily.poppinsBold,
     color: '#C46C27',
     textTransform: 'uppercase',
   },
@@ -971,7 +967,7 @@ const styles = StyleSheet.create({
   },
   productOriginTag: {
     fontSize: 9,
-    fontWeight: '700',
+    fontFamily: FontFamily.poppinsSemiBold,
     color: Colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -979,7 +975,7 @@ const styles = StyleSheet.create({
   },
   productItemTitle: {
     fontSize: Typography.fontSize.xs + 1,
-    fontWeight: '700',
+    fontFamily: FontFamily.poppinsSemiBold,
     color: Colors.textPrimary,
     lineHeight: 17,
     minHeight: 34,
@@ -992,8 +988,8 @@ const styles = StyleSheet.create({
   },
   artisanNameText: {
     fontSize: 11,
+    fontFamily: FontFamily.poppinsMedium,
     color: Colors.textSecondary,
-    fontWeight: '600',
     flex: 1,
   },
   ratingRow: {
@@ -1004,11 +1000,12 @@ const styles = StyleSheet.create({
   },
   ratingScore: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: FontFamily.poppinsBold,
     color: Colors.textPrimary,
   },
   reviewsCount: {
     fontSize: 10,
+    fontFamily: FontFamily.latoRegular,
     color: Colors.textMuted,
   },
   priceActionRow: {
@@ -1019,7 +1016,7 @@ const styles = StyleSheet.create({
   },
   priceValue: {
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: FontFamily.poppinsBold,
     color: Colors.primaryDark,
   },
   addMiniBtn: {
@@ -1052,11 +1049,12 @@ const styles = StyleSheet.create({
   },
   cultureCardTitle: {
     fontSize: 14,
-    fontWeight: '800',
+    fontFamily: FontFamily.cormorantBold,
     color: '#FFF8EA',
   },
   cultureCardSub: {
     fontSize: 10,
+    fontFamily: FontFamily.latoRegular,
     color: '#E0D0BF',
     marginTop: 2,
   },
@@ -1085,7 +1083,7 @@ const styles = StyleSheet.create({
   },
   spotlightBadgeText: {
     fontSize: 9,
-    fontWeight: '800',
+    fontFamily: FontFamily.poppinsBold,
     color: '#FFF',
     letterSpacing: 0.6,
   },
@@ -1096,18 +1094,19 @@ const styles = StyleSheet.create({
   },
   verifiedText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: FontFamily.poppinsMedium,
     color: '#E8BA7A',
   },
   spotlightHeading: {
     fontSize: 18,
-    fontWeight: '800',
+    fontFamily: FontFamily.cormorantBold,
     color: '#FFF5DE',
     marginBottom: 4,
   },
   spotlightDescription: {
     fontSize: 12,
     lineHeight: 18,
+    fontFamily: FontFamily.latoRegular,
     color: '#D8C7B8',
     marginBottom: Spacing.md,
   },
@@ -1125,7 +1124,7 @@ const styles = StyleSheet.create({
   },
   spotlightActionText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontFamily: FontFamily.poppinsBold,
     color: '#E8BA7A',
   },
 });

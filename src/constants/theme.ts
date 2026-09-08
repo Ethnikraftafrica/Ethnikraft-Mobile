@@ -33,6 +33,24 @@ export const Colors = {
   vendorBadgeText: '#3730A3',
 } as const;
 
+export const FontFamily = {
+  // Editorial African Luxury (Headings, quotes, numbers, accents)
+  cormorantSemiBold: 'CormorantGaramond_600SemiBold',
+  cormorantBold: 'CormorantGaramond_700Bold',
+  cormorantItalic: 'CormorantGaramond_700Bold_Italic',
+
+  // Modern African Craft Identity (Buttons, brand labels, tabs, badges)
+  poppinsRegular: 'Poppins_400Regular',
+  poppinsMedium: 'Poppins_500Medium',
+  poppinsSemiBold: 'Poppins_600SemiBold',
+  poppinsBold: 'Poppins_700Bold',
+  poppinsExtraBold: 'Poppins_800ExtraBold',
+
+  // Clean Editorial Body (Descriptions, metadata, specs)
+  latoRegular: 'Lato_400Regular',
+  latoBold: 'Lato_700Bold',
+} as const;
+
 export const Typography = {
   fontSize: {
     xs: 12,
@@ -49,6 +67,7 @@ export const Typography = {
     semibold: '600' as const,
     bold: '700' as const,
   },
+  fontFamily: FontFamily,
 };
 
 export const Spacing = {

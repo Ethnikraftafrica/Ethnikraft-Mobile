@@ -7,7 +7,7 @@ import * as Haptics from 'expo-haptics';
 import { useAppSelector } from '@/store';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AuthPromptModal } from './AuthPromptModal';
-import { Radius, Shadows, Spacing } from '@/constants/theme';
+import { FontFamily, Radius, Shadows, Spacing } from '@/constants/theme';
 
 export const WebParityHeader = () => {
   const router = useRouter();
@@ -150,14 +150,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   brandName: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 20,
+    fontFamily: FontFamily.cormorantBold,
     color: '#FFF7E8',
     letterSpacing: 0.2,
   },
   brandTagline: {
     fontSize: 7.5,
-    fontWeight: '800',
+    fontFamily: FontFamily.poppinsBold,
     color: '#E8BA7A',
     letterSpacing: 1.2,
     marginTop: 1,
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   },
   signInText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: FontFamily.poppinsSemiBold,
     color: '#FFF5DE',
   },
   combinedPill: {

@@ -8,10 +8,40 @@ import { store, useAppDispatch, useAppSelector } from '@/store';
 import { hydrateSession } from '@/store/slices/authSlice';
 import { StorageService } from '@/services/storage.service';
 import { Colors } from '@/constants/theme';
+import {
+  useFonts,
+  CormorantGaramond_600SemiBold,
+  CormorantGaramond_700Bold,
+  CormorantGaramond_700Bold_Italic,
+} from '@expo-google-fonts/cormorant-garamond';
+import {
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+  Poppins_800ExtraBold,
+} from '@expo-google-fonts/poppins';
+import {
+  Lato_400Regular,
+  Lato_700Bold,
+} from '@expo-google-fonts/lato';
 
 function RootNavigation() {
   const dispatch = useAppDispatch();
   const isHydrated = useAppSelector((state) => state.auth.isHydrated);
+
+  const [fontsLoaded] = useFonts({
+    CormorantGaramond_600SemiBold,
+    CormorantGaramond_700Bold,
+    CormorantGaramond_700Bold_Italic,
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+    Poppins_800ExtraBold,
+    Lato_400Regular,
+    Lato_700Bold,
+  });
 
   useEffect(() => {
     async function restoreSession() {
@@ -47,7 +77,7 @@ function RootNavigation() {
     restoreSession();
   }, [dispatch]);
 
-  if (!isHydrated) {
+  if (!isHydrated || !fontsLoaded) {
     return (
       <View style={styles.splash}>
         <ActivityIndicator size="large" color={Colors.primary} />
