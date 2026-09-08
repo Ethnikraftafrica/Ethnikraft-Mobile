@@ -171,14 +171,20 @@ export const CartFloatingButton = forwardRef<
         >
           {/* Main Bubble / Left Anchor (overflow visible so counter stacks without clipping) */}
           <View style={styles.cartBubble}>
-            <Ionicons name="cart" size={18} color="#FFF5DE" />
-            <View style={styles.badgeMini}>
+            <Ionicons name="cart" size={19} color="#FFF5DE" />
+            <View
+              style={[
+                styles.badgeMini,
+                itemCount > 9 && styles.badgeMiniWide,
+              ]}
+            >
               <Text style={styles.badgeMiniText}>{itemCount}</Text>
             </View>
           </View>
 
           {/* Fluid Extended Info & Checkout Pill */}
           <Animated.View
+            pointerEvents={isExpanded ? 'auto' : 'none'}
             style={[
               styles.expandedBody,
               {
@@ -232,7 +238,7 @@ const styles = StyleSheet.create({
     borderRadius: 27,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 4,
+    paddingLeft: 3.5,
     overflow: 'visible', // Ensure counter badge stacks properly without any clipping
     shadowColor: '#C46C27',
     shadowOffset: { width: 0, height: 8 },
@@ -248,7 +254,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
-    marginLeft: 1,
     overflow: 'visible', // Stacks counter outside boundary
   },
   badgeMini: {
@@ -256,29 +261,38 @@ const styles = StyleSheet.create({
     top: -4,
     right: -4,
     backgroundColor: '#1C0D05',
-    minWidth: 18,
+    width: 18,
     height: 18,
     borderRadius: 9,
-    borderWidth: 1.4,
+    borderWidth: 1.5,
     borderColor: '#E8BA7A',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 3,
     zIndex: 50,
     elevation: 8,
+  },
+  badgeMiniWide: {
+    width: undefined,
+    minWidth: 20,
+    paddingHorizontal: 4,
   },
   badgeMiniText: {
     fontSize: 9.5,
     fontFamily: FontFamily.poppinsBold,
-    color: '#FFF',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   expandedBody: {
-    flex: 1,
+    position: 'absolute',
+    left: 52,
+    right: 6,
+    top: 0,
+    bottom: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingLeft: 10,
-    paddingRight: 6,
     overflow: 'hidden',
   },
   expandedTextCol: {
