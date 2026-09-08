@@ -37,7 +37,8 @@ export default function UserTabsLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explore Craft',
+          headerShown: false,
+          title: 'Shop Craft',
           tabBarLabel: 'Explore',
         }}
       />

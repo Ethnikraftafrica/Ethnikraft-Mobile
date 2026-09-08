@@ -1,97 +1,735 @@
-import React from 'react';
-import { StyleSheet, Text, View, TextInput, ScrollView } from 'react-native';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  ActivityIndicator,
+  RefreshControl,
+  Dimensions,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { useGetProductsQuery, Product } from '@/store/api/productApi';
+import { MOCK_PRODUCTS } from '@/constants/mockProducts';
+import { ProductCard, PRODUCT_CARD_WIDTH } from '@/components/products/ProductCard';
+import { ProductFilterModal, FilterState } from '@/components/products/ProductFilterModal';
+import { ProductSortModal, SortOption } from '@/components/products/ProductSortModal';
+import { AuthPromptModal } from '@/components/common/AuthPromptModal';
+import { Colors, FontFamily, Radius, Shadows, Spacing } from '@/constants/theme';
+import { useAppSelector } from '@/store';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const CATEGORIES = [
+  { id: 'ALL', label: 'All' },
+  { id: 'WEARS', label: 'Wears' },
+  { id: 'SHOES', label: 'Shoes' },
+  { id: 'BAGS', label: 'Bags' },
+  { id: 'ACCESSORIES', label: 'Accessories' },
+  { id: 'CRAFTS', label: 'Crafts' },
+  { id: 'PAINTINGS', label: 'Paintings' },
+  { id: 'ANTIQUES', label: 'Antiques' },
+];
+
+const INITIAL_FILTERS: FilterState = {
+  category: 'ALL',
+  pricePreset: 'all',
+  minPrice: undefined,
+  maxPrice: undefined,
+  availability: 'all',
+  curation: [],
+};
 
 export default function ExploreScreen() {
-  const collections = [
-    { title: 'Heritage Masters', desc: 'Preserving century-old weaving techniques' },
-    { title: 'Women in Craft', desc: 'Empowering female pottery & textile artisans' },
-    { title: 'Mixed Media Innovators', desc: 'Sculptures, metalwork, and canvas blends' },
-    { title: 'Royal Occasions', desc: 'Coronations, weddings, and grand gatherings' },
-  ];
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
+
+  // Search & Filter State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('ALL');
+  const [selectedSort, setSelectedSort] = useState<SortOption>('relevance');
+  const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
+
+  // Modals
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [isSortModalOpen, setIsSortModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [wishlistCount, setWishlistCount] = useState(0);
+
+  // Pagination & Refresh
+  const [page, setPage] = useState(1);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Handle Search Typing with debounce
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
+    }
+    searchTimeout.current = setTimeout(() => {
+      setDebouncedSearch(text.trim());
+      setPage(1);
+    }, 350);
+  };
+
+  const handleClearSearch = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSearchQuery('');
+    setDebouncedSearch('');
+    setPage(1);
+  };
+
+  // Build RTK Query params
+  const queryParams = useMemo(() => {
+    const params: any = {
+      take: 24,
+      skip: (page - 1) * 24,
+    };
+
+    if (debouncedSearch) {
+      params.search = debouncedSearch;
+    }
+
+    const activeCat = filters.category !== 'ALL' ? filters.category : selectedCategory;
+    if (activeCat !== 'ALL') {
+      params.productCategory = activeCat;
+    }
+
+    if (filters.minPrice !== undefined) params.minPrice = filters.minPrice;
+    if (filters.maxPrice !== undefined) params.maxPrice = filters.maxPrice;
+
+    if (filters.curation.length > 0) {
+      filters.curation.forEach((flag) => {
+        params[flag] = true;
+      });
+    }
+
+    return params;
+  }, [debouncedSearch, selectedCategory, filters, page]);
+
+  // Fetch live products
+  const { data: apiResponse, isLoading, isFetching, refetch } = useGetProductsQuery(queryParams);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setPage(1);
+    try {
+      await refetch();
+    } catch (e) {
+      // Ignore
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refetch]);
+
+  // Combine and sort products (using live API with client-side fallback)
+  const displayProducts = useMemo(() => {
+    let list: Product[] = [];
+
+    if (apiResponse?.data?.products && apiResponse.data.products.length > 0) {
+      list = [...apiResponse.data.products];
+    } else {
+      // Offline fallback: filter MOCK_PRODUCTS client-side
+      list = MOCK_PRODUCTS.filter((item) => {
+        // Category filter
+        const activeCat = filters.category !== 'ALL' ? filters.category : selectedCategory;
+        if (activeCat !== 'ALL' && item.productCategory !== activeCat) return false;
+
+        // Search query filter
+        if (debouncedSearch) {
+          const q = debouncedSearch.toLowerCase();
+          const matchName = item.name.toLowerCase().includes(q);
+          const matchDesc = item.description?.toLowerCase().includes(q);
+          if (!matchName && !matchDesc) return false;
+        }
+
+        // Price filter
+        const price = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
+        if (filters.minPrice !== undefined && price < filters.minPrice) return false;
+        if (filters.maxPrice !== undefined && price > filters.maxPrice) return false;
+
+        // Availability
+        if (filters.availability === 'in_stock' && item.stockQuantity <= 0) return false;
+        if (filters.availability === 'requestable' && !item.isRequestable) return false;
+
+        // Curation flags
+        if (filters.curation.length > 0) {
+          const hasMatch = filters.curation.some((flag) => (item as any)[flag] === true);
+          if (!hasMatch) return false;
+        }
+
+        return true;
+      });
+    }
+
+    // Apply Client-side Sorting
+    switch (selectedSort) {
+      case 'price_asc':
+        return list.sort((a, b) => Number(a.price) - Number(b.price));
+      case 'price_desc':
+        return list.sort((a, b) => Number(b.price) - Number(a.price));
+      case 'newest':
+        return list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      case 'rating':
+        return list.sort((a, b) => (b.vendor?.rating || 0) - (a.vendor?.rating || 0));
+      case 'relevance':
+      default:
+        return list;
+    }
+  }, [apiResponse, selectedCategory, filters, debouncedSearch, selectedSort]);
+
+  const totalCount = apiResponse?.data?.total || displayProducts.length;
+
+  const handleCategoryTabPress = (catId: string) => {
+    Haptics.selectionAsync();
+    setSelectedCategory(catId);
+    setFilters((prev) => ({ ...prev, category: catId }));
+    setPage(1);
+  };
+
+  const handleApplyFilters = (newFilters: FilterState) => {
+    setFilters(newFilters);
+    setSelectedCategory(newFilters.category);
+    setPage(1);
+  };
+
+  const handleWishlistToggle = (_product: Product, isNowWishlisted: boolean) => {
+    setWishlistCount((prev) => (isNowWishlisted ? prev + 1 : Math.max(0, prev - 1)));
+  };
+
+  const activeFilterCount =
+    (filters.category !== 'ALL' ? 1 : 0) +
+    (filters.pricePreset !== 'all' ? 1 : 0) +
+    (filters.availability !== 'all' ? 1 : 0) +
+    filters.curation.length;
+
+  const sortLabels: Record<SortOption, string> = {
+    relevance: 'Relevance',
+    price_asc: 'Price: Low to High',
+    price_desc: 'Price: High to Low',
+    newest: 'Newest',
+    rating: 'Top Rated',
+  };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Search Input */}
-      <View style={styles.searchBar}>
-        <Ionicons name="search" size={20} color={Colors.textMuted} style={styles.searchIcon} />
-        <TextInput
-          placeholder="Search handmade items, artisans, materials..."
-          placeholderTextColor={Colors.textMuted}
-          style={styles.input}
-        />
+    <View style={styles.container}>
+      {/* ─── 1. TOP HEADER (BRAND & SEARCH) ─────────────────────────── */}
+      <View style={[styles.headerContainer, { paddingTop: insets.top + 6 }]}>
+        {/* Top Brand Bar */}
+        <View style={styles.topBrandBar}>
+          <View style={styles.brandTitleRow}>
+            <View style={styles.brandEmblem}>
+              <Ionicons name="sparkles" size={12} color="#E8BA7A" />
+            </View>
+            <Text style={styles.brandLogoText}>ETHNIKRAFT</Text>
+          </View>
+
+          <View style={styles.topRightActions}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={styles.headerActionBtn}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                if (!isAuthenticated) setIsAuthModalOpen(true);
+              }}
+            >
+              <Ionicons name="heart-outline" size={19} color="#1C0D05" />
+              {wishlistCount > 0 && (
+                <View style={styles.headerBadge}>
+                  <Text style={styles.headerBadgeText}>{wishlistCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={styles.headerActionBtn}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push('/(user)/orders');
+              }}
+            >
+              <Ionicons name="cart-outline" size={19} color="#1C0D05" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Search Input Bar with Filter Button (Matching Web Screenshot) */}
+        <View style={styles.searchBarRow}>
+          <View style={styles.searchInputContainer}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search the shop..."
+              placeholderTextColor="#968574"
+              value={searchQuery}
+              onChangeText={handleSearchChange}
+              returnKeyType="search"
+            />
+            {searchQuery.length > 0 ? (
+              <TouchableOpacity
+                onPress={handleClearSearch}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={styles.clearSearchBtn}
+              >
+                <Ionicons name="close-circle" size={16} color="#8C7765" />
+              </TouchableOpacity>
+            ) : (
+              <Ionicons
+                name="search"
+                size={17}
+                color="#8C7765"
+                style={styles.searchIcon}
+              />
+            )}
+          </View>
+
+          {/* Filter Toggle Button */}
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setIsFilterModalOpen(true);
+            }}
+            style={[
+              styles.filterToggleBtn,
+              activeFilterCount > 0 && styles.filterToggleBtnActive,
+            ]}
+          >
+            <Ionicons
+              name="options-outline"
+              size={18}
+              color={activeFilterCount > 0 ? '#FFF' : '#1C0D05'}
+            />
+            {activeFilterCount > 0 && (
+              <View style={styles.filterBadge}>
+                <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Horizontal Category Pills Carousel */}
+        <View style={styles.categoriesScrollWrap}>
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            data={CATEGORIES}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.categoryPillsList}
+            renderItem={({ item }) => {
+              const isSelected = selectedCategory === item.id;
+              return (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => handleCategoryTabPress(item.id)}
+                  style={[
+                    styles.categoryPill,
+                    isSelected && styles.categoryPillActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.categoryPillText,
+                      isSelected && styles.categoryPillTextActive,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            }}
+          />
+        </View>
       </View>
 
-      <Text style={styles.sectionTitle}>Featured Collections</Text>
-      {collections.map((item) => (
-        <View key={item.title} style={styles.collectionCard}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>{item.title}</Text>
-            <Ionicons name="chevron-forward" size={18} color={Colors.primary} />
-          </View>
-          <Text style={styles.cardDesc}>{item.desc}</Text>
+      {/* ─── 2. SECTION SUBHEADER (TITLE, COUNT & SORT) ─────────────── */}
+      <View style={styles.subHeaderBar}>
+        <View>
+          <Text style={styles.shopHeading}>Shop</Text>
+          <Text style={styles.productsCountText}>
+            {isLoading ? 'Searching craft...' : `${totalCount} products`}
+          </Text>
         </View>
-      ))}
-    </ScrollView>
+
+        {/* Sort Button with active label */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setIsSortModalOpen(true);
+          }}
+          style={styles.sortDropdownBtn}
+        >
+          <Ionicons name="swap-vertical-outline" size={14} color="#5C4A3A" />
+          <Text style={styles.sortDropdownText}>
+            {sortLabels[selectedSort]}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ─── 3. 2-COLUMN PRODUCT GRID (FLATLIST) ────────────────────── */}
+      <FlatList
+        data={displayProducts}
+        numColumns={2}
+        keyExtractor={(item) => item.id}
+        columnWrapperStyle={styles.gridColumnWrapper}
+        contentContainerStyle={styles.gridContentContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={['#C46C27']}
+            tintColor="#C46C27"
+          />
+        }
+        renderItem={({ item }) => (
+          <ProductCard
+            product={item}
+            onToggleWishlist={handleWishlistToggle}
+            onAddToCart={(prod) => {
+              if (!isAuthenticated) setIsAuthModalOpen(true);
+            }}
+            onCustomize={(prod) => {
+              router.push({
+                pathname: '/product/[id]',
+                params: { id: prod.id },
+              });
+            }}
+          />
+        )}
+        ListEmptyComponent={
+          isLoading ? (
+            <View style={styles.emptyContainer}>
+              <ActivityIndicator size="large" color="#C46C27" />
+              <Text style={styles.emptyTitle}>Curating authentic pieces...</Text>
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIconCircle}>
+                <Ionicons name="search-outline" size={32} color="#C46C27" />
+              </View>
+              <Text style={styles.emptyTitle}>No Artifacts Found</Text>
+              <Text style={styles.emptySub}>
+                We couldn't find any products matching your search or filters.
+              </Text>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setSearchQuery('');
+                  setDebouncedSearch('');
+                  setFilters(INITIAL_FILTERS);
+                  setSelectedCategory('ALL');
+                }}
+                style={styles.emptyResetBtn}
+              >
+                <Text style={styles.emptyResetText}>Reset All Filters</Text>
+              </TouchableOpacity>
+            </View>
+          )
+        }
+        ListFooterComponent={
+          isFetching && page > 1 ? (
+            <View style={styles.footerLoader}>
+              <ActivityIndicator size="small" color="#C46C27" />
+            </View>
+          ) : (
+            <View style={{ height: 100 }} />
+          )
+        }
+      />
+
+      {/* ─── 4. MODALS & DRAWERS ────────────────────────────────────── */}
+      <ProductFilterModal
+        visible={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        onApply={handleApplyFilters}
+        currentFilters={filters}
+      />
+
+      <ProductSortModal
+        visible={isSortModalOpen}
+        onClose={() => setIsSortModalOpen(false)}
+        selectedSort={selectedSort}
+        onSelectSort={setSelectedSort}
+      />
+
+      <AuthPromptModal
+        visible={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#FAF6F0',
   },
-  content: {
-    padding: Spacing.md,
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.full,
+
+  // ─── HEADER CONTAINER ──────────────────────────────────────
+  headerContainer: {
+    backgroundColor: '#FAF6F0',
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    marginBottom: Spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDE4D8',
+    paddingBottom: Spacing.xs,
   },
-  searchIcon: {
-    marginRight: Spacing.sm,
-  },
-  input: {
-    flex: 1,
-    fontSize: Typography.fontSize.sm,
-    color: Colors.textPrimary,
-  },
-  sectionTitle: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.md,
-  },
-  collectionCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginBottom: Spacing.sm,
-  },
-  cardHeader: {
+  topBrandBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  brandTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  brandEmblem: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#1E1208',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  brandLogoText: {
+    fontSize: 15,
+    fontFamily: FontFamily.cormorantBold,
+    color: '#1C0D05',
+    letterSpacing: 1.8,
+  },
+  topRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  headerActionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E8DEC7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    ...Shadows.sm,
+  },
+  headerBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#C46C27',
+    minWidth: 15,
+    height: 15,
+    borderRadius: 7.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 2,
+  },
+  headerBadgeText: {
+    fontSize: 8.5,
+    fontFamily: FontFamily.poppinsBold,
+    color: '#FFF',
+  },
+
+  // ─── SEARCH & FILTER ROW ───────────────────────────────────
+  searchBarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: Spacing.xs + 2,
+  },
+  searchInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: '#E2D6C7',
+    paddingHorizontal: 14,
+    height: 42,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 12.5,
+    fontFamily: FontFamily.poppinsRegular,
+    color: '#1C0D05',
+    height: '100%',
+  },
+  searchIcon: {
+    marginLeft: 4,
+  },
+  clearSearchBtn: {
+    padding: 2,
+  },
+  filterToggleBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: Radius.full,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2D6C7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  filterToggleBtnActive: {
+    backgroundColor: '#C46C27',
+    borderColor: '#C46C27',
+  },
+  filterBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#1E1208',
+    borderWidth: 1,
+    borderColor: '#E8BA7A',
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filterBadgeText: {
+    fontSize: 8.5,
+    fontFamily: FontFamily.poppinsBold,
+    color: '#FFF',
+  },
+
+  // ─── CATEGORIES PILLS ──────────────────────────────────────
+  categoriesScrollWrap: {
+    paddingVertical: 4,
+  },
+  categoryPillsList: {
+    gap: 8,
+  },
+  categoryPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: Radius.full,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2D6C7',
+  },
+  categoryPillActive: {
+    backgroundColor: '#C46C27',
+    borderColor: '#C46C27',
+  },
+  categoryPillText: {
+    fontSize: 11.5,
+    fontFamily: FontFamily.poppinsMedium,
+    color: '#5C4A3A',
+  },
+  categoryPillTextActive: {
+    color: '#FFF5DE',
+    fontFamily: FontFamily.poppinsSemiBold,
+  },
+
+  // ─── SUBHEADER (TITLE, COUNT, SORT) ────────────────────────
+  subHeaderBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm + 2,
+    paddingBottom: Spacing.xs,
+  },
+  shopHeading: {
+    fontSize: 22,
+    fontFamily: FontFamily.cormorantBold,
+    color: '#1C0D05',
+  },
+  productsCountText: {
+    fontSize: 10.5,
+    fontFamily: FontFamily.poppinsRegular,
+    color: '#8C7765',
+    marginTop: 1,
+  },
+  sortDropdownBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2D6C7',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: Radius.full,
+    gap: 4,
+  },
+  sortDropdownText: {
+    fontSize: 11,
+    fontFamily: FontFamily.poppinsMedium,
+    color: '#4A3728',
+  },
+
+  // ─── 2-COLUMN GRID ─────────────────────────────────────────
+  gridColumnWrapper: {
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+  },
+  gridContentContainer: {
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.xxl,
+  },
+  footerLoader: {
+    paddingVertical: Spacing.md,
+    alignItems: 'center',
+  },
+
+  // ─── EMPTY STATE ───────────────────────────────────────────
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.xxl,
+  },
+  emptyIconCircle: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#F7EDE1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontFamily: FontFamily.cormorantBold,
+    color: '#1C0D05',
     marginBottom: 4,
   },
-  cardTitle: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  cardDesc: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
+  emptySub: {
+    fontSize: 11.5,
+    fontFamily: FontFamily.poppinsRegular,
+    color: '#7A6250',
+    textAlign: 'center',
     lineHeight: 18,
+    marginBottom: Spacing.lg,
+  },
+  emptyResetBtn: {
+    backgroundColor: '#3E2210',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 10,
+    borderRadius: Radius.full,
+  },
+  emptyResetText: {
+    fontSize: 11.5,
+    fontFamily: FontFamily.poppinsBold,
+    color: '#E8BA7A',
   },
 });
