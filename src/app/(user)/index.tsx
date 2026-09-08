@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -17,11 +17,21 @@ import * as Haptics from 'expo-haptics';
 import { WebParityHeader } from '@/components/common/WebParityHeader';
 import { BrandStoryModal } from '@/components/common/BrandStoryModal';
 import { AuthPromptModal } from '@/components/common/AuthPromptModal';
+import { CartFloatingButton } from '@/components/common/CartFloatingButton';
+import { StudioFloatingButton } from '@/components/common/StudioFloatingButton';
 import { RoleSwitchBanner } from '@/components/common/RoleSwitchBanner';
 import { Colors, Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useAppSelector } from '@/store';
 
 const { width } = Dimensions.get('window');
+
+const HERITAGE_CARD_WIDTH = 175;
+const HERITAGE_GAP = 12;
+const HERITAGE_SNAP_INTERVAL = HERITAGE_CARD_WIDTH + HERITAGE_GAP;
+
+const CULTURE_CARD_WIDTH = 210;
+const CULTURE_GAP = 12;
+const CULTURE_SNAP_INTERVAL = CULTURE_CARD_WIDTH + CULTURE_GAP;
 
 interface HeritageCardItem {
   id: string;
@@ -178,6 +188,102 @@ export default function UserHomeScreen() {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
 
+  // ─── SLIDE ANIMATION REFS ──────────────────────────────────
+  const heritageScrollRef = useRef<ScrollView>(null);
+  const heritageIndexRef = useRef(0);
+  const heritageTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const heritageResumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isHeritageUserDragging = useRef(false);
+
+  const cultureScrollRef = useRef<ScrollView>(null);
+  const cultureIndexRef = useRef(0);
+  const cultureTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const cultureResumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isCultureUserDragging = useRef(false);
+
+  // ─── 1. HERITAGE CAROUSEL SLIDE ANIMATION ──────────────────
+  const startHeritageAutoSlide = useCallback(() => {
+    if (heritageTimerRef.current) clearInterval(heritageTimerRef.current);
+    heritageTimerRef.current = setInterval(() => {
+      if (isHeritageUserDragging.current || !heritageScrollRef.current) return;
+      const nextIndex = (heritageIndexRef.current + 1) % HERITAGE_CARDS.length;
+      heritageIndexRef.current = nextIndex;
+      heritageScrollRef.current.scrollTo({
+        x: nextIndex * HERITAGE_SNAP_INTERVAL,
+        animated: true,
+      });
+    }, 3800);
+  }, []);
+
+  const pauseHeritageAutoSlide = useCallback(() => {
+    if (heritageTimerRef.current) {
+      clearInterval(heritageTimerRef.current);
+      heritageTimerRef.current = null;
+    }
+    if (heritageResumeTimerRef.current) {
+      clearTimeout(heritageResumeTimerRef.current);
+      heritageResumeTimerRef.current = null;
+    }
+  }, []);
+
+  const resumeHeritageAutoSlideAfterDelay = useCallback(() => {
+    pauseHeritageAutoSlide();
+    heritageResumeTimerRef.current = setTimeout(() => {
+      isHeritageUserDragging.current = false;
+      startHeritageAutoSlide();
+    }, 4500);
+  }, [pauseHeritageAutoSlide, startHeritageAutoSlide]);
+
+  useEffect(() => {
+    startHeritageAutoSlide();
+    return () => {
+      if (heritageTimerRef.current) clearInterval(heritageTimerRef.current);
+      if (heritageResumeTimerRef.current) clearTimeout(heritageResumeTimerRef.current);
+    };
+  }, [startHeritageAutoSlide]);
+
+  // ─── 2. ONE-OF-A-KIND FINDS SLIDE ANIMATION ────────────────
+  const startCultureAutoSlide = useCallback(() => {
+    if (cultureTimerRef.current) clearInterval(cultureTimerRef.current);
+    cultureTimerRef.current = setInterval(() => {
+      if (isCultureUserDragging.current || !cultureScrollRef.current) return;
+      const nextIndex = (cultureIndexRef.current + 1) % CURATED_CULTURE_CARDS.length;
+      cultureIndexRef.current = nextIndex;
+      cultureScrollRef.current.scrollTo({
+        x: nextIndex * CULTURE_SNAP_INTERVAL,
+        animated: true,
+      });
+    }, 4200);
+  }, []);
+
+  const pauseCultureAutoSlide = useCallback(() => {
+    if (cultureTimerRef.current) {
+      clearInterval(cultureTimerRef.current);
+      cultureTimerRef.current = null;
+    }
+    if (cultureResumeTimerRef.current) {
+      clearTimeout(cultureResumeTimerRef.current);
+      cultureResumeTimerRef.current = null;
+    }
+  }, []);
+
+  const resumeCultureAutoSlideAfterDelay = useCallback(() => {
+    pauseCultureAutoSlide();
+    cultureResumeTimerRef.current = setTimeout(() => {
+      isCultureUserDragging.current = false;
+      startCultureAutoSlide();
+    }, 4500);
+  }, [pauseCultureAutoSlide, startCultureAutoSlide]);
+
+  useEffect(() => {
+    startCultureAutoSlide();
+    return () => {
+      if (cultureTimerRef.current) clearInterval(cultureTimerRef.current);
+      if (cultureResumeTimerRef.current) clearTimeout(cultureResumeTimerRef.current);
+    };
+  }, [startCultureAutoSlide]);
+
+  // ─── SCROLL HANDLERS ───────────────────────────────────────
   const handleHeritageScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent;
@@ -185,6 +291,15 @@ export default function UserHomeScreen() {
       if (maxScroll > 0) {
         setScrollProgress(Math.min(1, Math.max(0, contentOffset.x / maxScroll)));
       }
+      heritageIndexRef.current = Math.round(contentOffset.x / HERITAGE_SNAP_INTERVAL);
+    },
+    []
+  );
+
+  const handleCultureScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { contentOffset } = e.nativeEvent;
+      cultureIndexRef.current = Math.round(contentOffset.x / CULTURE_SNAP_INTERVAL);
     },
     []
   );
@@ -289,24 +404,6 @@ export default function UserHomeScreen() {
                 </View>
               </TouchableOpacity>
             </View>
-
-            {/* Floating Quick Cart Trigger */}
-            <TouchableOpacity
-              style={styles.floatingCartPill}
-              onPress={() => handleProtectedAction('/(user)/orders')}
-              activeOpacity={0.85}
-            >
-              <View style={styles.cartBubble}>
-                <Ionicons name="cart" size={16} color="#FFF5DE" />
-                <View style={styles.cartBadgeMini}>
-                  <Text style={styles.cartBadgeText}>0</Text>
-                </View>
-              </View>
-              <View>
-                <Text style={styles.floatingCartLabel}>YOUR BAG</Text>
-                <Text style={styles.floatingCartSub}>0 Items • NGN 0.00</Text>
-              </View>
-            </TouchableOpacity>
           </View>
 
           {/* ============================================================ */}
@@ -325,13 +422,23 @@ export default function UserHomeScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Horizontal Heritage Cards Scroll */}
+            {/* Horizontal Heritage Cards Scroll with Smooth Slide Animations */}
             <ScrollView
+              ref={heritageScrollRef}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.heritageCardsScroll}
               onScroll={handleHeritageScroll}
               scrollEventThrottle={16}
+              snapToInterval={HERITAGE_SNAP_INTERVAL}
+              decelerationRate="fast"
+              snapToAlignment="start"
+              onScrollBeginDrag={() => {
+                isHeritageUserDragging.current = true;
+                pauseHeritageAutoSlide();
+              }}
+              onScrollEndDrag={resumeHeritageAutoSlideAfterDelay}
+              onMomentumScrollEnd={resumeHeritageAutoSlideAfterDelay}
             >
               {HERITAGE_CARDS.map((item) => (
                 <TouchableOpacity
@@ -475,7 +582,7 @@ export default function UserHomeScreen() {
         </View>
 
         {/* ============================================================ */}
-        {/* INSPIRED BY CULTURE — CURATED HORIZONTAL SECTION            */}
+        {/* ONE-OF-A-KIND FINDS — CURATED HORIZONTAL SLIDER             */}
         {/* ============================================================ */}
         <View style={styles.sectionBlock}>
           <View style={styles.sectionHeaderRow}>
@@ -488,9 +595,21 @@ export default function UserHomeScreen() {
           </View>
 
           <ScrollView
+            ref={cultureScrollRef}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.cultureCardsScroll}
+            onScroll={handleCultureScroll}
+            scrollEventThrottle={16}
+            snapToInterval={CULTURE_SNAP_INTERVAL}
+            decelerationRate="fast"
+            snapToAlignment="start"
+            onScrollBeginDrag={() => {
+              isCultureUserDragging.current = true;
+              pauseCultureAutoSlide();
+            }}
+            onScrollEndDrag={resumeCultureAutoSlideAfterDelay}
+            onMomentumScrollEnd={resumeCultureAutoSlideAfterDelay}
           >
             {CURATED_CULTURE_CARDS.map((card) => (
               <TouchableOpacity
@@ -552,6 +671,17 @@ export default function UserHomeScreen() {
         <View style={{ height: Spacing.xxl }} />
       </ScrollView>
 
+      {/* ─── DRAGGABLE FLOATING ACTION BUTTONS (FABs) ────────────── */}
+      {/* 1. Bag / Checkout FAB (repositioned from hero body) */}
+      <CartFloatingButton
+        onRequireAuth={() => setIsAuthModalOpen(true)}
+      />
+
+      {/* 2. Custom Studio FAB (from Ethnikraft-User dashboard) */}
+      <StudioFloatingButton
+        onRequireAuth={() => setIsAuthModalOpen(true)}
+      />
+
       {/* Brand Story Modal */}
       <BrandStoryModal
         visible={isStoryModalOpen}
@@ -582,14 +712,14 @@ const styles = StyleSheet.create({
   // ─── HERO SECTION ──────────────────────────────────────────
   heroWrapper: {
     position: 'relative',
-    minHeight: 640,
+    minHeight: 580,
     backgroundColor: '#1E1208',
     paddingBottom: Spacing.md,
   },
   heroBody: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
-    paddingBottom: Spacing.lg,
+    paddingBottom: Spacing.md,
   },
   headlineContainer: {
     marginBottom: Spacing.sm,
@@ -616,7 +746,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.sm,
     flexWrap: 'wrap',
   },
   primaryCtaBtn: {
@@ -664,57 +794,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  floatingCartPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-    borderRadius: Radius.full,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    alignSelf: 'flex-start',
-    gap: 10,
-    marginTop: Spacing.xs,
-  },
-  cartBubble: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#C46C27',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  cartBadgeMini: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: '#271100',
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E8BA7A',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cartBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#FFF',
-  },
-  floatingCartLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#E8BA7A',
-    letterSpacing: 0.8,
-  },
-  floatingCartSub: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#FFF5DE',
-  },
 
   // ─── SHOP BY HERITAGE CONTAINER ────────────────────────────
   heritageSectionContainer: {
@@ -751,11 +830,11 @@ const styles = StyleSheet.create({
   },
   heritageCardsScroll: {
     paddingHorizontal: Spacing.md,
-    gap: 12,
+    gap: HERITAGE_GAP,
     paddingBottom: 4,
   },
   heritageCard: {
-    width: 175,
+    width: HERITAGE_CARD_WIDTH,
     height: 135,
     borderRadius: Radius.lg,
     overflow: 'hidden',
@@ -954,11 +1033,11 @@ const styles = StyleSheet.create({
 
   // ─── CULTURE CARDS ─────────────────────────────────────────
   cultureCardsScroll: {
-    gap: 12,
+    gap: CULTURE_GAP,
     paddingVertical: 4,
   },
   cultureCard: {
-    width: 210,
+    width: CULTURE_CARD_WIDTH,
     height: 140,
     borderRadius: Radius.lg,
     overflow: 'hidden',
