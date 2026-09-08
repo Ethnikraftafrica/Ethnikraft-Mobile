@@ -44,6 +44,7 @@ export default function UserTabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
+          headerShown: false,
           title: 'Ethnikraft',
           tabBarLabel: 'Home',
           tabBarIcon: ({ color, focused }) => (

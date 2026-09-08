@@ -1,283 +1,1014 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
-  ScrollView,
   StyleSheet,
   Text,
   View,
+  ScrollView,
   TouchableOpacity,
-  TextInput,
+  Dimensions,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { WebParityHeader } from '@/components/common/WebParityHeader';
+import { BrandStoryModal } from '@/components/common/BrandStoryModal';
+import { AuthPromptModal } from '@/components/common/AuthPromptModal';
 import { RoleSwitchBanner } from '@/components/common/RoleSwitchBanner';
 import { Colors, Radius, Shadows, Spacing, Typography } from '@/constants/theme';
+import { useAppSelector } from '@/store';
+
+const { width } = Dimensions.get('window');
+
+interface HeritageCardItem {
+  id: string;
+  title: string;
+  copy: string;
+  image: any;
+  category: string;
+}
+
+const HERITAGE_CARDS: HeritageCardItem[] = [
+  {
+    id: 'ready-to-wear',
+    title: 'Ready to Wear (Aṣọ)',
+    copy: 'Timeless African fashion',
+    image: require('../../../assets/revamp/ready-to-wear.webp'),
+    category: 'Wears',
+  },
+  {
+    id: 'shoes',
+    title: 'Shoes (Bàtà)',
+    copy: 'Rooted steps, crafted sole',
+    image: require('../../../assets/revamp/shoes-card.webp'),
+    category: 'Shoes',
+  },
+  {
+    id: 'bags',
+    title: 'Bags (Akpa)',
+    copy: 'Handcrafted for every journey',
+    image: require('../../../assets/revamp/bags-card.webp'),
+    category: 'Bags',
+  },
+  {
+    id: 'accessories',
+    title: 'Accessories (Ọ̀ṣọ́)',
+    copy: 'Bold details. Rooted in culture',
+    image: require('../../../assets/revamp/accessories-card.webp'),
+    category: 'Accessories',
+  },
+  {
+    id: 'crafts',
+    title: 'Crafts (Nka)',
+    copy: 'Made by hands that tell stories',
+    image: require('../../../assets/revamp/crafts-card.webp'),
+    category: 'Crafts',
+  },
+  {
+    id: 'art',
+    title: 'Art (Ọnà)',
+    copy: 'African expression for every home',
+    image: require('../../../assets/revamp/art-card.webp'),
+    category: 'Paintings',
+  },
+  {
+    id: 'antiques',
+    title: 'Antiques (Àtijọ́)',
+    copy: 'Timeless relics of our ancestors',
+    image: require('../../../assets/revamp/antiques-card.webp'),
+    category: 'Antiques',
+  },
+];
+
+interface ProductItem {
+  id: string;
+  title: string;
+  artisan: string;
+  origin: string;
+  price: string;
+  rating: number;
+  reviews: number;
+  image: any;
+  badge: string;
+}
+
+const TOP_PICKS_PRODUCTS: ProductItem[] = [
+  {
+    id: 'top-1',
+    title: 'Patchwork Loose-Fit Denim Aso Oke Jorts',
+    artisan: 'Faustaze Studio',
+    origin: 'Lagos, Nigeria',
+    price: 'NGN 54,000.00',
+    rating: 4.9,
+    reviews: 18,
+    image: require('../../../assets/revamp/asoke-shorts-grid.webp'),
+    badge: 'Popular',
+  },
+  {
+    id: 'top-2',
+    title: 'Indigo Royal Tapestry & Chain Shorts',
+    artisan: 'Abeokuta Indigo Guild',
+    origin: 'Ogun, Nigeria',
+    price: 'NGN 18,000.00',
+    rating: 4.8,
+    reviews: 24,
+    image: require('../../../assets/revamp/asoke-blue-shorts-model.webp'),
+    badge: 'Bestseller',
+  },
+  {
+    id: 'top-3',
+    title: 'Handwoven Striped Emerald Aso Oke Pants',
+    artisan: 'Master Kwame Studios',
+    origin: 'Kumasi, Ghana',
+    price: 'NGN 72,000.00',
+    rating: 5.0,
+    reviews: 31,
+    image: require('../../../assets/revamp/asoke-pants.webp'),
+    badge: 'Masterwork',
+  },
+  {
+    id: 'top-4',
+    title: 'Classic African Silhouette Beachwear Shorts',
+    artisan: 'Ethnikraft Atelier',
+    origin: 'Accra, Ghana',
+    price: 'NGN 18,000.00',
+    rating: 4.7,
+    reviews: 12,
+    image: require('../../../assets/revamp/asoke-model.webp'),
+    badge: 'Trending',
+  },
+];
+
+const CURATED_CULTURE_CARDS = [
+  {
+    id: 'c-1',
+    title: 'Symbolic Motifs (Nsibidi)',
+    subtitle: 'Sacred indigenous typography',
+    image: require('../../../assets/revamp/symbolic-motiffs-card.webp'),
+  },
+  {
+    id: 'c-2',
+    title: 'Beaded Apparel (Ìlẹ̀kẹ̀)',
+    subtitle: 'Royal ceremonial beadwork',
+    image: require('../../../assets/revamp/beaded-apparel-card.webp'),
+  },
+  {
+    id: 'c-3',
+    title: 'Art Inspired (Ọnà)',
+    subtitle: 'Contemporary African canvases',
+    image: require('../../../assets/revamp/art-inspired-card.webp'),
+  },
+  {
+    id: 'c-4',
+    title: 'Rare Antiques (Àtijọ́)',
+    subtitle: 'Centuries of preserved artifacts',
+    image: require('../../../assets/revamp/rare-antiques-card.webp'),
+  },
+];
 
 export default function UserHomeScreen() {
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const router = useRouter();
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
 
-  const categories = [
-    { name: 'All', icon: 'sparkles' },
-    { name: 'Menswear', icon: 'shirt' },
-    { name: 'Paintings', icon: 'color-palette' },
-    { name: 'Jewelry', icon: 'diamond' },
-    { name: 'Sculptures', icon: 'cube' },
-    { name: 'Shoes', icon: 'footsteps' },
-  ];
+  const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [favorites, setFavorites] = useState<Record<string, boolean>>({});
 
-  const featuredProducts = [
-    {
-      id: '1',
-      title: 'Royal Aso Oke Agbada (3-Piece)',
-      artisan: 'Master Kwame',
-      origin: 'Accra, Ghana',
-      price: '₦185,000',
-      badge: 'Masterwork',
-      category: 'Menswear',
+  const handleHeritageScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent;
+      const maxScroll = contentSize.width - layoutMeasurement.width;
+      if (maxScroll > 0) {
+        setScrollProgress(Math.min(1, Math.max(0, contentOffset.x / maxScroll)));
+      }
     },
-    {
-      id: '2',
-      title: 'Hand-carved Benin Ivory Queen Mask',
-      artisan: 'Studio Ejiro',
-      origin: 'Benin City, Nigeria',
-      price: '₦240,000',
-      badge: 'Heritage',
-      category: 'Sculptures',
-    },
-    {
-      id: '3',
-      title: 'Adire Ochre Indigo Tapestry',
-      artisan: 'Aisha Weaves',
-      origin: 'Abeokuta, Nigeria',
-      price: '₦95,000',
-      badge: 'Eco-Craft',
-      category: 'Paintings',
-    },
-    {
-      id: '4',
-      title: 'Royal Coral Beaded Choker & Earrings',
-      artisan: 'Madam Ovia',
-      origin: 'Warri, Nigeria',
-      price: '₦130,000',
-      badge: 'Ceremonial',
-      category: 'Jewelry',
-    },
-  ];
+    []
+  );
+
+  const toggleFavorite = (id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setFavorites((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleProtectedAction = (target: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (isAuthenticated) {
+      router.push(target as any);
+    } else {
+      setIsAuthModalOpen(true);
+    }
+  };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <RoleSwitchBanner />
-
-      {/* Luxury Search Bar */}
-      <View style={[styles.searchContainer, Shadows.sm]}>
-        <Ionicons name="search-outline" size={18} color={Colors.textMuted} style={styles.searchIcon} />
-        <TextInput
-          placeholder="Search handmade luxury, artisans, fabrics..."
-          placeholderTextColor={Colors.textMuted}
-          style={styles.searchInput}
-        />
-        <TouchableOpacity style={styles.filterBtn}>
-          <Ionicons name="options-outline" size={16} color={Colors.primaryDark} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Editorial Hero Banner */}
-      <View style={[styles.heroCard, Shadows.md]}>
-        <View style={styles.heroTopRow}>
-          <View style={styles.heroBadge}>
-            <Text style={styles.heroBadgeText}>HERITAGE & LUXURY 2026</Text>
-          </View>
-          <View style={styles.verifiedRow}>
-            <Ionicons name="shield-checkmark" size={14} color={Colors.accentGold} />
-            <Text style={styles.verifiedText}>Verified Origin</Text>
-          </View>
-        </View>
-
-        <Text style={styles.heroTitle}>The African Master Artisan Collection</Text>
-        <Text style={styles.heroSubtitle}>
-          Directly commissioned bespoke pieces, preserving centuries of ancestral craftsmanship.
-        </Text>
-
-        <View style={styles.heroActions}>
-          <TouchableOpacity style={styles.heroBtnPrimary}>
-            <Text style={styles.heroBtnPrimaryText}>Explore Curation</Text>
-            <Ionicons name="arrow-forward" size={14} color={Colors.textInverse} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.heroBtnSecondary}>
-            <Ionicons name="sparkles" size={14} color={Colors.accentGold} />
-            <Text style={styles.heroBtnSecondaryText}>Custom Studio</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Categories Horizontal Scroller */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Curated Departments</Text>
-        <TouchableOpacity>
-          <Text style={styles.seeAllText}>View all</Text>
-        </TouchableOpacity>
-      </View>
-
+    <View style={styles.screenContainer}>
       <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.categoryScrollContainer}
+        style={styles.mainScrollView}
+        contentContainerStyle={styles.scrollContentContainer}
+        showsVerticalScrollIndicator={false}
       >
-        {categories.map((cat) => {
-          const isActive = selectedCategory === cat.name;
-          return (
-            <TouchableOpacity
-              key={cat.name}
-              onPress={() => setSelectedCategory(cat.name)}
-              activeOpacity={0.8}
-              style={[
-                styles.categoryChip,
-                isActive && styles.categoryChipActive,
-                Shadows.sm,
-              ]}
-            >
-              <Ionicons
-                name={cat.icon as any}
-                size={14}
-                color={isActive ? Colors.textInverse : Colors.primaryDark}
-                style={styles.categoryIcon}
-              />
-              <Text
-                style={[
-                  styles.categoryChipText,
-                  isActive && styles.categoryChipTextActive,
-                ]}
-              >
-                {cat.name}
+        {/* ============================================================ */}
+        {/* HERO SECTION — 1:1 REPLICATION OF WEB LUXURY LANDING        */}
+        {/* ============================================================ */}
+        <View style={styles.heroWrapper}>
+          {/* High-Resolution Hero Background Image */}
+          <Image
+            source={require('../../../assets/revamp/main-background.webp')}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={300}
+          />
+
+          {/* Layer 1: Horizontal Deep Forest & Coffee Atmospheric Gradient */}
+          <LinearGradient
+            colors={[
+              'rgba(11, 16, 11, 0.94)',
+              'rgba(16, 22, 14, 0.82)',
+              'rgba(33, 18, 11, 0.40)',
+              'rgba(55, 24, 10, 0.28)',
+            ]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={StyleSheet.absoluteFill}
+          />
+
+          {/* Layer 2: Vertical Dark Fade towards Bottom for Seamless Flow */}
+          <LinearGradient
+            colors={['transparent', 'rgba(0, 0, 0, 0.25)', 'rgba(38, 20, 9, 0.95)']}
+            style={StyleSheet.absoluteFill}
+          />
+
+          {/* Top Parity Header (with Safe Area Inset) */}
+          <WebParityHeader />
+
+          {/* Hero Content Area */}
+          <View style={styles.heroBody}>
+            {/* Editorial Headline */}
+            <View style={styles.headlineContainer}>
+              <Text style={styles.headlineLine}>Discover Africa.</Text>
+              <Text style={styles.headlineLine}>Own a piece</Text>
+              <Text style={styles.headlineLine}>
+                of our <Text style={styles.headlineHighlight}>Heritage.</Text>
               </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-
-      {/* Featured Products Grid */}
-      <View style={styles.sectionHeader}>
-        <View>
-          <Text style={styles.sectionTitle}>Artisan Masterpieces</Text>
-          <Text style={styles.sectionSubtitle}>Handcrafted one-of-a-kind treasures</Text>
-        </View>
-      </View>
-
-      <View style={styles.productGrid}>
-        {featuredProducts.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            activeOpacity={0.9}
-            style={[styles.productCard, Shadows.sm]}
-          >
-            {/* Visual Canvas */}
-            <View style={styles.productCanvas}>
-              <View style={styles.badgePill}>
-                <Text style={styles.badgePillText}>{item.badge}</Text>
-              </View>
-              <TouchableOpacity style={styles.favoriteButton} activeOpacity={0.7}>
-                <Ionicons name="heart-outline" size={16} color={Colors.primaryDark} />
-              </TouchableOpacity>
-              <Ionicons name="sparkles-outline" size={36} color={Colors.primaryLight} />
             </View>
 
-            {/* Product Meta */}
-            <View style={styles.productInfo}>
-              <Text style={styles.productOrigin}>{item.origin}</Text>
-              <Text style={styles.productTitle} numberOfLines={2}>
-                {item.title}
-              </Text>
-              <Text style={styles.artisanName}>by {item.artisan}</Text>
-              <View style={styles.priceRow}>
-                <Text style={styles.productPrice}>{item.price}</Text>
-                <View style={styles.cartAddMini}>
-                  <Ionicons name="add" size={16} color={Colors.textInverse} />
+            {/* Subtitle */}
+            <Text style={styles.heroSubtitle}>
+              Exclusive collections handcrafted by master artisans across Africa.
+            </Text>
+
+            {/* CTA Buttons Row */}
+            <View style={styles.ctaRow}>
+              <TouchableOpacity
+                style={styles.primaryCtaBtn}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  router.push('/(user)/explore');
+                }}
+                activeOpacity={0.88}
+              >
+                <Text style={styles.primaryCtaText}>Shop Collections</Text>
+                <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.secondaryCtaBtn}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setIsStoryModalOpen(true);
+                }}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.secondaryCtaText}>Watch Our Story</Text>
+                <View style={styles.playIconBubble}>
+                  <Ionicons name="play" size={13} color="#FFF5DE" style={{ marginLeft: 2 }} />
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {/* Floating Quick Cart Trigger */}
+            <TouchableOpacity
+              style={styles.floatingCartPill}
+              onPress={() => handleProtectedAction('/(user)/orders')}
+              activeOpacity={0.85}
+            >
+              <View style={styles.cartBubble}>
+                <Ionicons name="cart" size={16} color="#FFF5DE" />
+                <View style={styles.cartBadgeMini}>
+                  <Text style={styles.cartBadgeText}>0</Text>
                 </View>
               </View>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
+              <View>
+                <Text style={styles.floatingCartLabel}>YOUR BAG</Text>
+                <Text style={styles.floatingCartSub}>0 Items • NGN 0.00</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
 
-      {/* Artisan Spotlight Banner */}
-      <View style={[styles.spotlightCard, Shadows.sm]}>
-        <View style={styles.spotlightLeft}>
-          <Text style={styles.spotlightTag}>CREATOR SPOTLIGHT</Text>
-          <Text style={styles.spotlightTitle}>Master Ejiro Agbada</Text>
-          <Text style={styles.spotlightBio}>
-            Third-generation weaver blending raw silk and Aso Oke with modern sculptural silhouettes.
+          {/* ============================================================ */}
+          {/* SHOP BY HERITAGE SECTION — LUXURY EMBEDDED CAROUSEL         */}
+          {/* ============================================================ */}
+          <View style={[styles.heritageSectionContainer, Shadows.md]}>
+            <View style={styles.heritageSectionHeader}>
+              <Text style={styles.heritageTitle}>
+                - Shop by <Text style={styles.heritageTitleAccent}>Heritage</Text>
+              </Text>
+              <TouchableOpacity
+                onPress={() => router.push('/(user)/explore')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.seeAllHeritageText}>Explore All →</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Horizontal Heritage Cards Scroll */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.heritageCardsScroll}
+              onScroll={handleHeritageScroll}
+              scrollEventThrottle={16}
+            >
+              {HERITAGE_CARDS.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.heritageCard, Shadows.sm]}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    router.push('/(user)/explore');
+                  }}
+                  activeOpacity={0.88}
+                >
+                  <Image
+                    source={item.image}
+                    style={StyleSheet.absoluteFill}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                  />
+                  {/* Subtle Darkening Overlay */}
+                  <LinearGradient
+                    colors={['rgba(0,0,0,0.68)', 'rgba(0,0,0,0.22)', 'rgba(0,0,0,0.72)']}
+                    style={StyleSheet.absoluteFill}
+                  />
+
+                  <View style={styles.heritageCardContent}>
+                    <Text style={styles.heritageCardTitle}>{item.title}</Text>
+                    <Text style={styles.heritageCardCopy}>{item.copy}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Sleek Progress Indicator Bar */}
+            <View style={styles.progressBarWrapper}>
+              <View style={styles.progressBarTrack}>
+                <View
+                  style={[
+                    styles.progressBarThumb,
+                    { left: `${scrollProgress * 66.7}%` },
+                  ]}
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Role Switch Banner */}
+        <View style={styles.roleBannerContainer}>
+          <RoleSwitchBanner />
+        </View>
+
+        {/* ============================================================ */}
+        {/* TOP PICKS THIS WEEK — PRODUCT SHOWCASE                       */}
+        {/* ============================================================ */}
+        <View style={styles.sectionBlock}>
+          <View style={styles.sectionHeaderRow}>
+            <View>
+              <Text style={styles.sectionEditorialTitle}>Top picks this week</Text>
+              <Text style={styles.sectionEditorialSubtitle}>
+                Handcrafted pieces trending across our artisan network
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => router.push('/(user)/explore')}
+              style={styles.curatedViewAll}
+            >
+              <Text style={styles.viewAllOrange}>See More</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.productsGrid}>
+            {TOP_PICKS_PRODUCTS.map((prod) => {
+              const isFav = !!favorites[prod.id];
+              return (
+                <View key={prod.id} style={[styles.productCard, Shadows.sm]}>
+                  {/* Visual Image Container */}
+                  <View style={styles.productImageWrapper}>
+                    <Image
+                      source={prod.image}
+                      style={styles.productImage}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                    />
+
+                    {/* Badge Pill */}
+                    <View style={styles.badgePill}>
+                      <Text style={styles.badgePillText}>{prod.badge}</Text>
+                    </View>
+
+                    {/* Favorite Heart Button */}
+                    <TouchableOpacity
+                      style={styles.favIconBtn}
+                      onPress={() => toggleFavorite(prod.id)}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons
+                        name={isFav ? 'heart' : 'heart-outline'}
+                        size={17}
+                        color={isFav ? '#D96225' : '#221208'}
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Product Details */}
+                  <View style={styles.productDetails}>
+                    <Text style={styles.productOriginTag}>{prod.origin}</Text>
+                    <Text style={styles.productItemTitle} numberOfLines={2}>
+                      {prod.title}
+                    </Text>
+
+                    {/* Artisan Signature */}
+                    <View style={styles.artisanRow}>
+                      <Ionicons name="storefront-outline" size={12} color="#C46C27" />
+                      <Text style={styles.artisanNameText} numberOfLines={1}>
+                        {prod.artisan}
+                      </Text>
+                    </View>
+
+                    {/* Rating Stars */}
+                    <View style={styles.ratingRow}>
+                      <Ionicons name="star" size={12} color="#E8BA7A" />
+                      <Text style={styles.ratingScore}>{prod.rating}</Text>
+                      <Text style={styles.reviewsCount}>({prod.reviews})</Text>
+                    </View>
+
+                    {/* Price and Add to Bag */}
+                    <View style={styles.priceActionRow}>
+                      <Text style={styles.priceValue}>{prod.price}</Text>
+                      <TouchableOpacity
+                        style={styles.addMiniBtn}
+                        onPress={() => handleProtectedAction('/(user)/orders')}
+                        activeOpacity={0.85}
+                      >
+                        <Ionicons name="add" size={17} color="#FFF" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* ============================================================ */}
+        {/* INSPIRED BY CULTURE — CURATED HORIZONTAL SECTION            */}
+        {/* ============================================================ */}
+        <View style={styles.sectionBlock}>
+          <View style={styles.sectionHeaderRow}>
+            <View>
+              <Text style={styles.sectionEditorialTitle}>One-of-a-Kind Finds</Text>
+              <Text style={styles.sectionEditorialSubtitle}>
+                Rare artifacts, antique relics, and bespoke sculpture
+              </Text>
+            </View>
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.cultureCardsScroll}
+          >
+            {CURATED_CULTURE_CARDS.map((card) => (
+              <TouchableOpacity
+                key={card.id}
+                style={[styles.cultureCard, Shadows.sm]}
+                onPress={() => router.push('/(user)/explore')}
+                activeOpacity={0.88}
+              >
+                <Image
+                  source={card.image}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                />
+                <LinearGradient
+                  colors={['rgba(0,0,0,0.2)', 'rgba(0,0,0,0.85)']}
+                  style={StyleSheet.absoluteFill}
+                />
+                <View style={styles.cultureCardBody}>
+                  <Text style={styles.cultureCardTitle}>{card.title}</Text>
+                  <Text style={styles.cultureCardSub}>{card.subtitle}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* ============================================================ */}
+        {/* ARTISAN SPOTLIGHT — EDITORIAL HERO CARD                      */}
+        {/* ============================================================ */}
+        <View style={[styles.spotlightCard, Shadows.md]}>
+          <View style={styles.spotlightTop}>
+            <View style={styles.spotlightBadge}>
+              <Text style={styles.spotlightBadgeText}>ARTISAN GUILD SPOTLIGHT</Text>
+            </View>
+            <View style={styles.verifiedRow}>
+              <Ionicons name="shield-checkmark" size={14} color="#E8BA7A" />
+              <Text style={styles.verifiedText}>Certified Provenance</Text>
+            </View>
+          </View>
+
+          <Text style={styles.spotlightHeading}>Master Ejiro & The Abeokuta Weavers</Text>
+          <Text style={styles.spotlightDescription}>
+            Carrying forward three generations of indigo vat dyeing and handloom weaving.
+            Each garment takes over 40 hours of focused craftsmanship.
           </Text>
-          <TouchableOpacity style={styles.spotlightBtn}>
-            <Text style={styles.spotlightBtnText}>View Workshop Profile</Text>
+
+          <TouchableOpacity
+            style={styles.spotlightActionBtn}
+            onPress={() => router.push('/(user)/studio')}
+            activeOpacity={0.88}
+          >
+            <Text style={styles.spotlightActionText}>Commission Bespoke Piece</Text>
+            <Ionicons name="sparkles" size={14} color="#FFF5DE" />
           </TouchableOpacity>
         </View>
-      </View>
-    </ScrollView>
+
+        {/* Bottom Spacing */}
+        <View style={{ height: Spacing.xxl }} />
+      </ScrollView>
+
+      {/* Brand Story Modal */}
+      <BrandStoryModal
+        visible={isStoryModalOpen}
+        onClose={() => setIsStoryModalOpen(false)}
+      />
+
+      {/* Auth Prompt Modal */}
+      <AuthPromptModal
+        visible={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screenContainer: {
     flex: 1,
-    backgroundColor: '#FAF6F0', // Warm African parchment tone
+    backgroundColor: '#FAF6F0', // African Warm Parchment
   },
-  content: {
+  mainScrollView: {
+    flex: 1,
+  },
+  scrollContentContainer: {
     paddingBottom: Spacing.xxl,
   },
-  searchContainer: {
+
+  // ─── HERO SECTION ──────────────────────────────────────────
+  heroWrapper: {
+    position: 'relative',
+    minHeight: 640,
+    backgroundColor: '#1E1208',
+    paddingBottom: Spacing.md,
+  },
+  heroBody: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.lg,
+  },
+  headlineContainer: {
+    marginBottom: Spacing.sm,
+  },
+  headlineLine: {
+    fontSize: 34,
+    fontWeight: '800',
+    color: '#FFF8EA',
+    letterSpacing: -0.5,
+    lineHeight: 40,
+  },
+  headlineHighlight: {
+    fontStyle: 'italic',
+    color: '#D96225', // Terracotta Brand Accent
+  },
+  heroSubtitle: {
+    fontSize: 13,
+    color: '#E8DAC8',
+    lineHeight: 20,
+    marginBottom: Spacing.lg,
+    maxWidth: width * 0.85,
+  },
+  ctaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surface,
-    marginHorizontal: Spacing.md,
-    marginTop: Spacing.xs,
-    marginBottom: Spacing.md,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    gap: 10,
+    marginBottom: Spacing.lg,
+    flexWrap: 'wrap',
+  },
+  primaryCtaBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#C46C27',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm + 4,
     borderRadius: Radius.full,
+    gap: 8,
+    shadowColor: '#C46C27',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  primaryCtaText: {
+    color: '#FFFFFF',
+    fontSize: Typography.fontSize.sm,
+    fontWeight: '800',
+  },
+  secondaryCtaBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.42)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.22)',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm + 2,
+    borderRadius: Radius.full,
+    gap: 8,
+  },
+  secondaryCtaText: {
+    color: '#FFF5DE',
+    fontSize: Typography.fontSize.xs,
+    fontWeight: '700',
+  },
+  playIconBubble: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  floatingCartPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    borderRadius: Radius.full,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    alignSelf: 'flex-start',
+    gap: 10,
+    marginTop: Spacing.xs,
+  },
+  cartBubble: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#C46C27',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  cartBadgeMini: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#271100',
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E8BA7A',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cartBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#FFF',
+  },
+  floatingCartLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#E8BA7A',
+    letterSpacing: 0.8,
+  },
+  floatingCartSub: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFF5DE',
+  },
+
+  // ─── SHOP BY HERITAGE CONTAINER ────────────────────────────
+  heritageSectionContainer: {
+    backgroundColor: '#3E2413', // Rich dark chocolate container matching web
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.sm,
+    borderRadius: Radius.xl,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.sm + 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  heritageSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  heritageTitle: {
+    fontSize: 19,
+    fontWeight: '700',
+    color: '#FFF2DF',
+    letterSpacing: -0.2,
+  },
+  heritageTitleAccent: {
+    fontStyle: 'italic',
+    color: '#E06A2A',
+  },
+  seeAllHeritageText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#E8BA7A',
+  },
+  heritageCardsScroll: {
+    paddingHorizontal: Spacing.md,
+    gap: 12,
+    paddingBottom: 4,
+  },
+  heritageCard: {
+    width: 175,
+    height: 135,
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
+    position: 'relative',
+    justifyContent: 'flex-end',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  heritageCardContent: {
+    padding: Spacing.sm + 2,
+    zIndex: 10,
+  },
+  heritageCardTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFF8EA',
+    marginBottom: 2,
+  },
+  heritageCardCopy: {
+    fontSize: 11,
+    color: '#E0D0BF',
+    fontWeight: '500',
+    lineHeight: 15,
+  },
+  progressBarWrapper: {
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  progressBarTrack: {
+    width: 48,
+    height: 2.5,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  progressBarThumb: {
+    position: 'absolute',
+    top: 0,
+    width: 16,
+    height: '100%',
+    borderRadius: 2,
+    backgroundColor: '#D96225',
+  },
+
+  // ─── ROLE BANNER ───────────────────────────────────────────
+  roleBannerContainer: {
+    marginTop: Spacing.sm,
+  },
+
+  // ─── TOP PICKS & CURATED SECTIONS ──────────────────────────
+  sectionBlock: {
+    marginTop: Spacing.lg,
+    paddingHorizontal: Spacing.md,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginBottom: Spacing.sm + 2,
+  },
+  sectionEditorialTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: Colors.primaryDark,
+    letterSpacing: -0.3,
+  },
+  sectionEditorialSubtitle: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.textSecondary,
+    marginTop: 2,
+    maxWidth: width * 0.7,
+  },
+  curatedViewAll: {
+    paddingBottom: 2,
+  },
+  viewAllOrange: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#C46C27',
+  },
+  productsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: Spacing.sm,
+  },
+  productCard: {
+    width: (width - Spacing.md * 2 - Spacing.sm) / 2,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: '#EFE6D8',
+    overflow: 'hidden',
+    marginBottom: Spacing.xs,
   },
-  searchIcon: {
-    marginRight: Spacing.sm,
+  productImageWrapper: {
+    height: 160,
+    backgroundColor: '#F7EFE4',
+    position: 'relative',
   },
-  searchInput: {
-    flex: 1,
-    fontSize: Typography.fontSize.sm,
-    color: Colors.textPrimary,
+  productImage: {
+    width: '100%',
+    height: '100%',
   },
-  filterBtn: {
-    padding: Spacing.xs,
-    backgroundColor: Colors.surfaceSubtle,
+  badgePill: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     borderRadius: Radius.full,
   },
-  heroCard: {
-    backgroundColor: '#271100', // Luxury Deep Coffee
+  badgePillText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#C46C27',
+    textTransform: 'uppercase',
+  },
+  favIconBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  productDetails: {
+    padding: Spacing.sm + 2,
+  },
+  productOriginTag: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: Colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  productItemTitle: {
+    fontSize: Typography.fontSize.xs + 1,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    lineHeight: 17,
+    minHeight: 34,
+  },
+  artisanRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  artisanNameText: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    fontWeight: '600',
+    flex: 1,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 4,
+  },
+  ratingScore: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  reviewsCount: {
+    fontSize: 10,
+    color: Colors.textMuted,
+  },
+  priceActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: Spacing.xs + 2,
+  },
+  priceValue: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: Colors.primaryDark,
+  },
+  addMiniBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#C46C27',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // ─── CULTURE CARDS ─────────────────────────────────────────
+  cultureCardsScroll: {
+    gap: 12,
+    paddingVertical: 4,
+  },
+  cultureCard: {
+    width: 210,
+    height: 140,
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
+    position: 'relative',
+    justifyContent: 'flex-end',
+    borderWidth: 1,
+    borderColor: '#E8DAC8',
+  },
+  cultureCardBody: {
+    padding: Spacing.md,
+    zIndex: 10,
+  },
+  cultureCardTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#FFF8EA',
+  },
+  cultureCardSub: {
+    fontSize: 10,
+    color: '#E0D0BF',
+    marginTop: 2,
+  },
+
+  // ─── SPOTLIGHT CARD ────────────────────────────────────────
+  spotlightCard: {
     marginHorizontal: Spacing.md,
-    marginBottom: Spacing.lg,
+    marginTop: Spacing.xl,
+    backgroundColor: '#2A170A',
     borderRadius: Radius.xl,
     padding: Spacing.lg,
     borderWidth: 1,
-    borderColor: '#4A2A10',
+    borderColor: '#4A2B15',
   },
-  heroTopRow: {
+  spotlightTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.sm,
   },
-  heroBadge: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: Spacing.sm + 2,
-    paddingVertical: Spacing.xs,
+  spotlightBadge: {
+    backgroundColor: '#C46C27',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: Radius.full,
   },
-  heroBadgeText: {
-    color: Colors.textInverse,
+  spotlightBadgeText: {
     fontSize: 9,
     fontWeight: '800',
-    letterSpacing: 0.8,
+    color: '#FFF',
+    letterSpacing: 0.6,
   },
   verifiedRow: {
     flexDirection: 'row',
@@ -285,244 +1016,37 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   verifiedText: {
-    color: Colors.accentGold,
-    fontSize: Typography.fontSize.xs,
+    fontSize: 11,
     fontWeight: '600',
+    color: '#E8BA7A',
   },
-  heroTitle: {
-    fontSize: 22,
+  spotlightHeading: {
+    fontSize: 18,
     fontWeight: '800',
-    color: Colors.textInverse,
-    marginBottom: Spacing.xs,
-    lineHeight: 28,
-  },
-  heroSubtitle: {
-    fontSize: Typography.fontSize.xs,
-    color: '#D6C8B5',
-    lineHeight: 18,
-    marginBottom: Spacing.md,
-  },
-  heroActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  heroBtnPrimary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.primary,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.full,
-    gap: 4,
-  },
-  heroBtnPrimaryText: {
-    color: Colors.textInverse,
-    fontSize: Typography.fontSize.xs,
-    fontWeight: '700',
-  },
-  heroBtnSecondary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#3E1C03',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.full,
-    gap: 4,
-    borderWidth: 1,
-    borderColor: '#603310',
-  },
-  heroBtnSecondaryText: {
-    color: Colors.accentGold,
-    fontSize: Typography.fontSize.xs,
-    fontWeight: '700',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.sm,
-  },
-  sectionTitle: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-    letterSpacing: -0.2,
-  },
-  sectionSubtitle: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  seeAllText: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.primary,
-    fontWeight: '700',
-  },
-  categoryScrollContainer: {
-    paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.md,
-    gap: Spacing.xs + 4,
-  },
-  categoryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: '#EFE7DA',
-  },
-  categoryChipActive: {
-    backgroundColor: Colors.primaryDark,
-    borderColor: Colors.primaryDark,
-  },
-  categoryIcon: {
-    marginRight: 6,
-  },
-  categoryChipText: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textPrimary,
-    fontWeight: '600',
-  },
-  categoryChipTextActive: {
-    color: Colors.textInverse,
-    fontWeight: '700',
-  },
-  productGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: Spacing.md,
-    justifyContent: 'space-between',
-    gap: Spacing.sm,
-  },
-  productCard: {
-    width: '48%',
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: '#EFE7DA',
-    overflow: 'hidden',
-    marginBottom: Spacing.sm,
-  },
-  productCanvas: {
-    height: 140,
-    backgroundColor: '#F8F1E7',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  badgePill: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: '#FFFFFFE0',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: Radius.full,
-  },
-  badgePillText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: Colors.primaryDark,
-  },
-  favoriteButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFFE0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  productInfo: {
-    padding: Spacing.sm + 2,
-  },
-  productOrigin: {
-    fontSize: 10,
-    color: Colors.textMuted,
-    fontWeight: '600',
-    marginBottom: 2,
-    textTransform: 'uppercase',
-  },
-  productTitle: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    lineHeight: 18,
-    minHeight: 36,
-  },
-  artisanName: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.primary,
-    fontWeight: '500',
-    marginTop: 2,
-    marginBottom: Spacing.xs,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: Spacing.xs,
-  },
-  productPrice: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: '800',
-    color: Colors.primaryDark,
-  },
-  cartAddMini: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  spotlightCard: {
-    marginHorizontal: Spacing.md,
-    marginTop: Spacing.md,
-    backgroundColor: '#FFF8EE',
-    borderWidth: 1,
-    borderColor: '#E8D4BE',
-    borderRadius: Radius.xl,
-    padding: Spacing.lg,
-  },
-  spotlightLeft: {
-    flex: 1,
-  },
-  spotlightTag: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: Colors.primary,
-    letterSpacing: 0.8,
+    color: '#FFF5DE',
     marginBottom: 4,
   },
-  spotlightTitle: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-    marginBottom: 4,
-  },
-  spotlightBio: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
+  spotlightDescription: {
+    fontSize: 12,
     lineHeight: 18,
+    color: '#D8C7B8',
     marginBottom: Spacing.md,
   },
-  spotlightBtn: {
+  spotlightActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: Colors.primaryDark,
+    backgroundColor: '#3E2210',
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs + 2,
+    paddingVertical: Spacing.xs + 3,
     borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: '#62381B',
+    gap: 6,
   },
-  spotlightBtnText: {
-    color: Colors.textInverse,
-    fontSize: Typography.fontSize.xs,
-    fontWeight: '700',
+  spotlightActionText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#E8BA7A',
   },
 });
