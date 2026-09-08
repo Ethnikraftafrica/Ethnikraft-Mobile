@@ -22,7 +22,7 @@ import { useAppSelector } from '@/store';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const COLLAPSED_WIDTH = 54;
+const COLLAPSED_SIZE = 56;
 const EXPANDED_WIDTH = Math.min(SCREEN_WIDTH - 48, 280);
 
 export interface CartFloatingButtonRef {
@@ -140,12 +140,12 @@ export const CartFloatingButton = forwardRef<
   // Interpolated animated width
   const animatedWidth = expandAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [COLLAPSED_WIDTH, EXPANDED_WIDTH],
+    outputRange: [COLLAPSED_SIZE, EXPANDED_WIDTH],
   });
 
   // Interpolated content opacity
   const contentOpacity = expandAnim.interpolate({
-    inputRange: [0, 0.35, 1],
+    inputRange: [0, 0.4, 1],
     outputRange: [0, 0, 1],
   });
 
@@ -161,6 +161,7 @@ export const CartFloatingButton = forwardRef<
         onLongPress={expandBag}
         delayLongPress={350}
         onPress={handlePress}
+        style={styles.touchableWrapper}
       >
         <Animated.View
           style={[
@@ -182,45 +183,46 @@ export const CartFloatingButton = forwardRef<
             </View>
           </View>
 
-          {/* Fluid Extended Info & Checkout Pill */}
-          <Animated.View
-            pointerEvents={isExpanded ? 'auto' : 'none'}
-            style={[
-              styles.expandedBody,
-              {
-                opacity: contentOpacity,
-              },
-            ]}
-          >
-            <View style={styles.expandedTextCol}>
-              <Text style={styles.bagTitle}>YOUR BAG</Text>
-              <Text style={styles.bagDetails}>
-                {itemCount} {itemCount === 1 ? 'Item' : 'Items'} • {totalPrice}
-              </Text>
-            </View>
-
-            {/* Checkout Action Pill */}
-            <TouchableOpacity
-              onPress={handleCheckoutPress}
-              activeOpacity={0.85}
-              style={styles.checkoutPillBtn}
+          {/* Fluid Extended Info & Checkout Pill — unmounted when collapsed to prevent layout drift */}
+          {isExpanded && (
+            <Animated.View
+              style={[
+                styles.expandedBody,
+                {
+                  opacity: contentOpacity,
+                },
+              ]}
             >
-              <Text style={styles.checkoutPillText}>Checkout</Text>
-              <Ionicons name="arrow-forward" size={12} color="#180C04" />
-            </TouchableOpacity>
+              <View style={styles.expandedTextCol}>
+                <Text style={styles.bagTitle}>YOUR BAG</Text>
+                <Text style={styles.bagDetails}>
+                  {itemCount} {itemCount === 1 ? 'Item' : 'Items'} • {totalPrice}
+                </Text>
+              </View>
 
-            {/* Mini Close Button */}
-            <TouchableOpacity
-              onPress={(e) => {
-                e.stopPropagation();
-                collapseBag();
-              }}
-              style={styles.closeCollapseBtn}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Ionicons name="close" size={14} color="#A8998A" />
-            </TouchableOpacity>
-          </Animated.View>
+              {/* Checkout Action Pill */}
+              <TouchableOpacity
+                onPress={handleCheckoutPress}
+                activeOpacity={0.85}
+                style={styles.checkoutPillBtn}
+              >
+                <Text style={styles.checkoutPillText}>Checkout</Text>
+                <Ionicons name="arrow-forward" size={12} color="#180C04" />
+              </TouchableOpacity>
+
+              {/* Mini Close Button */}
+              <TouchableOpacity
+                onPress={(e) => {
+                  e.stopPropagation();
+                  collapseBag();
+                }}
+                style={styles.closeCollapseBtn}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={14} color="#A8998A" />
+              </TouchableOpacity>
+            </Animated.View>
+          )}
         </Animated.View>
       </TouchableOpacity>
     </DraggableFAB>
@@ -230,15 +232,19 @@ export const CartFloatingButton = forwardRef<
 CartFloatingButton.displayName = 'CartFloatingButton';
 
 const styles = StyleSheet.create({
+  touchableWrapper: {
+    borderRadius: COLLAPSED_SIZE / 2,
+    overflow: 'visible',
+  },
   fabContainer: {
-    height: 54,
+    height: COLLAPSED_SIZE,
     backgroundColor: '#1C0D05',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: 'rgba(232, 186, 122, 0.45)',
-    borderRadius: 27,
+    borderRadius: COLLAPSED_SIZE / 2,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: 3.5,
+    paddingLeft: 4, // (56 - 4px borders - 44px cartBubble) / 2 = 4px margin on all 4 sides!
     overflow: 'visible', // Ensure counter badge stacks properly without any clipping
     shadowColor: '#C46C27',
     shadowOffset: { width: 0, height: 8 },
@@ -286,13 +292,15 @@ const styles = StyleSheet.create({
   },
   expandedBody: {
     position: 'absolute',
-    left: 52,
-    right: 6,
+    left: COLLAPSED_SIZE,
+    width: EXPANDED_WIDTH - COLLAPSED_SIZE - 6,
     top: 0,
     bottom: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingLeft: 2,
+    paddingRight: 6,
     overflow: 'hidden',
   },
   expandedTextCol: {
