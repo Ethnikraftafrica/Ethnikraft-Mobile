@@ -139,6 +139,7 @@ export const authApi = baseApi.injectEndpoints({
       providesTags: ['VendorProfile'],
     }),
   }),
+  overrideExisting: true,
 });
 
 export const {

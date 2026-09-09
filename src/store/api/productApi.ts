@@ -196,6 +196,7 @@ export const productApi = baseApi.injectEndpoints({
       providesTags: (_result, _error, { productId }) => [{ type: 'Reviews' as const, id: productId }],
     }),
   }),
+  overrideExisting: true,
 });
 
 export const {
