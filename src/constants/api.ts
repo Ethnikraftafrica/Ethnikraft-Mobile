@@ -42,6 +42,13 @@ export const API_ENDPOINTS = {
     categories: '/product-categories',
   },
 
+  // Reviews
+  reviews: {
+    list: '/reviews',
+    details: (id: string) => `/reviews/${id}`,
+    vendorStats: (vendorId: string) => `/reviews/vendor/${vendorId}/stats`,
+  },
+
   // Orders
   orders: {
     customerOrders: '/orders',

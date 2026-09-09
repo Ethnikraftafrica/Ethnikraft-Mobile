@@ -15,11 +15,15 @@ import { Colors, Radius, Shadows, Spacing, Typography } from '@/constants/theme'
 interface AuthPromptModalProps {
   visible: boolean;
   onClose: () => void;
+  title?: string;
+  message?: string;
 }
 
 export const AuthPromptModal: React.FC<AuthPromptModalProps> = ({
   visible,
   onClose,
+  title = 'Sign in to continue',
+  message = 'You need an account to access this page. It only takes a minute to get started.',
 }) => {
   const router = useRouter();
 
@@ -57,10 +61,8 @@ export const AuthPromptModal: React.FC<AuthPromptModalProps> = ({
               </View>
 
               {/* Title & Description */}
-              <Text style={styles.title}>Sign in to continue</Text>
-              <Text style={styles.subtitle}>
-                You need an account to access this page. It only takes a minute to get started.
-              </Text>
+              <Text style={styles.title}>{title}</Text>
+              <Text style={styles.subtitle}>{message}</Text>
 
               {/* Primary Action: Sign In */}
               <TouchableOpacity

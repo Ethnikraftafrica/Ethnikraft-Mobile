@@ -60,9 +60,53 @@ export interface Product {
   isFeaturedCreator?: boolean;
   details?: ProductDetails;
   vendor?: ProductVendor;
+  vendorId?: string;
+  rating?: number;
+  reviewCount?: number;
+  dimensions?: string;
+  occasionTags?: string[];
+  artStyleTags?: string[];
+  tags?: any[];
+  height?: number | null;
+  length?: number | null;
+  width?: number | null;
+  weight?: number | null;
+  weightUnit?: string;
+  hasVariants?: boolean;
   createdBy?: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface ProductReview {
+  id: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  isVerifiedPurchase?: boolean;
+  helpfulCount?: number;
+  reviewer?: {
+    id?: string;
+    firstName?: string;
+    lastName?: string;
+    profilePicture?: string;
+  };
+  request?: {
+    size?: string;
+    color?: string;
+  };
+}
+
+export interface ProductReviewsResponse {
+  success: boolean;
+  data?: {
+    reviews: ProductReview[];
+    total: number;
+    averageRating: number;
+  };
+  reviews?: ProductReview[];
+  total?: number;
+  averageRating?: number;
 }
 
 export interface ProductQueryParams {
@@ -139,6 +183,18 @@ export const productApi = baseApi.injectEndpoints({
       query: () => API_ENDPOINTS.products.categories,
       providesTags: [{ type: 'Categories', id: 'LIST' }],
     }),
+
+    getProductReviews: builder.query<{ reviews: ProductReview[]; total: number; averageRating: number }, { productId: string; limit?: number }>({
+      query: ({ productId, limit = 10 }) => `${API_ENDPOINTS.reviews.list}?productId=${productId}&limit=${limit}`,
+      transformResponse: (response: any) => {
+        const data = response?.data || response;
+        const reviews = data?.reviews || (Array.isArray(data) ? data : []);
+        const total = data?.total ?? reviews.length;
+        const averageRating = data?.averageRating ?? 0;
+        return { reviews, total, averageRating };
+      },
+      providesTags: (_result, _error, { productId }) => [{ type: 'Reviews' as const, id: productId }],
+    }),
   }),
 });
 
@@ -146,4 +202,5 @@ export const {
   useGetProductsQuery,
   useGetProductByIdQuery,
   useGetProductCategoriesQuery,
+  useGetProductReviewsQuery,
 } = productApi;

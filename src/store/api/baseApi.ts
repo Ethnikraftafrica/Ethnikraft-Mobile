@@ -29,6 +29,7 @@ export const baseApi = createApi({
     'CustomRequests',
     'VendorBids',
     'Payouts',
+    'Reviews',
   ],
   endpoints: () => ({}),
 });

@@ -49,6 +49,14 @@ export const FontFamily = {
   // Clean Editorial Body (Descriptions, metadata, specs)
   latoRegular: 'Lato_400Regular',
   latoBold: 'Lato_700Bold',
+
+  // Semantic Typography Aliases
+  bodyRegular: 'Lato_400Regular',
+  bodyBold: 'Lato_700Bold',
+  displayBold: 'CormorantGaramond_700Bold',
+  displaySemiBold: 'CormorantGaramond_600SemiBold',
+  headingBold: 'Poppins_700Bold',
+  headingMedium: 'Poppins_500Medium',
 } as const;
 
 export const Typography = {
