@@ -50,6 +50,7 @@ export const ProductSortModal: React.FC<ProductSortModalProps> = ({
       transparent
       animationType="fade"
       onRequestClose={onClose}
+      statusBarTranslucent
     >
       <View style={styles.modalOverlay}>
         <TouchableOpacity

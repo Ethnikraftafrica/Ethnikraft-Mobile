@@ -121,6 +121,7 @@ export const ProductFilterModal: React.FC<ProductFilterModalProps> = ({
       transparent
       animationType="fade"
       onRequestClose={onClose}
+      statusBarTranslucent
     >
       <View style={styles.modalOverlay}>
         <TouchableOpacity

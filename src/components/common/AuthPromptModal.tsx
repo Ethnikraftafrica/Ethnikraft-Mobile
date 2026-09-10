@@ -47,6 +47,7 @@ export const AuthPromptModal: React.FC<AuthPromptModalProps> = ({
       transparent
       visible={visible}
       onRequestClose={onClose}
+      statusBarTranslucent
     >
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.backdrop}>

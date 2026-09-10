@@ -78,7 +78,8 @@ export default function ProductDetailScreen() {
   });
 
   const fallbackProduct = MOCK_PRODUCTS.find((p) => p.id === id) || MOCK_PRODUCTS[0];
-  const product: Product = apiProduct || fallbackProduct;
+  const resolvedProduct = (apiProduct as any)?.product || apiProduct;
+  const product: Product = resolvedProduct || fallbackProduct;
 
   const images = product?.imageList?.length ? product.imageList : [product?.mainImage];
   const category = detectCategory(product);

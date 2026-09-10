@@ -173,8 +173,9 @@ export const productApi = baseApi.injectEndpoints({
     getProductById: builder.query<Product, string>({
       query: (id) => API_ENDPOINTS.products.details(id),
       transformResponse: (response: any) => {
-        // Backend returns either { success: true, product: { ... } } or { data: { ... } }
-        return response?.product || response?.data || response;
+        // Backend returns { success: true, data: { product: { ... } } }, or { success: true, product: { ... } }
+        const raw = response?.data?.product || response?.product || response?.data || response;
+        return raw?.product || raw;
       },
       providesTags: (_result, _error, id) => [{ type: 'Products', id }],
     }),
