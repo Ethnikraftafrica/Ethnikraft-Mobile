@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -123,15 +123,27 @@ export default function ProductDetailScreen() {
   const isOutOfStock = !product.isRequestable && (product.stockQuantity === 0 || product.stockQuantity === undefined);
 
   const flatListRef = useRef<FlatList<string>>(null);
-  const isInteractingWithCarousel = useRef(false);
+  const autoSlideTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isAutoSlideActive = useRef(true);
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  // Auto-slide carousel effect (rotates every 4.5s when user is not manually interacting)
+  const stopAutoSlide = useCallback(() => {
+    isAutoSlideActive.current = false;
+    if (autoSlideTimerRef.current) {
+      clearInterval(autoSlideTimerRef.current);
+      autoSlideTimerRef.current = null;
+    }
+  }, []);
+
+  // Auto-slide carousel effect (rotates until user interacts with the carousel)
   useEffect(() => {
     if (!images || images.length <= 1) return;
 
-    const interval = setInterval(() => {
-      if (isInteractingWithCarousel.current) return;
+    autoSlideTimerRef.current = setInterval(() => {
+      if (!isAutoSlideActive.current) {
+        if (autoSlideTimerRef.current) clearInterval(autoSlideTimerRef.current);
+        return;
+      }
       setActiveImageIndex((prevIndex) => {
         const nextIndex = (prevIndex + 1) % images.length;
         flatListRef.current?.scrollToIndex({
@@ -142,32 +154,32 @@ export default function ProductDetailScreen() {
       });
     }, 4500);
 
-    return () => clearInterval(interval);
+    return () => {
+      if (autoSlideTimerRef.current) clearInterval(autoSlideTimerRef.current);
+    };
   }, [images?.length]);
 
   const scrollToImage = (index: number) => {
+    stopAutoSlide();
     if (index === activeImageIndex || index < 0 || index >= images.length) return;
     Haptics.selectionAsync();
     setActiveImageIndex(index);
-    isInteractingWithCarousel.current = true;
 
     flatListRef.current?.scrollToIndex({
       index,
       animated: true,
     });
-
-    setTimeout(() => {
-      isInteractingWithCarousel.current = false;
-    }, 1200);
   };
 
   const nextSlide = () => {
+    stopAutoSlide();
     if (!images || images.length <= 1) return;
     const nextIdx = (activeImageIndex + 1) % images.length;
     scrollToImage(nextIdx);
   };
 
   const prevSlide = () => {
+    stopAutoSlide();
     if (!images || images.length <= 1) return;
     const prevIdx = (activeImageIndex - 1 + images.length) % images.length;
     scrollToImage(prevIdx);
@@ -372,14 +384,17 @@ export default function ProductDetailScreen() {
                 });
               }}
               onScrollBeginDrag={() => {
-                isInteractingWithCarousel.current = true;
+                stopAutoSlide();
+              }}
+              onTouchStart={() => {
+                stopAutoSlide();
               }}
               onMomentumScrollEnd={(event) => {
+                stopAutoSlide();
                 const slide = Math.round(event.nativeEvent.contentOffset.x / CAROUSEL_CARD_WIDTH);
                 if (slide >= 0 && slide < images.length && slide !== activeImageIndex) {
                   setActiveImageIndex(slide);
                 }
-                isInteractingWithCarousel.current = false;
               }}
               renderItem={({ item: imgUri }) => (
                 <View style={styles.carouselSlide}>
