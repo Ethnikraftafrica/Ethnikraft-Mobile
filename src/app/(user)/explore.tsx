@@ -15,7 +15,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
-import { useGetProductsQuery, Product } from '@/store/api/productApi';
+import {
+  useGetProductsQuery,
+  useGetTopPicksWeekQuery,
+  useGetAfricanPaintingsQuery,
+  useGetBestsellersDecorationsQuery,
+  useGetInspiredByCultureQuery,
+  Product,
+} from '@/store/api/productApi';
 import { MOCK_PRODUCTS } from '@/constants/mockProducts';
 import { ProductCard, PRODUCT_CARD_WIDTH } from '@/components/products/ProductCard';
 import { ProductFilterModal, FilterState } from '@/components/products/ProductFilterModal';
@@ -48,10 +55,18 @@ const INITIAL_FILTERS: FilterState = {
 
 export default function ExploreScreen() {
   const router = useRouter();
-  const { category: urlCategory, autoFocus: autoFocusParam } = useLocalSearchParams<{
+  const {
+    category: urlCategory,
+    collection: urlCollection,
+    search: urlSearch,
+    title: urlTitle,
+    autoFocus: autoFocusParam,
+  } = useLocalSearchParams<{
     category?: string;
-    autoFocus?: string;
+    collection?: string;
     search?: string;
+    title?: string;
+    autoFocus?: string;
   }>();
   const insets = useSafeAreaInsets();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
@@ -63,6 +78,8 @@ export default function ExploreScreen() {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedSort, setSelectedSort] = useState<SortOption>('relevance');
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
+  const [activeCollection, setActiveCollection] = useState<string | null>(null);
+  const [activeTitle, setActiveTitle] = useState<string>('');
 
   // Auto-focus search input when navigated with autoFocus=1
   React.useEffect(() => {
@@ -74,19 +91,43 @@ export default function ExploreScreen() {
     }
   }, [autoFocusParam]);
 
-  // Sync category param from route/navigation
+  // Sync params from route/navigation
   React.useEffect(() => {
+    if (urlTitle) {
+      setActiveTitle(urlTitle);
+    }
+    if (urlCollection) {
+      setActiveCollection(urlCollection);
+      if (urlCollection === 'african-paintings') {
+        setSelectedCategory('PAINTINGS');
+        setFilters((prev) => ({ ...prev, category: 'PAINTINGS' }));
+      } else if (urlCollection === 'bestsellers-decorations') {
+        setSelectedCategory('CRAFTS');
+        setFilters((prev) => ({ ...prev, category: 'CRAFTS' }));
+      }
+      setPage(1);
+    }
     if (urlCategory) {
       const match = CATEGORIES.find(
-        (c) => c.id.toUpperCase() === urlCategory.toUpperCase() || c.label.toUpperCase() === urlCategory.toUpperCase()
+        (c) =>
+          c.id.toUpperCase() === urlCategory.toUpperCase() ||
+          c.label.toUpperCase() === urlCategory.toUpperCase()
       );
       if (match) {
         setSelectedCategory(match.id);
         setFilters((prev) => ({ ...prev, category: match.id }));
+        if (!urlTitle) {
+          setActiveTitle(match.label);
+        }
         setPage(1);
       }
     }
-  }, [urlCategory]);
+    if (urlSearch) {
+      setSearchQuery(urlSearch);
+      setDebouncedSearch(urlSearch);
+      setPage(1);
+    }
+  }, [urlCategory, urlCollection, urlSearch, urlTitle]);
 
   // Modals
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
@@ -147,30 +188,121 @@ export default function ExploreScreen() {
   }, [debouncedSearch, selectedCategory, filters, page]);
 
   // Fetch live products
-  const { data: apiResponse, isLoading, isFetching, refetch } = useGetProductsQuery(queryParams);
+  const {
+    data: apiResponse,
+    isLoading: isProductsLoading,
+    isFetching: isProductsFetching,
+    refetch: refetchProducts,
+  } = useGetProductsQuery(queryParams, {
+    skip: !!activeCollection,
+  });
+
+  const {
+    data: topPicksData,
+    isLoading: isTopPicksLoading,
+    refetch: refetchTopPicks,
+  } = useGetTopPicksWeekQuery(undefined, {
+    skip: activeCollection !== 'top-picks-week',
+  });
+
+  const {
+    data: paintingsData,
+    isLoading: isPaintingsLoading,
+    refetch: refetchPaintings,
+  } = useGetAfricanPaintingsQuery(undefined, {
+    skip: activeCollection !== 'african-paintings',
+  });
+
+  const {
+    data: decorationsData,
+    isLoading: isDecorationsLoading,
+    refetch: refetchDecorations,
+  } = useGetBestsellersDecorationsQuery(undefined, {
+    skip: activeCollection !== 'bestsellers-decorations',
+  });
+
+  const {
+    data: cultureData,
+    isLoading: isCultureLoading,
+    refetch: refetchCulture,
+  } = useGetInspiredByCultureQuery(undefined, {
+    skip: activeCollection !== 'inspired-by-culture',
+  });
+
+  const isLoading =
+    activeCollection === 'top-picks-week'
+      ? isTopPicksLoading
+      : activeCollection === 'african-paintings'
+      ? isPaintingsLoading
+      : activeCollection === 'bestsellers-decorations'
+      ? isDecorationsLoading
+      : activeCollection === 'inspired-by-culture'
+      ? isCultureLoading
+      : isProductsLoading;
+
+  const isFetching = activeCollection ? isLoading : isProductsFetching;
 
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setPage(1);
     try {
-      await refetch();
+      if (activeCollection === 'top-picks-week') await refetchTopPicks();
+      else if (activeCollection === 'african-paintings') await refetchPaintings();
+      else if (activeCollection === 'bestsellers-decorations') await refetchDecorations();
+      else if (activeCollection === 'inspired-by-culture') await refetchCulture();
+      else await refetchProducts();
     } catch (e) {
       // Ignore
     } finally {
       setIsRefreshing(false);
     }
-  }, [refetch]);
+  }, [
+    activeCollection,
+    refetchTopPicks,
+    refetchPaintings,
+    refetchDecorations,
+    refetchCulture,
+    refetchProducts,
+  ]);
 
   // Combine and sort products (using live API with client-side fallback)
   const displayProducts = useMemo(() => {
     let list: Product[] = [];
 
-    if (apiResponse?.data?.products && apiResponse.data.products.length > 0) {
+    if (activeCollection === 'top-picks-week' && topPicksData && topPicksData.length > 0) {
+      list = [...topPicksData];
+    } else if (activeCollection === 'african-paintings' && paintingsData && paintingsData.length > 0) {
+      list = [...paintingsData];
+    } else if (
+      activeCollection === 'bestsellers-decorations' &&
+      decorationsData &&
+      decorationsData.length > 0
+    ) {
+      list = [...decorationsData];
+    } else if (activeCollection === 'inspired-by-culture' && cultureData && cultureData.length > 0) {
+      list = [...cultureData];
+    } else if (apiResponse?.data?.products && apiResponse.data.products.length > 0) {
       list = [...apiResponse.data.products];
     } else {
       // Offline fallback: filter MOCK_PRODUCTS client-side
       list = MOCK_PRODUCTS.filter((item) => {
+        if (activeCollection === 'african-paintings') {
+          return item.productCategory === 'PAINTINGS';
+        }
+        if (activeCollection === 'top-picks-week') {
+          return item.isTrending || item.isBestseller;
+        }
+        if (activeCollection === 'bestsellers-decorations') {
+          return item.productCategory === 'CRAFTS' || item.isBestseller;
+        }
+        if (activeCollection === 'inspired-by-culture') {
+          return (
+            (item.occasionTags && item.occasionTags.length > 0) ||
+            (item.artStyleTags && item.artStyleTags.length > 0)
+          );
+        }
+
         // Category filter
         const activeCat = filters.category !== 'ALL' ? filters.category : selectedCategory;
         if (activeCat !== 'ALL' && item.productCategory !== activeCat) return false;
@@ -216,20 +348,52 @@ export default function ExploreScreen() {
       default:
         return list;
     }
-  }, [apiResponse, selectedCategory, filters, debouncedSearch, selectedSort]);
+  }, [
+    activeCollection,
+    topPicksData,
+    paintingsData,
+    decorationsData,
+    cultureData,
+    apiResponse,
+    selectedCategory,
+    filters,
+    debouncedSearch,
+    selectedSort,
+  ]);
 
-  const totalCount = apiResponse?.data?.total || displayProducts.length;
+  const totalCount = activeCollection
+    ? displayProducts.length
+    : apiResponse?.data?.total || displayProducts.length;
 
   const handleCategoryTabPress = (catId: string) => {
     Haptics.selectionAsync();
     setSelectedCategory(catId);
     setFilters((prev) => ({ ...prev, category: catId }));
+    setActiveCollection(null);
+    if (catId === 'ALL') {
+      setActiveTitle('');
+    } else {
+      const match = CATEGORIES.find((c) => c.id === catId);
+      setActiveTitle(match ? match.label : '');
+    }
+    setPage(1);
+  };
+
+  const handleResetAllFilters = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setActiveTitle('');
+    setActiveCollection(null);
+    setSelectedCategory('ALL');
+    setFilters(INITIAL_FILTERS);
+    setSearchQuery('');
+    setDebouncedSearch('');
     setPage(1);
   };
 
   const handleApplyFilters = (newFilters: FilterState) => {
     setFilters(newFilters);
     setSelectedCategory(newFilters.category);
+    setActiveCollection(null);
     setPage(1);
   };
 
@@ -396,8 +560,22 @@ export default function ExploreScreen() {
 
       {/* ─── 2. SECTION SUBHEADER (TITLE, COUNT & SORT) ─────────────── */}
       <View style={styles.subHeaderBar}>
-        <View>
-          <Text style={styles.shopHeading}>Shop</Text>
+        <View style={styles.subHeaderLeftCol}>
+          <View style={styles.headingRow}>
+            <Text style={styles.shopHeading} numberOfLines={1}>
+              {activeTitle ? `Shop • ${activeTitle}` : 'Shop'}
+            </Text>
+            {(!!activeTitle || !!activeCollection || selectedCategory !== 'ALL' || !!debouncedSearch) && (
+              <TouchableOpacity
+                style={styles.clearFilterChip}
+                onPress={handleResetAllFilters}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel="Clear filter"
+              >
+                <Ionicons name="close-circle" size={16} color="#C46C27" />
+              </TouchableOpacity>
+            )}
+          </View>
           <Text style={styles.productsCountText}>
             {isLoading ? 'Searching craft...' : `${totalCount} products`}
           </Text>
@@ -700,6 +878,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.sm + 2,
     paddingBottom: Spacing.xs,
+  },
+  subHeaderLeftCol: {
+    flex: 1,
+    paddingRight: Spacing.sm,
+  },
+  headingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  clearFilterChip: {
+    padding: 2,
   },
   shopHeading: {
     fontSize: 22,

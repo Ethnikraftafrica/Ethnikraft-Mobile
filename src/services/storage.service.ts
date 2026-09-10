@@ -10,6 +10,7 @@ const REFRESH_TOKEN_KEY = 'ethnikraft_refresh_token';
 const ACTIVE_ROLE_KEY = '@ethnikraft/active_role';
 const USER_PROFILE_KEY = '@ethnikraft/user_profile';
 const VENDOR_PROFILE_KEY = '@ethnikraft/vendor_profile';
+const CURRENCY_KEY = '@ethnikraft/user_currency';
 
 export const StorageService = {
   // === Secure Tokens ===
@@ -100,6 +101,23 @@ export const StorageService = {
     try {
       const data = await AsyncStorage.getItem(VENDOR_PROFILE_KEY);
       return data ? JSON.parse(data) : null;
+    } catch {
+      return null;
+    }
+  },
+
+  // === Currency Selection ===
+  async setCurrency(code: string): Promise<void> {
+    try {
+      await AsyncStorage.setItem(CURRENCY_KEY, code);
+    } catch (e) {
+      console.error('Error saving user currency', e);
+    }
+  },
+
+  async getCurrency(): Promise<string | null> {
+    try {
+      return await AsyncStorage.getItem(CURRENCY_KEY);
     } catch {
       return null;
     }

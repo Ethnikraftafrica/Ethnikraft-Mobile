@@ -23,6 +23,7 @@ import { MOCK_PRODUCTS } from '@/constants/mockProducts';
 import { Colors, FontFamily, Radius, Shadows } from '@/constants/theme';
 import { AuthPromptModal } from '@/components/common/AuthPromptModal';
 import { useAppSelector } from '@/store';
+import { formatPrice } from '@/utils/price';
 import { ProductSizeChart, detectCategory } from '@/components/products/ProductSizeChart';
 import { ProductSpecifications } from '@/components/products/ProductSpecifications';
 import { ProductArtisanStory } from '@/components/products/ProductArtisanStory';
@@ -64,6 +65,7 @@ export default function ProductDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { code: currencyCode, rate: exchangeRate } = useAppSelector((state) => state.currency);
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
@@ -117,8 +119,7 @@ export default function ProductDetailScreen() {
       ? product.details.colorOptions
       : ['Indigo Blue', 'Imperial Gold', 'Terracotta', 'Ebony Black'];
 
-  const numPrice = typeof product?.price === 'string' ? parseFloat(product.price) : product?.price || 0;
-  const formattedPrice = `₦${numPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formattedPrice = formatPrice(product?.price, currencyCode, exchangeRate);
   const maxQuantity = product.stockQuantity || 10;
   const isOutOfStock = !product.isRequestable && (product.stockQuantity === 0 || product.stockQuantity === undefined);
 

@@ -1,11 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
 import authReducer from './slices/authSlice';
+import currencyReducer from './slices/currencySlice';
 import { baseApi } from './api/baseApi';
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
+    currency: currencyReducer,
     [baseApi.reducerPath]: baseApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>

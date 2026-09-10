@@ -14,6 +14,8 @@ import * as Haptics from 'expo-haptics';
 import { FontFamily, Radius, Shadows } from '@/constants/theme';
 import { Product, useGetProductsQuery } from '@/store/api/productApi';
 import { MOCK_PRODUCTS } from '@/constants/mockProducts';
+import { useAppSelector } from '@/store';
+import { formatPrice } from '@/utils/price';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = Math.min(SCREEN_WIDTH * 0.46, 190);
@@ -28,6 +30,7 @@ export const ProductAlsoViewed: React.FC<ProductAlsoViewedProps> = ({
   category,
 }) => {
   const router = useRouter();
+  const { code: currencyCode, rate: exchangeRate } = useAppSelector((state) => state.currency);
 
   // Fetch related products by category
   const { data: apiResponse } = useGetProductsQuery(
@@ -63,8 +66,7 @@ export const ProductAlsoViewed: React.FC<ProductAlsoViewedProps> = ({
         contentContainerStyle={styles.scrollList}
       >
         {related.map((item) => {
-          const numPrice = typeof item.price === 'string' ? parseFloat(item.price) : item.price || 0;
-          const formattedPrice = `₦${numPrice.toLocaleString('en-US')}`;
+          const formattedPrice = formatPrice(item.price, currencyCode, exchangeRate);
           const rating = Number(item.rating || item.details?.averageRating || 4.9).toFixed(1);
 
           return (

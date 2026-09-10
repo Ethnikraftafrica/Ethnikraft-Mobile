@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { store, useAppDispatch, useAppSelector } from '@/store';
 import { hydrateSession } from '@/store/slices/authSlice';
+import { hydrateCurrency } from '@/store/slices/currencySlice';
 import { StorageService } from '@/services/storage.service';
 import { Colors } from '@/constants/theme';
 import {
@@ -47,12 +48,17 @@ function RootNavigation() {
   useEffect(() => {
     async function restoreSession() {
       try {
-        const [token, user, vendor, activeRole] = await Promise.all([
+        const [token, user, vendor, activeRole, savedCurrency] = await Promise.all([
           StorageService.getAccessToken(),
           StorageService.getUserProfile(),
           StorageService.getVendorProfile(),
           StorageService.getActiveRole(),
+          StorageService.getCurrency(),
         ]);
+
+        if (savedCurrency) {
+          dispatch(hydrateCurrency(savedCurrency));
+        }
 
         dispatch(
           hydrateSession({
