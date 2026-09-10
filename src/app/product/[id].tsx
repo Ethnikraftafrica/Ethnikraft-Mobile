@@ -4,6 +4,7 @@ import {
   Text,
   View,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   Dimensions,
   Share,
@@ -121,10 +122,8 @@ export default function ProductDetailScreen() {
   const maxQuantity = product.stockQuantity || 10;
   const isOutOfStock = !product.isRequestable && (product.stockQuantity === 0 || product.stockQuantity === undefined);
 
-  const carouselRef = useRef<ScrollView>(null);
+  const flatListRef = useRef<FlatList<string>>(null);
   const isInteractingWithCarousel = useRef(false);
-  const isProgrammaticScroll = useRef(false);
-  const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   // Auto-slide carousel effect (rotates every 4.5s when user is not manually interacting)
@@ -132,11 +131,11 @@ export default function ProductDetailScreen() {
     if (!images || images.length <= 1) return;
 
     const interval = setInterval(() => {
-      if (isInteractingWithCarousel.current || isProgrammaticScroll.current) return;
+      if (isInteractingWithCarousel.current) return;
       setActiveImageIndex((prevIndex) => {
         const nextIndex = (prevIndex + 1) % images.length;
-        carouselRef.current?.scrollTo({
-          x: nextIndex * CAROUSEL_CARD_WIDTH,
+        flatListRef.current?.scrollToIndex({
+          index: nextIndex,
           animated: true,
         });
         return nextIndex;
@@ -147,24 +146,19 @@ export default function ProductDetailScreen() {
   }, [images?.length]);
 
   const scrollToImage = (index: number) => {
-    if (index === activeImageIndex) return;
+    if (index === activeImageIndex || index < 0 || index >= images.length) return;
     Haptics.selectionAsync();
     setActiveImageIndex(index);
-    isProgrammaticScroll.current = true;
     isInteractingWithCarousel.current = true;
 
-    carouselRef.current?.scrollTo({
-      x: index * CAROUSEL_CARD_WIDTH,
+    flatListRef.current?.scrollToIndex({
+      index,
       animated: true,
     });
 
-    if (scrollTimeout.current) {
-      clearTimeout(scrollTimeout.current);
-    }
-    scrollTimeout.current = setTimeout(() => {
-      isProgrammaticScroll.current = false;
+    setTimeout(() => {
       isInteractingWithCarousel.current = false;
-    }, 450);
+    }, 1200);
   };
 
   const nextSlide = () => {
@@ -177,14 +171,6 @@ export default function ProductDetailScreen() {
     if (!images || images.length <= 1) return;
     const prevIdx = (activeImageIndex - 1 + images.length) % images.length;
     scrollToImage(prevIdx);
-  };
-
-  const handleCarouselScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (isProgrammaticScroll.current) return;
-    const slide = Math.round(event.nativeEvent.contentOffset.x / CAROUSEL_CARD_WIDTH);
-    if (slide !== activeImageIndex && slide >= 0 && slide < images.length) {
-      setActiveImageIndex(slide);
-    }
   };
 
   // Interpolations for sticky app bar
@@ -365,35 +351,38 @@ export default function ProductDetailScreen() {
         {/* Hero Image Showcase Carousel Card */}
         <View style={styles.carouselOuterWrapper}>
           <View style={styles.carouselCard}>
-            <ScrollView
-              ref={carouselRef}
+            <FlatList
+              ref={flatListRef}
+              data={images}
+              keyExtractor={(item, index) => `${item}-${index}`}
               horizontal
-              pagingEnabled={false}
-              snapToInterval={CAROUSEL_CARD_WIDTH}
-              snapToAlignment="center"
-              decelerationRate="fast"
+              pagingEnabled
               showsHorizontalScrollIndicator={false}
-              onScroll={handleCarouselScroll}
-              scrollEventThrottle={16}
+              nestedScrollEnabled
+              style={{ width: CAROUSEL_CARD_WIDTH, height: CAROUSEL_CARD_HEIGHT }}
+              getItemLayout={(_, index) => ({
+                length: CAROUSEL_CARD_WIDTH,
+                offset: CAROUSEL_CARD_WIDTH * index,
+                index,
+              })}
+              onScrollToIndexFailed={(info) => {
+                flatListRef.current?.scrollToOffset({
+                  offset: info.index * CAROUSEL_CARD_WIDTH,
+                  animated: true,
+                });
+              }}
               onScrollBeginDrag={() => {
                 isInteractingWithCarousel.current = true;
               }}
-              onScrollEndDrag={() => {
-                setTimeout(() => {
-                  isInteractingWithCarousel.current = false;
-                }, 3000);
+              onMomentumScrollEnd={(event) => {
+                const slide = Math.round(event.nativeEvent.contentOffset.x / CAROUSEL_CARD_WIDTH);
+                if (slide >= 0 && slide < images.length && slide !== activeImageIndex) {
+                  setActiveImageIndex(slide);
+                }
+                isInteractingWithCarousel.current = false;
               }}
-              onTouchStart={() => {
-                isInteractingWithCarousel.current = true;
-              }}
-              onTouchEnd={() => {
-                setTimeout(() => {
-                  isInteractingWithCarousel.current = false;
-                }, 3000);
-              }}
-            >
-              {images.map((imgUri, index) => (
-                <View key={index} style={styles.carouselSlide}>
+              renderItem={({ item: imgUri }) => (
+                <View style={styles.carouselSlide}>
                   <Image
                     source={{ uri: imgUri }}
                     style={styles.carouselImage}
@@ -401,8 +390,8 @@ export default function ProductDetailScreen() {
                     cachePolicy="memory-disk"
                   />
                 </View>
-              ))}
-            </ScrollView>
+              )}
+            />
 
             {/* Availability Pill on image */}
             <View
