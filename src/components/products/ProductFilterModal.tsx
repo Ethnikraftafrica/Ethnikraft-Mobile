@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -95,6 +95,61 @@ export const ProductFilterModal: React.FC<ProductFilterModalProps> = ({
     setSelectedCurations([]);
   };
 
+  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [modalVisible, setModalVisible] = useState(visible);
+
+  useEffect(() => {
+    if (visible) {
+      setModalVisible(true);
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          tension: 65,
+          friction: 11,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else if (modalVisible) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: SCREEN_HEIGHT,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setModalVisible(false);
+      });
+    }
+  }, [visible]);
+
+  const handleDismiss = () => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: SCREEN_HEIGHT,
+        duration: 240,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onClose();
+    });
+  };
+
   const handleApply = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const preset = PRICE_PRESETS.find((p) => p.value === selectedPricePreset);
@@ -106,7 +161,7 @@ export const ProductFilterModal: React.FC<ProductFilterModalProps> = ({
       availability: selectedAvailability,
       curation: selectedCurations,
     });
-    onClose();
+    handleDismiss();
   };
 
   const activeFilterCount =
@@ -117,20 +172,27 @@ export const ProductFilterModal: React.FC<ProductFilterModalProps> = ({
 
   return (
     <Modal
-      visible={visible}
+      visible={modalVisible}
       transparent
-      animationType="fade"
-      onRequestClose={onClose}
+      animationType="none"
+      onRequestClose={handleDismiss}
       statusBarTranslucent
     >
       <View style={styles.modalOverlay}>
-        <TouchableOpacity
-          style={styles.backdrop}
-          activeOpacity={1}
-          onPress={onClose}
-        />
+        <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={handleDismiss}
+          />
+        </Animated.View>
 
-        <View style={styles.sheetContainer}>
+        <Animated.View
+          style={[
+            styles.sheetContainer,
+            { transform: [{ translateY: slideAnim }] },
+          ]}
+        >
           {/* Sheet Header */}
           <View style={styles.sheetHeader}>
             <View>
@@ -138,7 +200,7 @@ export const ProductFilterModal: React.FC<ProductFilterModalProps> = ({
               <Text style={styles.sheetSubtitle}>Refine luxury craft catalog</Text>
             </View>
             <TouchableOpacity
-              onPress={onClose}
+              onPress={handleDismiss}
               style={styles.closeButton}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
@@ -286,7 +348,7 @@ export const ProductFilterModal: React.FC<ProductFilterModalProps> = ({
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -295,11 +357,11 @@ export const ProductFilterModal: React.FC<ProductFilterModalProps> = ({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(20, 10, 3, 0.55)',
     justifyContent: 'flex-end',
   },
   backdrop: {
-    flex: 1,
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(20, 10, 3, 0.55)',
   },
   sheetContainer: {
     backgroundColor: '#FAF6F0',

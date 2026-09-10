@@ -1,14 +1,18 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   Modal,
   TouchableOpacity,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors, FontFamily, Radius, Shadows, Spacing } from '@/constants/theme';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export type SortOption =
   | 'relevance'
@@ -38,32 +42,96 @@ export const ProductSortModal: React.FC<ProductSortModalProps> = ({
   selectedSort,
   onSelectSort,
 }) => {
+  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [modalVisible, setModalVisible] = useState(visible);
+
+  useEffect(() => {
+    if (visible) {
+      setModalVisible(true);
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          tension: 65,
+          friction: 11,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else if (modalVisible) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: SCREEN_HEIGHT,
+          duration: 240,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setModalVisible(false);
+      });
+    }
+  }, [visible]);
+
+  const handleDismiss = (callback?: () => void) => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: SCREEN_HEIGHT,
+        duration: 240,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onClose();
+      if (callback) callback();
+    });
+  };
+
   const handleSelect = (option: SortOption) => {
     Haptics.selectionAsync();
-    onSelectSort(option);
-    onClose();
+    handleDismiss(() => {
+      onSelectSort(option);
+    });
   };
 
   return (
     <Modal
-      visible={visible}
+      visible={modalVisible}
       transparent
-      animationType="fade"
-      onRequestClose={onClose}
+      animationType="none"
+      onRequestClose={() => handleDismiss()}
       statusBarTranslucent
     >
       <View style={styles.modalOverlay}>
-        <TouchableOpacity
-          style={styles.backdrop}
-          activeOpacity={1}
-          onPress={onClose}
-        />
+        <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => handleDismiss()}
+          />
+        </Animated.View>
 
-        <View style={styles.sheetContainer}>
+        <Animated.View
+          style={[
+            styles.sheetContainer,
+            { transform: [{ translateY: slideAnim }] },
+          ]}
+        >
           <View style={styles.sheetHeader}>
             <Text style={styles.sheetTitle}>Sort Collection</Text>
             <TouchableOpacity
-              onPress={onClose}
+              onPress={() => handleDismiss()}
               style={styles.closeButton}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
@@ -102,7 +170,7 @@ export const ProductSortModal: React.FC<ProductSortModalProps> = ({
               );
             })}
           </View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -111,11 +179,11 @@ export const ProductSortModal: React.FC<ProductSortModalProps> = ({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(20, 10, 3, 0.55)',
     justifyContent: 'flex-end',
   },
   backdrop: {
-    flex: 1,
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(20, 10, 3, 0.55)',
   },
   sheetContainer: {
     backgroundColor: '#FAF6F0',

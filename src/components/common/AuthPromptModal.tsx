@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   Modal,
   StyleSheet,
@@ -6,11 +6,15 @@ import {
   View,
   TouchableOpacity,
   TouchableWithoutFeedback,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Colors, Radius, Shadows, Spacing, Typography } from '@/constants/theme';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface AuthPromptModalProps {
   visible: boolean;
@@ -26,38 +30,105 @@ export const AuthPromptModal: React.FC<AuthPromptModalProps> = ({
   message = 'You need an account to access this page. It only takes a minute to get started.',
 }) => {
   const router = useRouter();
+  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [modalVisible, setModalVisible] = useState(visible);
 
-  if (!visible) return null;
+  useEffect(() => {
+    if (visible) {
+      setModalVisible(true);
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          tension: 65,
+          friction: 11,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else if (modalVisible) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: SCREEN_HEIGHT,
+          duration: 240,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setModalVisible(false);
+      });
+    }
+  }, [visible]);
+
+  const handleDismiss = (callback?: () => void) => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: SCREEN_HEIGHT,
+        duration: 240,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onClose();
+      if (callback) callback();
+    });
+  };
 
   const handleSignIn = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onClose();
-    router.push('/(auth)/login');
+    handleDismiss(() => {
+      router.push('/(auth)/login');
+    });
   };
 
   const handleRegister = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onClose();
-    router.push('/(auth)/register');
+    handleDismiss(() => {
+      router.push('/(auth)/register');
+    });
   };
 
   return (
     <Modal
-      animationType="fade"
+      animationType="none"
       transparent
-      visible={visible}
-      onRequestClose={onClose}
+      visible={modalVisible}
+      onRequestClose={() => handleDismiss()}
       statusBarTranslucent
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.backdrop}>
-          <TouchableWithoutFeedback>
-            <View style={[styles.sheetContainer, Shadows.lg]}>
-              {/* Handle Bar */}
-              <View style={styles.handleBar} />
+      <View style={styles.modalOverlay}>
+        <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => handleDismiss()}
+          />
+        </Animated.View>
 
-              {/* Lock Icon Badge */}
-              <View style={styles.lockBadge}>
+        <Animated.View
+          style={[
+            styles.sheetContainer,
+            Shadows.lg,
+            { transform: [{ translateY: slideAnim }] },
+          ]}
+        >
+          {/* Handle Bar */}
+          <View style={styles.handleBar} />
+
+          {/* Lock Icon Badge */}
+          <View style={styles.lockBadge}>
                 <Ionicons name="lock-closed" size={26} color="#B45309" />
               </View>
 
@@ -86,24 +157,25 @@ export const AuthPromptModal: React.FC<AuthPromptModalProps> = ({
               {/* Dismiss Action */}
               <TouchableOpacity
                 style={styles.laterBtn}
-                onPress={onClose}
+                onPress={() => handleDismiss()}
                 activeOpacity={0.7}
               >
                 <Text style={styles.laterBtnText}>Maybe later</Text>
               </TouchableOpacity>
-            </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
+        </Animated.View>
+      </View>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  backdrop: {
+  modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'flex-end',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0,0,0,0.6)',
   },
   sheetContainer: {
     backgroundColor: '#FFFFFF',

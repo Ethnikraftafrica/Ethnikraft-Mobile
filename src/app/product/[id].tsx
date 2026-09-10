@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,6 +10,7 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -106,12 +107,64 @@ export default function ProductDetailScreen() {
   const maxQuantity = product.stockQuantity || 10;
   const isOutOfStock = !product.isRequestable && (product.stockQuantity === 0 || product.stockQuantity === undefined);
 
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+  const carouselRef = useRef<ScrollView>(null);
+  const isInteractingWithCarousel = useRef(false);
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  // Auto-slide carousel effect
+  useEffect(() => {
+    if (!images || images.length <= 1) return;
+
+    const interval = setInterval(() => {
+      if (isInteractingWithCarousel.current) return;
+      setActiveImageIndex((prevIndex) => {
+        const nextIndex = (prevIndex + 1) % images.length;
+        carouselRef.current?.scrollTo({
+          x: nextIndex * SCREEN_WIDTH,
+          animated: true,
+        });
+        return nextIndex;
+      });
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [images?.length]);
+
+  const scrollToImage = (index: number) => {
+    Haptics.selectionAsync();
+    setActiveImageIndex(index);
+    carouselRef.current?.scrollTo({
+      x: index * SCREEN_WIDTH,
+      animated: true,
+    });
+  };
+
+  const handleCarouselScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const slide = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-    if (slide !== activeImageIndex) {
+    if (slide !== activeImageIndex && slide >= 0 && slide < images.length) {
       setActiveImageIndex(slide);
     }
   };
+
+  // Interpolations for sticky app bar
+  const headerThreshold = HERO_IMAGE_HEIGHT - (insets.top + 70);
+  const headerBgOpacity = scrollY.interpolate({
+    inputRange: [Math.max(0, headerThreshold - 80), headerThreshold],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+  const headerTitleOpacity = scrollY.interpolate({
+    inputRange: [headerThreshold - 40, headerThreshold],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+  const categoryBadgeOpacity = scrollY.interpolate({
+    inputRange: [headerThreshold - 40, headerThreshold],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
 
   const handleShare = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -192,45 +245,108 @@ export default function ProductDetailScreen() {
 
   return (
     <View style={[styles.screenContainer, { paddingBottom: insets.bottom }]}>
-      {/* Top Floating Navigation Bar */}
-      <View style={[styles.topBar, { top: insets.top + 8 }]}>
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.back();
-          }}
-          style={styles.topBarPillBtn}
-        >
-          <Ionicons name="arrow-back" size={16} color="#1C0D05" />
-          <Text style={styles.topBarPillText}>Back</Text>
-        </TouchableOpacity>
+      {/* Sticky / Floating Navigation Header */}
+      <Animated.View
+        style={[
+          styles.headerWrapper,
+          {
+            paddingTop: insets.top + 6,
+            backgroundColor: headerBgOpacity.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['rgba(250, 246, 240, 0)', 'rgba(250, 246, 240, 0.98)'],
+            }),
+            borderBottomColor: headerBgOpacity.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['transparent', '#EADBCC'],
+            }),
+          },
+        ]}
+      >
+        <View style={styles.topBar}>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.back();
+            }}
+            style={styles.topBarPillBtn}
+          >
+            <Ionicons name="arrow-back" size={16} color="#1C0D05" />
+            <Text style={styles.topBarPillText}>Back</Text>
+          </TouchableOpacity>
 
-        <Text style={styles.categoryBadgeText}>
-          {product.productCategory || 'ARTISANAL'}
-        </Text>
+          {/* Center Info: shows category badge initially, then fades in product title when sticky */}
+          <View style={styles.headerCenterContent}>
+            <Animated.Text
+              style={[
+                styles.categoryBadgeText,
+                {
+                  opacity: categoryBadgeOpacity,
+                  position: 'absolute',
+                },
+              ]}
+              numberOfLines={1}
+            >
+              {product.productCategory || 'ARTISANAL'}
+            </Animated.Text>
+            <Animated.Text
+              style={[
+                styles.headerStickyTitle,
+                {
+                  opacity: headerTitleOpacity,
+                },
+              ]}
+              numberOfLines={1}
+            >
+              {product.name}
+            </Animated.Text>
+          </View>
 
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={handleShare}
-          style={styles.topBarCircleBtn}
-        >
-          <Ionicons name="share-social-outline" size={18} color="#1C0D05" />
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={handleShare}
+            style={styles.topBarCircleBtn}
+          >
+            <Ionicons name="share-social-outline" size={18} color="#1C0D05" />
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
 
-      <ScrollView
+      <Animated.ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
       >
         {/* Hero Image Showcase Carousel */}
         <View style={styles.carouselContainer}>
           <ScrollView
+            ref={carouselRef}
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
-            onScroll={handleScroll}
+            onScroll={handleCarouselScroll}
             scrollEventThrottle={16}
+            onScrollBeginDrag={() => {
+              isInteractingWithCarousel.current = true;
+            }}
+            onScrollEndDrag={() => {
+              // resume auto-slide shortly after user finishes gesture
+              setTimeout(() => {
+                isInteractingWithCarousel.current = false;
+              }, 2000);
+            }}
+            onTouchStart={() => {
+              isInteractingWithCarousel.current = true;
+            }}
+            onTouchEnd={() => {
+              setTimeout(() => {
+                isInteractingWithCarousel.current = false;
+              }, 2000);
+            }}
           >
             {images.map((imgUri, index) => (
               <View key={index} style={styles.carouselSlide}>
@@ -297,12 +413,15 @@ export default function ProductDetailScreen() {
             />
           </TouchableOpacity>
 
-          {/* Carousel Pagination Dots */}
+          {/* Carousel Pagination Dots (tap-to-scroll enabled) */}
           {images.length > 1 && (
             <View style={styles.dotsRow}>
               {images.map((_, i) => (
-                <View
+                <TouchableOpacity
                   key={i}
+                  activeOpacity={0.8}
+                  onPress={() => scrollToImage(i)}
+                  hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
                   style={[
                     styles.dot,
                     activeImageIndex === i && styles.dotActive,
@@ -544,7 +663,7 @@ export default function ProductDetailScreen() {
           currentProductId={product.id}
           category={product.productCategory}
         />
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Sticky Bottom Action Dock */}
       <View style={[styles.bottomDock, Shadows.lg, { paddingBottom: Math.max(insets.bottom, 12) }]}>
@@ -666,20 +785,39 @@ const styles = StyleSheet.create({
     color: '#8C532B',
     marginTop: 12,
   },
-  topBar: {
+  headerWrapper: {
     position: 'absolute',
-    left: 16,
-    right: 16,
-    zIndex: 50,
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    paddingBottom: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  topBar: {
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  headerCenterContent: {
+    flex: 1,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  headerStickyTitle: {
+    fontSize: 14,
+    fontFamily: FontFamily.displayBold,
+    color: '#1C0D05',
+    textAlign: 'center',
   },
   topBarPillBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 20,
@@ -703,7 +841,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderWidth: 1,
     borderColor: '#EADBCC',
     alignItems: 'center',
