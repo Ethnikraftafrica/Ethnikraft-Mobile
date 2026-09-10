@@ -21,6 +21,7 @@ import { BrandStoryModal } from '@/components/common/BrandStoryModal';
 import { AuthPromptModal } from '@/components/common/AuthPromptModal';
 import { CartFloatingButton, CartFloatingButtonRef } from '@/components/common/CartFloatingButton';
 import { RoleSwitchBanner } from '@/components/common/RoleSwitchBanner';
+import { ProductRailSkeleton, CategoryRailSkeleton } from '@/components/common/Skeletons';
 import { Colors, FontFamily, Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useAppSelector } from '@/store';
 import { formatPrice } from '@/utils/price';
@@ -490,9 +491,7 @@ export default function UserHomeScreen() {
         </View>
 
         {isLoading && items.length === 0 ? (
-          <View style={styles.sectionLoader}>
-            <ActivityIndicator size="small" color="#C46C27" />
-          </View>
+          <ProductRailSkeleton count={4} />
         ) : (
           <ScrollView
             horizontal
@@ -591,10 +590,11 @@ export default function UserHomeScreen() {
     title: string,
     subtitle: string,
     categoryGroup: any,
-    viewAllParam?: string
+    viewAllParam?: string,
+    isLoading?: boolean
   ) => {
     const filters = categoryGroup?.filters;
-    if (!filters || filters.length === 0) return null;
+    if (!isLoading && (!filters || filters.length === 0)) return null;
 
     return (
       <View style={styles.sectionBlock}>
@@ -625,13 +625,16 @@ export default function UserHomeScreen() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoryCardsScroll}
-        >
-          {filters.map((f: any) => {
-            const culturalTitle = getHeritageName(f.name);
+        {isLoading && (!filters || filters.length === 0) ? (
+          <CategoryRailSkeleton count={4} />
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryCardsScroll}
+          >
+            {filters?.map((f: any) => {
+              const culturalTitle = getHeritageName(f.name);
             return (
               <TouchableOpacity
                 key={f.id}
@@ -665,6 +668,7 @@ export default function UserHomeScreen() {
             );
           })}
         </ScrollView>
+        )}
       </View>
     );
   };
@@ -889,7 +893,8 @@ export default function UserHomeScreen() {
           'Discover by Occasion',
           'Find curated pieces perfect for celebrations, travel, and lifestyle',
           discoverByOccasion,
-          'discover-by-occasion'
+          'discover-by-occasion',
+          isMetadataLoading
         )}
 
         {/* ============================================================ */}
@@ -899,7 +904,8 @@ export default function UserHomeScreen() {
           'Artisan Spotlight',
           'Meet master weavers, sculptors, and certified heritage creators',
           artisanSpotlight,
-          'artisan-spotlight'
+          'artisan-spotlight',
+          isMetadataLoading
         )}
 
         {/* ============================================================ */}
@@ -909,7 +915,8 @@ export default function UserHomeScreen() {
           'Kitchen & Dining',
           'Artisanal tableware, carved pottery, and indigenous storage',
           kitchenDining,
-          'kitchen-dining'
+          'kitchen-dining',
+          isMetadataLoading
         )}
 
         {/* ============================================================ */}
@@ -938,7 +945,8 @@ export default function UserHomeScreen() {
           'Popular Picks',
           'Ceremonial royal beads, lighting, and statement crafts',
           explorePopular,
-          'popular-picks'
+          'popular-picks',
+          isMetadataLoading
         )}
 
         {/* ============================================================ */}
@@ -948,7 +956,8 @@ export default function UserHomeScreen() {
           'Shop Deals in Fashion',
           'Curated clearance, couple outfits, and ready-to-wear pieces',
           shopDealsFashion,
-          'deals'
+          'deals',
+          isMetadataLoading
         )}
 
         {/* ============================================================ */}
@@ -988,7 +997,8 @@ export default function UserHomeScreen() {
           "What's Trending",
           'Limited editions, weekend styles, and gifted artisan heirlooms',
           trendingPopular,
-          'trending'
+          'trending',
+          isMetadataLoading
         )}
 
         {/* ============================================================ */}
@@ -1016,7 +1026,8 @@ export default function UserHomeScreen() {
           'Casual Looks',
           'Relaxed unisex comfort, lightweight boho, and denim-inspired apparel',
           casualLooks,
-          'casual-looks'
+          'casual-looks',
+          isMetadataLoading
         )}
 
         {/* ============================================================ */}
@@ -1026,7 +1037,8 @@ export default function UserHomeScreen() {
           'Discover by Style',
           'Youthful streetwear, sleek elegance, and minimalist heritage aesthetics',
           discoverByStyle,
-          'style'
+          'style',
+          isMetadataLoading
         )}
 
         {/* ============================================================ */}
@@ -1036,7 +1048,8 @@ export default function UserHomeScreen() {
           'For Weddings & Ceremonies',
           "Aso-Ebi luxury textiles, bridal coral, and groom's majesty",
           forWeddings,
-          'weddings'
+          'weddings',
+          isMetadataLoading
         )}
 
         {/* ============================================================ */}
@@ -1046,7 +1059,8 @@ export default function UserHomeScreen() {
           "Collector's Picks",
           'High-end couture, museum-grade vintage jewelry, and timeless relics',
           collectorsPicks,
-          'collectors'
+          'collectors',
+          isMetadataLoading
         )}
 
         {/* ============================================================ */}
@@ -1056,7 +1070,8 @@ export default function UserHomeScreen() {
           'Home Beautification',
           'Handmade woven furniture, ornamental pottery, and sculpted wall art',
           homeBeautification,
-          'home-beautification'
+          'home-beautification',
+          isMetadataLoading
         )}
 
         {/* ============================================================ */}
@@ -1066,7 +1081,8 @@ export default function UserHomeScreen() {
           'One-of-a-Kind Finds',
           'Rare vintage bronzes, bespoke stone carvings, and heirloom masks',
           oneOfAKind,
-          'one-of-a-kind'
+          'one-of-a-kind',
+          isMetadataLoading
         )}
 
         {/* ============================================================ */}
@@ -1076,7 +1092,8 @@ export default function UserHomeScreen() {
           'New Arrivals',
           'Fresh off the artisan loom, vibrant leather footwear, and crafts',
           newArrivalsCurated,
-          'new-arrivals'
+          'new-arrivals',
+          isMetadataLoading
         )}
 
         {/* ============================================================ */}

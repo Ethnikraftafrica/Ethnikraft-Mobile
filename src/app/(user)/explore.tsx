@@ -25,6 +25,7 @@ import {
 } from '@/store/api/productApi';
 import { MOCK_PRODUCTS } from '@/constants/mockProducts';
 import { ProductCard, PRODUCT_CARD_WIDTH } from '@/components/products/ProductCard';
+import { ProductGridSkeleton } from '@/components/common/Skeletons';
 import { ProductFilterModal, FilterState } from '@/components/products/ProductFilterModal';
 import { ProductSortModal, SortOption } from '@/components/products/ProductSortModal';
 import { AuthPromptModal } from '@/components/common/AuthPromptModal';
@@ -630,10 +631,7 @@ export default function ExploreScreen() {
         )}
         ListEmptyComponent={
           isLoading ? (
-            <View style={styles.emptyContainer}>
-              <ActivityIndicator size="large" color="#C46C27" />
-              <Text style={styles.emptyTitle}>Curating authentic pieces...</Text>
-            </View>
+            <ProductGridSkeleton count={6} />
           ) : (
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIconCircle}>

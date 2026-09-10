@@ -15,6 +15,7 @@ import { useAppSelector } from '@/store';
 import { formatPrice } from '@/utils/price';
 import { Product } from '@/store/api/productApi';
 import { Colors, FontFamily, Radius, Shadows, Spacing } from '@/constants/theme';
+import { Shimmer } from '@/components/common/Shimmer';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 export const PRODUCT_CARD_WIDTH = (SCREEN_WIDTH - Spacing.md * 2 - Spacing.sm) / 2;
@@ -138,6 +139,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       >
         {/* Product Image Container */}
         <View style={styles.imageContainer}>
+          <Shimmer style={StyleSheet.absoluteFill} borderRadius={0} />
           <Image
             source={{ uri: product.mainImage }}
             style={styles.productImage}

@@ -22,6 +22,7 @@ import { useGetProductByIdQuery, Product } from '@/store/api/productApi';
 import { MOCK_PRODUCTS } from '@/constants/mockProducts';
 import { Colors, FontFamily, Radius, Shadows } from '@/constants/theme';
 import { AuthPromptModal } from '@/components/common/AuthPromptModal';
+import { ProductDetailSkeleton } from '@/components/common/Skeletons';
 import { useAppSelector } from '@/store';
 import { formatPrice } from '@/utils/price';
 import { ProductSizeChart, detectCategory } from '@/components/products/ProductSizeChart';
@@ -265,11 +266,22 @@ export default function ProductDetailScreen() {
     setIsNotified(true);
   };
 
-  if (isLoading && !product) {
+  if (isLoading && !resolvedProduct) {
     return (
-      <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color="#C46C27" />
-        <Text style={styles.loadingText}>Unveiling master artisan piece...</Text>
+      <View style={[styles.screenContainer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+        <View style={styles.topBar}>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => router.back()}
+            style={styles.topBarPillBtn}
+          >
+            <Ionicons name="arrow-back" size={16} color="#1C0D05" />
+            <Text style={styles.topBarPillText}>Back</Text>
+          </TouchableOpacity>
+        </View>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <ProductDetailSkeleton />
+        </ScrollView>
       </View>
     );
   }
