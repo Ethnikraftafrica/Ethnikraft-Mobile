@@ -21,15 +21,14 @@ import { BrandStoryModal } from '@/components/common/BrandStoryModal';
 import { AuthPromptModal } from '@/components/common/AuthPromptModal';
 import { CartFloatingButton, CartFloatingButtonRef } from '@/components/common/CartFloatingButton';
 import { RoleSwitchBanner } from '@/components/common/RoleSwitchBanner';
-import { ProductCard } from '@/components/products/ProductCard';
 import { Colors, FontFamily, Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useAppSelector } from '@/store';
 import {
+  useGetProductsQuery,
   useGetTopPicksWeekQuery,
   useGetAfricanPaintingsQuery,
   useGetBestsellersDecorationsQuery,
   useGetInspiredByCultureQuery,
-  useGetArtisanSpotlightQuery,
   useGetHomeFilterMetadataQuery,
   Product,
 } from '@/store/api/productApi';
@@ -40,12 +39,8 @@ const HERITAGE_CARD_WIDTH = 175;
 const HERITAGE_GAP = 12;
 const HERITAGE_SNAP_INTERVAL = HERITAGE_CARD_WIDTH + HERITAGE_GAP;
 
-const CULTURE_CARD_WIDTH = 210;
-const CULTURE_GAP = 12;
-const CULTURE_SNAP_INTERVAL = CULTURE_CARD_WIDTH + CULTURE_GAP;
-
-const ART_CARD_WIDTH = 220;
-const ART_GAP = 14;
+const CATEGORY_CARD_WIDTH = 165;
+const PRODUCT_RAIL_CARD_WIDTH = 168;
 
 interface HeritageCardItem {
   id: string;
@@ -107,6 +102,7 @@ const HERITAGE_CARDS: HeritageCardItem[] = [
   },
 ];
 
+// Fallback Top Picks for offline resilience
 const FALLBACK_TOP_PICKS: Product[] = [
   {
     id: 'top-1',
@@ -117,7 +113,7 @@ const FALLBACK_TOP_PICKS: Product[] = [
     condition: 'new',
     productCategory: 'WEARS',
     mainImage: 'https://res.cloudinary.com/dpr3pf3kw/image/upload/v1781276755/ethnikraft/products/dmfjyrvvk6iaiydrtmsx.jpg',
-    imageList: ['https://res.cloudinary.com/dpr3pf3kw/image/upload/v1781278649/ethnikraft/products/toqsouycscgnkjl0sbsc.jpg'],
+    imageList: [],
     isCustomizable: true,
     isRequestable: true,
     isTrending: true,
@@ -168,59 +164,107 @@ const FALLBACK_TOP_PICKS: Product[] = [
   },
 ];
 
-const CURATED_CULTURE_CARDS = [
-  {
-    id: 'c-1',
-    title: 'Symbolic Motifs (Nsibidi)',
-    subtitle: 'Sacred indigenous typography',
-    image: require('../../../assets/revamp/symbolic-motiffs-card.webp'),
-  },
-  {
-    id: 'c-2',
-    title: 'Beaded Apparel (Ìlẹ̀kẹ̀)',
-    subtitle: 'Royal ceremonial beadwork',
-    image: require('../../../assets/revamp/beaded-apparel-card.webp'),
-  },
-  {
-    id: 'c-3',
-    title: 'Art Inspired (Ọnà)',
-    subtitle: 'Contemporary African canvases',
-    image: require('../../../assets/revamp/art-inspired-card.webp'),
-  },
-  {
-    id: 'c-4',
-    title: 'Rare Antiques (Àtijọ́)',
-    subtitle: 'Centuries of preserved artifacts',
-    image: require('../../../assets/revamp/rare-antiques-card.webp'),
-  },
-];
+const getHeritageName = (name: string): string => {
+  const clean = (name || '').trim();
+  const lower = clean.toLowerCase();
 
-const OCCASION_FALLBACK = [
-  {
-    id: '2-1',
-    name: 'Holidays & Travel (Ije)',
-    image: 'https://res.cloudinary.com/deda2pipj/image/upload/v1766493582/Hotel_and_Travel_mn6szz.png',
-    slug: 'holidays-travel',
-  },
-  {
-    id: '2-2',
-    name: 'Summer Vibes (Ìgbà Ẹ̀rùn)',
-    image: 'https://res.cloudinary.com/deda2pipj/image/upload/v1766493775/Summer_vibes_e4mypj.png',
-    slug: 'summer-vibes',
-  },
-  {
-    id: '2-3',
-    name: 'Harmattan (Hunturu)',
-    image: 'https://res.cloudinary.com/deda2pipj/image/upload/v1766493579/Harmattan_essentials_onkfiy.png',
-    slug: 'harmattan-essentials',
-  },
-  {
-    id: '2-4',
-    name: 'Weddings (Igba Nkwu)',
-    image: 'https://res.cloudinary.com/deda2pipj/image/upload/v1766493789/Weddings_ihyegg.png',
-    slug: 'weddings',
-  },
-];
+  // Occasion
+  if (lower.includes('holiday') || lower.includes('travel')) return 'Holidays & Travel (Ije)';
+  if (lower.includes('summer')) return 'Summer Vibes (Ìgbà Ẹ̀rùn)';
+  if (lower.includes('harmattan')) return 'Harmattan (Hunturu)';
+  if (lower.includes('wedding')) return 'Weddings (Igba Nkwu)';
+
+  // Art You Can Wear / Style
+  if (lower.includes('art-inspired') || lower.includes('art inspired')) return 'Art Inspired (Ọnà)';
+  if (lower.includes('symbolic motif')) return 'Symbolic Motifs (Nsibidi)';
+  if (lower.includes('beaded')) return 'Beaded Apparel (Ìlẹ̀kẹ̀)';
+  if (lower.includes('paint-splatter') || lower.includes('paint splatter') || lower.includes('street')) return 'Streets (Hanya)';
+
+  // Artisan Spotlight
+  if (lower.includes('heritage master')) return 'Heritage Masters (Gwani)';
+  if (lower.includes('women in craft')) return 'Women in Craft (Mata)';
+  if (lower.includes('mixed media')) return 'Mixed Media (Nka)';
+  if (lower.includes('featured creator')) return 'Featured Creators (Gbajúmọ̀)';
+
+  // Kitchen & Dining
+  if (lower.includes('storage')) return 'Storage (Àpò)';
+  if (lower.includes('kitchen decor') || lower.includes('kitchen décor')) return 'Kitchen Décor (Gida)';
+  if (lower.includes('cookware')) return 'Cookware (Kasko)';
+  if (lower.includes('tableware') || lower.includes('table wear')) return 'Tableware (Farantai)';
+
+  // Explore Popular
+  if (lower.includes('royalty') || lower.includes('royal')) return 'Royalty (Ade)';
+  if (lower.includes('business') || lower.includes('professional')) return 'Professional (Aiki)';
+  if (lower.includes('party') || lower.includes('celebration')) return 'Party & Celebration (Arise)';
+  if (lower.includes('lighting')) return 'Lighting (Fitila)';
+  if (lower.includes('body jewelry')) return 'Body Jewelry (Afa)';
+
+  // Shop deals in Fashion
+  if (lower.includes('clearance')) return 'Clearance Sales (Arha)';
+  if (lower.includes('couple')) return 'Couple Outfits (Ibaji)';
+  if (lower.includes('new arrivals on sale') || lower.includes('new on sale')) return 'New on Sale (Àṣàyàn)';
+  if (lower.includes('ready-to-wear') || lower.includes('ready to wear')) return 'Ready to Wear (Aṣọ)';
+
+  // Casual Looks
+  if (lower.includes('unisex')) return 'Unisex Comfort (Sajen)';
+  if (lower.includes('boho') || lower.includes('easygoing')) return 'Easygoing (Raha)';
+  if (lower.includes('denim')) return 'Denim Inspired (Akwara)';
+  if (lower.includes('weekend vibe')) return 'Weekend Vibes (Futuha)';
+
+  // Discover by Style
+  if (lower.includes('playful') || lower.includes('youthful')) return 'Playful & Youthful (Saurayi)';
+  if (lower.includes('chic') || lower.includes('sleek')) return 'Chic & Sleek (Kwalisa)';
+  if (lower.includes('classic elegance')) return 'Classic Elegance (Ere)';
+  if (lower.includes('minimalist')) return 'Minimalist Heritage (Kolo)';
+
+  // For Weddings
+  if (lower.includes('bridal')) return 'Bridal Accessories (Ọ̀ṣọ́)';
+  if (lower.includes('aso-ebi') || lower.includes('aso ebi')) return 'Aso-Ebi Styles (Aṣọ Ẹbí)';
+  if (lower.includes('groom')) return "Groom's Attire (Maji)";
+  if (lower.includes("bride's trad") || lower.includes('bride trad') || lower.includes("bride's wear") || lower.includes('bride wear')) return "Bride's Wear (Amarya)";
+
+  // What's Trending
+  if (lower.includes('bestselling wear') || lower.includes('bestselling clothing')) return 'Bestselling Wears (Aṣọ)';
+  if (lower.includes('weekend style') || lower.includes('weekend staple')) return 'Weekend Style (Hanya)';
+  if (lower.includes('limited edition')) return 'Limited Edition (Kayataccen)';
+  if (lower.includes('gift')) return 'Gifts (Tsaraba)';
+
+  // Collector's Picks
+  if (lower.includes('vintage accessory') || lower.includes('vintage accessories')) return 'Vintage Accessories (Àtijọ́)';
+  if (lower.includes('high-end')) return 'High-End Fashion (Alahu)';
+  if (lower.includes('antique') && lower.includes('timeless')) return 'Timeless Antiques (Àtijọ́)';
+  if (lower.includes('exclusive artifact')) return 'Artifacts (Gado)';
+
+  // Home Beautification
+  if (lower.includes('wall art') || lower.includes('print')) return 'Wall Art (Ọnà)';
+  if (lower.includes('furniture')) return 'Artisan Furniture (Shimfida)';
+  if (lower.includes('vintage decorative')) return 'Vintage Decorative (Àtijọ́)';
+  if (lower.includes('vase')) return 'Ornamental Vases (Tukunyar)';
+
+  // One of a Kind
+  if (lower.includes('rare vintage') || lower.includes('rare antique')) return 'Rare Antiques (Àtijọ́)';
+  if (lower.includes('showpiece')) return 'Showpieces (Abun Kallo)';
+  if (lower.includes('sculpture')) return 'Unique Sculptures (Nka)';
+  if (lower.includes('artifact') || (lower.includes('local') && lower.includes('artifact'))) return 'Local Artifacts (Gado)';
+
+  // New Arrivals
+  if (lower.includes('slippers') || lower.includes("men's shoes")) return "Men's Shoes (Bàtà)";
+  if (lower.includes('peaceful') || lower.includes('rooted')) return 'Peaceful & Rooted (Lafiya)';
+  if (lower.includes('bold') && lower.includes('colorful')) return 'Bold & Colorful (Rini)';
+  if (lower.includes('culture curator')) return 'Culture Curator (Gado)';
+  if (lower.includes('loom')) return 'Hot off the Loom (Saka)';
+  if (lower.includes('decoration')) return 'Decorations (Ọ̀ṣọ́)';
+
+  return clean;
+};
+
+const formatPrice = (price: string | number | undefined): string => {
+  if (price === undefined || price === null) return 'NGN 0.00';
+  const num = typeof price === 'string' ? parseFloat(price) : price;
+  return isNaN(num)
+    ? 'NGN 0.00'
+    : `NGN ${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
 
 export default function UserHomeScreen() {
   const router = useRouter();
@@ -230,15 +274,21 @@ export default function UserHomeScreen() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [isCartExpanded, setIsCartExpanded] = useState(false);
-  const [artFavorites, setArtFavorites] = useState<Record<string, boolean>>({});
+  const [favorites, setFavorites] = useState<Record<string, boolean>>({});
   const cartFabRef = useRef<CartFloatingButtonRef>(null);
 
   // ─── LIVE RTK QUERY HOOKS ──────────────────────────────────
   const {
+    data: metadataData,
+    isLoading: isMetadataLoading,
+    refetch: refetchMetadata,
+  } = useGetHomeFilterMetadataQuery();
+
+  const {
     data: topPicksData,
     isLoading: isTopPicksLoading,
     refetch: refetchTopPicks,
-  } = useGetTopPicksWeekQuery({ limit: 6 });
+  } = useGetTopPicksWeekQuery({ limit: 8 });
 
   const {
     data: paintingsData,
@@ -247,26 +297,28 @@ export default function UserHomeScreen() {
   } = useGetAfricanPaintingsQuery({ limit: 8 });
 
   const {
+    data: menswearData,
+    isLoading: isMenswearLoading,
+    refetch: refetchMenswear,
+  } = useGetProductsQuery({ productCategory: 'WEARS', take: 8 });
+
+  const {
+    data: accessoriesData,
+    isLoading: isAccessoriesLoading,
+    refetch: refetchAccessories,
+  } = useGetProductsQuery({ productCategory: 'ACCESSORIES', take: 8 });
+
+  const {
     data: decorationsData,
     isLoading: isDecorationsLoading,
     refetch: refetchDecorations,
-  } = useGetBestsellersDecorationsQuery({ limit: 6 });
+  } = useGetBestsellersDecorationsQuery({ limit: 8 });
 
   const {
     data: cultureProductsData,
     isLoading: isCultureProductsLoading,
     refetch: refetchCulture,
   } = useGetInspiredByCultureQuery({ limit: 8 });
-
-  const {
-    data: metadataData,
-    refetch: refetchMetadata,
-  } = useGetHomeFilterMetadataQuery();
-
-  const {
-    data: spotlightData,
-    refetch: refetchSpotlight,
-  } = useGetArtisanSpotlightQuery('heritageMasters');
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -275,31 +327,46 @@ export default function UserHomeScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
       await Promise.all([
+        refetchMetadata(),
         refetchTopPicks(),
         refetchPaintings(),
+        refetchMenswear(),
+        refetchAccessories(),
         refetchDecorations(),
         refetchCulture(),
-        refetchMetadata(),
-        refetchSpotlight(),
       ]);
     } catch {
-      // Ignore network refresh errors
+      // Ignore network errors on pull-to-refresh
     } finally {
       setIsRefreshing(false);
     }
-  }, [refetchTopPicks, refetchPaintings, refetchDecorations, refetchCulture, refetchMetadata, refetchSpotlight]);
+  }, [
+    refetchMetadata,
+    refetchTopPicks,
+    refetchPaintings,
+    refetchMenswear,
+    refetchAccessories,
+    refetchDecorations,
+    refetchCulture,
+  ]);
 
-  // Derived Products with graceful fallback
-  const topPicksProducts = useMemo(() => {
-    if (topPicksData && topPicksData.length > 0) {
-      return topPicksData.slice(0, 6);
-    }
+  // Derived Products with fallbacks
+  const topPicks = useMemo(() => {
+    if (topPicksData && topPicksData.length > 0) return topPicksData;
     return FALLBACK_TOP_PICKS;
   }, [topPicksData]);
 
   const africanPaintings = useMemo(() => {
     return paintingsData || [];
   }, [paintingsData]);
+
+  const menswearProducts = useMemo(() => {
+    return menswearData?.data?.products || [];
+  }, [menswearData]);
+
+  const accessoriesProducts = useMemo(() => {
+    return accessoriesData?.data?.products || [];
+  }, [accessoriesData]);
 
   const decorationsProducts = useMemo(() => {
     return decorationsData || [];
@@ -309,48 +376,29 @@ export default function UserHomeScreen() {
     return cultureProductsData || [];
   }, [cultureProductsData]);
 
-  // Dynamic occasion categories from metadata
-  const occasionItems = useMemo(() => {
-    const cat = metadataData?.categories?.find(
-      (c) => c.slug === 'discover-by-occasion' || c.id === '2'
-    );
-    if (cat?.filters?.length) {
-      return cat.filters.map((f) => {
-        let culturalName = f.name;
-        const lower = f.name.toLowerCase();
-        if (lower.includes('holiday') || lower.includes('travel')) culturalName = 'Holidays & Travel (Ije)';
-        else if (lower.includes('summer')) culturalName = 'Summer Vibes (Ìgbà Ẹ̀rùn)';
-        else if (lower.includes('harmattan')) culturalName = 'Harmattan (Hunturu)';
-        else if (lower.includes('wedding')) culturalName = 'Weddings (Igba Nkwu)';
-        return {
-          id: f.id,
-          name: culturalName,
-          image: f.image,
-          slug: f.slug,
-        };
-      });
-    }
-    return OCCASION_FALLBACK;
+  // Derived category groupings by ID matching web Home.tsx
+  const categoriesList = useMemo(() => {
+    return metadataData?.categories || [];
   }, [metadataData]);
 
-  // Featured artisan spotlight info
-  const featuredArtisan = useMemo(() => {
-    if (spotlightData && spotlightData.length > 0) {
-      const p = spotlightData[0];
-      return {
-        name: p.vendor?.businessName || p.createdBy || 'Master Ejiro & The Abeokuta Weavers',
-        tagline: 'Certified Provenance',
-        bio: p.description
-          ? p.description.replace(/<[^>]*>?/gm, '').slice(0, 140) + '...'
-          : 'Carrying forward three generations of indigenous craftsmanship and traditional weaving techniques.',
-      };
-    }
-    return {
-      name: 'Master Ejiro & The Abeokuta Weavers',
-      tagline: 'Certified Provenance',
-      bio: 'Carrying forward three generations of indigo vat dyeing and handloom weaving. Each garment takes over 40 hours of focused craftsmanship.',
-    };
-  }, [spotlightData]);
+  const getCategoryById = useCallback(
+    (id: string) => categoriesList.find((c) => c.id === id),
+    [categoriesList]
+  );
+
+  const discoverByOccasion = useMemo(() => getCategoryById('2'), [getCategoryById]);
+  const artisanSpotlight = useMemo(() => getCategoryById('3'), [getCategoryById]);
+  const kitchenDining = useMemo(() => getCategoryById('5'), [getCategoryById]);
+  const explorePopular = useMemo(() => getCategoryById('7'), [getCategoryById]);
+  const shopDealsFashion = useMemo(() => getCategoryById('8'), [getCategoryById]);
+  const casualLooks = useMemo(() => getCategoryById('9'), [getCategoryById]);
+  const discoverByStyle = useMemo(() => getCategoryById('10'), [getCategoryById]);
+  const forWeddings = useMemo(() => getCategoryById('11'), [getCategoryById]);
+  const trendingPopular = useMemo(() => getCategoryById('14'), [getCategoryById]);
+  const collectorsPicks = useMemo(() => getCategoryById('15'), [getCategoryById]);
+  const homeBeautification = useMemo(() => getCategoryById('16'), [getCategoryById]);
+  const oneOfAKind = useMemo(() => getCategoryById('17'), [getCategoryById]);
+  const newArrivalsCurated = useMemo(() => getCategoryById('18'), [getCategoryById]);
 
   // ─── SLIDE ANIMATION REFS ──────────────────────────────────
   const heritageScrollRef = useRef<ScrollView>(null);
@@ -359,13 +407,7 @@ export default function UserHomeScreen() {
   const heritageResumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isHeritageUserDragging = useRef(false);
 
-  const cultureScrollRef = useRef<ScrollView>(null);
-  const cultureIndexRef = useRef(0);
-  const cultureTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const cultureResumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isCultureUserDragging = useRef(false);
-
-  // ─── 1. HERITAGE CAROUSEL SLIDE ANIMATION ──────────────────
+  // Auto-slide for Hero Heritage Cards
   const startHeritageAutoSlide = useCallback(() => {
     if (heritageTimerRef.current) clearInterval(heritageTimerRef.current);
     heritageTimerRef.current = setInterval(() => {
@@ -406,48 +448,6 @@ export default function UserHomeScreen() {
     };
   }, [startHeritageAutoSlide]);
 
-  // ─── 2. ONE-OF-A-KIND FINDS SLIDE ANIMATION ────────────────
-  const startCultureAutoSlide = useCallback(() => {
-    if (cultureTimerRef.current) clearInterval(cultureTimerRef.current);
-    cultureTimerRef.current = setInterval(() => {
-      if (isCultureUserDragging.current || !cultureScrollRef.current) return;
-      const nextIndex = (cultureIndexRef.current + 1) % CURATED_CULTURE_CARDS.length;
-      cultureIndexRef.current = nextIndex;
-      cultureScrollRef.current.scrollTo({
-        x: nextIndex * CULTURE_SNAP_INTERVAL,
-        animated: true,
-      });
-    }, 4200);
-  }, []);
-
-  const pauseCultureAutoSlide = useCallback(() => {
-    if (cultureTimerRef.current) {
-      clearInterval(cultureTimerRef.current);
-      cultureTimerRef.current = null;
-    }
-    if (cultureResumeTimerRef.current) {
-      clearTimeout(cultureResumeTimerRef.current);
-      cultureResumeTimerRef.current = null;
-    }
-  }, []);
-
-  const resumeCultureAutoSlideAfterDelay = useCallback(() => {
-    pauseCultureAutoSlide();
-    cultureResumeTimerRef.current = setTimeout(() => {
-      isCultureUserDragging.current = false;
-      startCultureAutoSlide();
-    }, 4500);
-  }, [pauseCultureAutoSlide, startCultureAutoSlide]);
-
-  useEffect(() => {
-    startCultureAutoSlide();
-    return () => {
-      if (cultureTimerRef.current) clearInterval(cultureTimerRef.current);
-      if (cultureResumeTimerRef.current) clearTimeout(cultureResumeTimerRef.current);
-    };
-  }, [startCultureAutoSlide]);
-
-  // ─── SCROLL HANDLERS ───────────────────────────────────────
   const handleHeritageScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent;
@@ -460,25 +460,214 @@ export default function UserHomeScreen() {
     []
   );
 
-  const handleCultureScroll = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const { contentOffset } = e.nativeEvent;
-      cultureIndexRef.current = Math.round(contentOffset.x / CULTURE_SNAP_INTERVAL);
-    },
-    []
-  );
-
-  const toggleArtFavorite = (id: string) => {
+  const toggleFavorite = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setArtFavorites((prev) => ({ ...prev, [id]: !prev[id] }));
+    setFavorites((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const formatPrice = (price: string | number | undefined): string => {
-    if (price === undefined || price === null) return 'NGN 0.00';
-    const num = typeof price === 'string' ? parseFloat(price) : price;
-    return isNaN(num)
-      ? 'NGN 0.00'
-      : `NGN ${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  // ─── REUSABLE SECTION SUBCOMPONENTS ─────────────────────────
+
+  /**
+   * Horizontal Product Rail with live pricing, vendor name, ratings, and click navigation
+   */
+  const renderProductRail = (
+    title: string,
+    subtitle: string,
+    items: Product[],
+    viewAllAction?: () => void,
+    isLoading?: boolean
+  ) => {
+    if (!isLoading && items.length === 0) return null;
+
+    return (
+      <View style={styles.sectionBlock}>
+        <View style={styles.sectionHeaderRow}>
+          <View style={{ flex: 1, paddingRight: Spacing.sm }}>
+            <Text style={styles.sectionEditorialTitle}>{title}</Text>
+            <Text style={styles.sectionEditorialSubtitle} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          </View>
+          {viewAllAction && (
+            <TouchableOpacity onPress={viewAllAction} style={styles.curatedViewAll}>
+              <Text style={styles.viewAllOrange}>See More</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {isLoading && items.length === 0 ? (
+          <View style={styles.sectionLoader}>
+            <ActivityIndicator size="small" color="#C46C27" />
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.railCardsScroll}
+          >
+            {items.map((prod) => {
+              const isFav = !!favorites[prod.id];
+              const brandName = prod.vendor?.businessName || prod.createdBy || 'Ethnikraft';
+              const ratingScore = prod.rating || 4.8;
+              const reviewsCount = prod.reviewCount || 12;
+
+              return (
+                <TouchableOpacity
+                  key={prod.id}
+                  style={[styles.railCard, Shadows.sm]}
+                  activeOpacity={0.92}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    router.push({
+                      pathname: '/product/[id]',
+                      params: { id: prod.id },
+                    });
+                  }}
+                >
+                  <View style={styles.railImageWrapper}>
+                    <Image
+                      source={{ uri: prod.mainImage }}
+                      style={styles.railImage}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                    />
+
+                    {/* Badge Pill */}
+                    {(prod.isTrending || prod.isBestseller || prod.isNewArrival) && (
+                      <View style={styles.badgePill}>
+                        <Text style={styles.badgePillText}>
+                          {prod.isTrending ? 'TRENDING' : prod.isBestseller ? 'BESTSELLER' : 'NEW'}
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* Favorite Button */}
+                    <TouchableOpacity
+                      style={styles.railFavBtn}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(prod.id);
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons
+                        name={isFav ? 'heart' : 'heart-outline'}
+                        size={15}
+                        color={isFav ? '#D96225' : '#221208'}
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.railDetails}>
+                    <Text style={styles.railPrice}>{formatPrice(prod.price)}</Text>
+                    <Text style={styles.railTitle} numberOfLines={2}>
+                      {prod.name}
+                    </Text>
+
+                    {/* Vendor Name */}
+                    <View style={styles.railVendorRow}>
+                      <Ionicons name="storefront-outline" size={11} color="#8C7765" />
+                      <Text style={styles.railVendorText} numberOfLines={1}>
+                        {brandName}
+                      </Text>
+                    </View>
+
+                    {/* Ratings */}
+                    <View style={styles.railRatingRow}>
+                      <Ionicons name="star" size={11} color="#C46C27" />
+                      <Text style={styles.railRatingScore}>{ratingScore}</Text>
+                      <Text style={styles.railReviewsCount}>({reviewsCount})</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
+      </View>
+    );
+  };
+
+  /**
+   * Horizontal Category Cards Grid with cultural naming and touch navigation
+   */
+  const renderCategoryGrid = (
+    title: string,
+    subtitle: string,
+    categoryGroup: any,
+    viewAllParam?: string
+  ) => {
+    const filters = categoryGroup?.filters;
+    if (!filters || filters.length === 0) return null;
+
+    return (
+      <View style={styles.sectionBlock}>
+        <View style={styles.sectionHeaderRow}>
+          <View style={{ flex: 1, paddingRight: Spacing.sm }}>
+            <Text style={styles.sectionEditorialTitle}>{title}</Text>
+            <Text style={styles.sectionEditorialSubtitle} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => {
+              if (viewAllParam) {
+                router.push({
+                  pathname: '/(user)/explore',
+                  params: { search: viewAllParam },
+                });
+              } else {
+                router.push('/(user)/explore');
+              }
+            }}
+            style={styles.curatedViewAll}
+          >
+            <Text style={styles.viewAllOrange}>Explore All</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryCardsScroll}
+        >
+          {filters.map((f: any) => {
+            const culturalTitle = getHeritageName(f.name);
+            return (
+              <TouchableOpacity
+                key={f.id}
+                style={[styles.categoryCard, Shadows.sm]}
+                activeOpacity={0.88}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  router.push({
+                    pathname: '/(user)/explore',
+                    params: { search: f.slug || f.name },
+                  });
+                }}
+              >
+                <Image
+                  source={{ uri: f.image }}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                />
+                <LinearGradient
+                  colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.8)']}
+                  style={StyleSheet.absoluteFill}
+                />
+                <View style={styles.categoryCardBody}>
+                  <Text style={styles.categoryCardTitle} numberOfLines={2}>
+                    {culturalTitle}
+                  </Text>
+                  <Text style={styles.categoryCardAction}>Shop Collection →</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
   };
 
   return (
@@ -497,7 +686,7 @@ export default function UserHomeScreen() {
         }
       >
         {/* ============================================================ */}
-        {/* 1. HERO SECTION — LUXURY ETHNIKRAFT EDITORIAL LANDING        */}
+        {/* 1. HERO SECTION & HERITAGE CAROUSEL                          */}
         {/* ============================================================ */}
         <View style={styles.heroWrapper}>
           <Image
@@ -505,30 +694,31 @@ export default function UserHomeScreen() {
             style={StyleSheet.absoluteFill}
             contentFit="cover"
             cachePolicy="memory-disk"
-            transition={300}
           />
 
+          {/* Vignette Layer */}
           <LinearGradient
             colors={[
-              'rgba(11, 16, 11, 0.94)',
-              'rgba(16, 22, 14, 0.82)',
-              'rgba(33, 18, 11, 0.40)',
-              'rgba(55, 24, 10, 0.28)',
+              'rgba(11, 16, 11, 0.88)',
+              'rgba(16, 22, 14, 0.72)',
+              'rgba(33, 18, 11, 0.32)',
+              'rgba(55, 24, 10, 0.15)',
             ]}
             start={{ x: 0, y: 0.5 }}
             end={{ x: 1, y: 0.5 }}
             style={StyleSheet.absoluteFill}
           />
 
+          {/* SEAMLESS FADE DIRECTLY INTO #FAF6F0 AT BOTTOM OF HERO */}
           <LinearGradient
-            colors={['transparent', 'rgba(0, 0, 0, 0.25)', 'rgba(38, 20, 9, 0.95)']}
+            colors={['transparent', 'rgba(250, 246, 240, 0.45)', '#FAF6F0']}
             style={StyleSheet.absoluteFill}
           />
 
-          {/* Web Parity Header with Notification & Cart access */}
+          {/* Web Parity Header with Insets */}
           <WebParityHeader />
 
-          {/* Hero Content Area */}
+          {/* Hero Body */}
           <View style={styles.heroBody}>
             <View style={styles.headlineContainer}>
               <Text style={styles.headlineLine}>Discover Africa.</Text>
@@ -571,9 +761,7 @@ export default function UserHomeScreen() {
             </View>
           </View>
 
-          {/* ============================================================ */}
-          {/* SHOP BY HERITAGE — INTERACTIVE CATEGORY CAROUSEL            */}
-          {/* ============================================================ */}
+          {/* SHOP BY HERITAGE CAROUSEL */}
           <View style={[styles.heritageSectionContainer, Shadows.md]}>
             <View style={styles.heritageSectionHeader}>
               <Text style={styles.heritageTitle}>
@@ -655,203 +843,123 @@ export default function UserHomeScreen() {
         </View>
 
         {/* ============================================================ */}
-        {/* 2. TOP PICKS THIS WEEK — DYNAMIC LIVE PRODUCTS               */}
+        {/* 2. TOP PICKS THIS WEEK — PRODUCT RAIL                        */}
         {/* ============================================================ */}
-        <View style={styles.sectionBlock}>
-          <View style={styles.sectionHeaderRow}>
-            <View>
-              <Text style={styles.sectionEditorialTitle}>Top picks this week</Text>
-              <Text style={styles.sectionEditorialSubtitle}>
-                Handcrafted pieces trending across our artisan network
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => router.push('/(user)/explore')}
-              style={styles.curatedViewAll}
-            >
-              <Text style={styles.viewAllOrange}>See More</Text>
-            </TouchableOpacity>
-          </View>
-
-          {isTopPicksLoading && !topPicksProducts.length ? (
-            <View style={styles.sectionLoader}>
-              <ActivityIndicator size="small" color="#C46C27" />
-            </View>
-          ) : (
-            <View style={styles.productsGrid}>
-              {topPicksProducts.map((prod) => (
-                <ProductCard
-                  key={prod.id}
-                  product={prod}
-                  onAddToCart={() => {
-                    if (!isAuthenticated) setIsAuthModalOpen(true);
-                  }}
-                  onCustomize={() => {
-                    router.push({
-                      pathname: '/product/[id]',
-                      params: { id: prod.id },
-                    });
-                  }}
-                />
-              ))}
-            </View>
-          )}
-        </View>
+        {renderProductRail(
+          'Top picks this week',
+          'Handcrafted pieces trending across our artisan network',
+          topPicks,
+          () => router.push('/(user)/explore'),
+          isTopPicksLoading
+        )}
 
         {/* ============================================================ */}
-        {/* 3. DISCOVER BY OCCASION — CEREMONY & LIFESTYLE SHOWCASE     */}
+        {/* 3. DISCOVER BY OCCASION — CATEGORY GRID                      */}
         {/* ============================================================ */}
-        <View style={styles.sectionBlock}>
-          <View style={styles.sectionHeaderRow}>
-            <View>
-              <Text style={styles.sectionEditorialTitle}>Discover by Occasion</Text>
-              <Text style={styles.sectionEditorialSubtitle}>
-                Find curated pieces perfect for celebrations, travel, and lifestyle
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => router.push('/(user)/explore')}
-              style={styles.curatedViewAll}
-            >
-              <Text style={styles.viewAllOrange}>View All</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.occasionScroll}
-          >
-            {occasionItems.map((occ) => (
-              <TouchableOpacity
-                key={occ.id}
-                style={[styles.occasionCard, Shadows.sm]}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  router.push({
-                    pathname: '/(user)/explore',
-                    params: { search: occ.slug },
-                  });
-                }}
-                activeOpacity={0.88}
-              >
-                <Image
-                  source={{ uri: occ.image }}
-                  style={StyleSheet.absoluteFill}
-                  contentFit="cover"
-                  cachePolicy="memory-disk"
-                />
-                <LinearGradient
-                  colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.78)']}
-                  style={StyleSheet.absoluteFill}
-                />
-                <View style={styles.occasionCardBody}>
-                  <Text style={styles.occasionCardTitle}>{occ.name}</Text>
-                  <Text style={styles.occasionCardAction}>Explore Collection →</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+        {renderCategoryGrid(
+          'Discover by Occasion',
+          'Find curated pieces perfect for celebrations, travel, and lifestyle',
+          discoverByOccasion,
+          'discover-by-occasion'
+        )}
 
         {/* ============================================================ */}
-        {/* 4. AFRICAN PAINTINGS & FINE ART GALLERY                      */}
+        {/* 4. ARTISAN SPOTLIGHT — CATEGORY GRID                         */}
         {/* ============================================================ */}
-        <View style={styles.sectionBlock}>
-          <View style={styles.sectionHeaderRow}>
-            <View>
-              <Text style={styles.sectionEditorialTitle}>African Paintings & Fine Art</Text>
-              <Text style={styles.sectionEditorialSubtitle}>
-                Original canvases and expressive works from master painters
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => {
-                router.push({
-                  pathname: '/(user)/explore',
-                  params: { category: 'PAINTINGS' },
-                });
-              }}
-              style={styles.curatedViewAll}
-            >
-              <Text style={styles.viewAllOrange}>View Gallery</Text>
-            </TouchableOpacity>
-          </View>
-
-          {isPaintingsLoading && !africanPaintings.length ? (
-            <View style={styles.sectionLoader}>
-              <ActivityIndicator size="small" color="#C46C27" />
-            </View>
-          ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.paintingsScroll}
-            >
-              {africanPaintings.map((art) => {
-                const isFav = !!artFavorites[art.id];
-                return (
-                  <TouchableOpacity
-                    key={art.id}
-                    style={[styles.artCard, Shadows.sm]}
-                    activeOpacity={0.92}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      router.push({
-                        pathname: '/product/[id]',
-                        params: { id: art.id },
-                      });
-                    }}
-                  >
-                    <View style={styles.artImageWrapper}>
-                      <Image
-                        source={{ uri: art.mainImage }}
-                        style={styles.artImage}
-                        contentFit="cover"
-                        cachePolicy="memory-disk"
-                      />
-                      <View style={styles.artBadgePill}>
-                        <Text style={styles.artBadgeText}>FINE ART</Text>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.artFavBtn}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          toggleArtFavorite(art.id);
-                        }}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons
-                          name={isFav ? 'heart' : 'heart-outline'}
-                          size={15}
-                          color={isFav ? '#D96225' : '#221208'}
-                        />
-                      </TouchableOpacity>
-                    </View>
-
-                    <View style={styles.artDetails}>
-                      <Text style={styles.artTitle} numberOfLines={2}>
-                        {art.name}
-                      </Text>
-                      <Text style={styles.artArtist} numberOfLines={1}>
-                        By {art.vendor?.businessName || art.createdBy || 'Authentic African Painter'}
-                      </Text>
-                      <View style={styles.artPriceRow}>
-                        <Text style={styles.artPrice}>{formatPrice(art.price)}</Text>
-                        <View style={styles.artViewTag}>
-                          <Text style={styles.artViewTagText}>View Piece</Text>
-                        </View>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          )}
-        </View>
+        {renderCategoryGrid(
+          'Artisan Spotlight',
+          'Meet master weavers, sculptors, and certified heritage creators',
+          artisanSpotlight,
+          'artisan-spotlight'
+        )}
 
         {/* ============================================================ */}
-        {/* 5. MID-PAGE EDITORIAL BANNER 1                               */}
+        {/* 5. KITCHEN & DINING — CATEGORY GRID                          */}
+        {/* ============================================================ */}
+        {renderCategoryGrid(
+          'Kitchen & Dining',
+          'Artisanal tableware, carved pottery, and indigenous storage',
+          kitchenDining,
+          'kitchen-dining'
+        )}
+
+        {/* ============================================================ */}
+        {/* 6. AFRICAN PAINTINGS & FINE ART — PRODUCT RAIL               */}
+        {/* ============================================================ */}
+        {renderProductRail(
+          'African Paintings & Fine Art',
+          'Original canvases and expressive works from master painters',
+          africanPaintings,
+          () =>
+            router.push({
+              pathname: '/(user)/explore',
+              params: { category: 'PAINTINGS' },
+            }),
+          isPaintingsLoading
+        )}
+
+        {/* ============================================================ */}
+        {/* 7. POPULAR PICKS — CATEGORY GRID                             */}
+        {/* ============================================================ */}
+        {renderCategoryGrid(
+          'Popular Picks',
+          'Ceremonial royal beads, lighting, and statement crafts',
+          explorePopular,
+          'popular-picks'
+        )}
+
+        {/* ============================================================ */}
+        {/* 8. SHOP DEALS IN FASHION — CATEGORY GRID                     */}
+        {/* ============================================================ */}
+        {renderCategoryGrid(
+          'Shop Deals in Fashion',
+          'Curated clearance, couple outfits, and ready-to-wear pieces',
+          shopDealsFashion,
+          'deals'
+        )}
+
+        {/* ============================================================ */}
+        {/* 9. BEST SELLERS IN MENSWEAR — PRODUCT RAIL                   */}
+        {/* ============================================================ */}
+        {renderProductRail(
+          'Best Sellers in Menswear',
+          'Tailored traditional silhouettes, linen kaftans, and Aso Oke',
+          menswearProducts,
+          () =>
+            router.push({
+              pathname: '/(user)/explore',
+              params: { category: 'WEARS' },
+            }),
+          isMenswearLoading
+        )}
+
+        {/* ============================================================ */}
+        {/* 10. BEST SELLERS IN ACCESSORIES — PRODUCT RAIL               */}
+        {/* ============================================================ */}
+        {renderProductRail(
+          'Best Sellers in Accessories',
+          'Hand-beaded crowns, brass cuff bracelets, and woven leather belts',
+          accessoriesProducts,
+          () =>
+            router.push({
+              pathname: '/(user)/explore',
+              params: { category: 'ACCESSORIES' },
+            }),
+          isAccessoriesLoading
+        )}
+
+        {/* ============================================================ */}
+        {/* 11. WHAT'S TRENDING — CATEGORY GRID                          */}
+        {/* ============================================================ */}
+        {renderCategoryGrid(
+          "What's Trending",
+          'Limited editions, weekend styles, and gifted artisan heirlooms',
+          trendingPopular,
+          'trending'
+        )}
+
+        {/* ============================================================ */}
+        {/* 12. EDITORIAL MID-PAGE BANNER 1                              */}
         {/* ============================================================ */}
         <TouchableOpacity
           style={[styles.editorialBannerWrapper, Shadows.md]}
@@ -869,157 +977,92 @@ export default function UserHomeScreen() {
         </TouchableOpacity>
 
         {/* ============================================================ */}
-        {/* 6. ARTISAN GUILD SPOTLIGHT — EDITORIAL HERO CARD             */}
+        {/* 13. CASUAL LOOKS — CATEGORY GRID                             */}
         {/* ============================================================ */}
-        <View style={[styles.spotlightCard, Shadows.md]}>
-          <View style={styles.spotlightTop}>
-            <View style={styles.spotlightBadge}>
-              <Text style={styles.spotlightBadgeText}>ARTISAN GUILD SPOTLIGHT</Text>
-            </View>
-            <View style={styles.verifiedRow}>
-              <Ionicons name="shield-checkmark" size={14} color="#E8BA7A" />
-              <Text style={styles.verifiedText}>{featuredArtisan.tagline}</Text>
-            </View>
-          </View>
-
-          <Text style={styles.spotlightHeading}>{featuredArtisan.name}</Text>
-          <Text style={styles.spotlightDescription}>{featuredArtisan.bio}</Text>
-
-          <TouchableOpacity
-            style={styles.spotlightActionBtn}
-            onPress={() => router.push('/(user)/studio')}
-            activeOpacity={0.88}
-          >
-            <Text style={styles.spotlightActionText}>Commission Bespoke Piece</Text>
-            <Ionicons name="sparkles" size={14} color="#FFF5DE" />
-          </TouchableOpacity>
-        </View>
-
-        {/* ============================================================ */}
-        {/* 7. ONE-OF-A-KIND FINDS — CURATED HORIZONTAL SLIDER           */}
-        {/* ============================================================ */}
-        <View style={styles.sectionBlock}>
-          <View style={styles.sectionHeaderRow}>
-            <View>
-              <Text style={styles.sectionEditorialTitle}>One-of-a-Kind Finds</Text>
-              <Text style={styles.sectionEditorialSubtitle}>
-                Rare artifacts, antique relics, and bespoke sculpture
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => {
-                router.push({
-                  pathname: '/(user)/explore',
-                  params: { category: 'ANTIQUES' },
-                });
-              }}
-              style={styles.curatedViewAll}
-            >
-              <Text style={styles.viewAllOrange}>See More</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView
-            ref={cultureScrollRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.cultureCardsScroll}
-            onScroll={handleCultureScroll}
-            scrollEventThrottle={16}
-            snapToInterval={CULTURE_SNAP_INTERVAL}
-            decelerationRate="fast"
-            snapToAlignment="start"
-            onScrollBeginDrag={() => {
-              isCultureUserDragging.current = true;
-              pauseCultureAutoSlide();
-            }}
-            onScrollEndDrag={resumeCultureAutoSlideAfterDelay}
-            onMomentumScrollEnd={resumeCultureAutoSlideAfterDelay}
-          >
-            {CURATED_CULTURE_CARDS.map((card) => (
-              <TouchableOpacity
-                key={card.id}
-                style={[styles.cultureCard, Shadows.sm]}
-                onPress={() => {
-                  router.push({
-                    pathname: '/(user)/explore',
-                    params: { category: 'ANTIQUES' },
-                  });
-                }}
-                activeOpacity={0.88}
-              >
-                <Image
-                  source={card.image}
-                  style={StyleSheet.absoluteFill}
-                  contentFit="cover"
-                  cachePolicy="memory-disk"
-                />
-                <LinearGradient
-                  colors={['rgba(0,0,0,0.2)', 'rgba(0,0,0,0.85)']}
-                  style={StyleSheet.absoluteFill}
-                />
-                <View style={styles.cultureCardBody}>
-                  <Text style={styles.cultureCardTitle}>{card.title}</Text>
-                  <Text style={styles.cultureCardSub}>{card.subtitle}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* ============================================================ */}
-        {/* 8. BESTSELLERS IN HOME & DÉCOR                               */}
-        {/* ============================================================ */}
-        {decorationsProducts.length > 0 && (
-          <View style={styles.sectionBlock}>
-            <View style={styles.sectionHeaderRow}>
-              <View>
-                <Text style={styles.sectionEditorialTitle}>Bestsellers in Home & Décor</Text>
-                <Text style={styles.sectionEditorialSubtitle}>
-                  Transform your living space with handcrafted African decor
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => {
-                  router.push({
-                    pathname: '/(user)/explore',
-                    params: { category: 'CRAFTS' },
-                  });
-                }}
-                style={styles.curatedViewAll}
-              >
-                <Text style={styles.viewAllOrange}>Explore Décor</Text>
-              </TouchableOpacity>
-            </View>
-
-            {isDecorationsLoading ? (
-              <View style={styles.sectionLoader}>
-                <ActivityIndicator size="small" color="#C46C27" />
-              </View>
-            ) : (
-              <View style={styles.productsGrid}>
-                {decorationsProducts.map((prod) => (
-                  <ProductCard
-                    key={prod.id}
-                    product={prod}
-                    onAddToCart={() => {
-                      if (!isAuthenticated) setIsAuthModalOpen(true);
-                    }}
-                    onCustomize={() => {
-                      router.push({
-                        pathname: '/product/[id]',
-                        params: { id: prod.id },
-                      });
-                    }}
-                  />
-                ))}
-              </View>
-            )}
-          </View>
+        {renderCategoryGrid(
+          'Casual Looks',
+          'Relaxed unisex comfort, lightweight boho, and denim-inspired apparel',
+          casualLooks,
+          'casual-looks'
         )}
 
         {/* ============================================================ */}
-        {/* 9. MID-PAGE EDITORIAL BANNER 2                               */}
+        {/* 14. DISCOVER BY STYLE — CATEGORY GRID                        */}
+        {/* ============================================================ */}
+        {renderCategoryGrid(
+          'Discover by Style',
+          'Youthful streetwear, sleek elegance, and minimalist heritage aesthetics',
+          discoverByStyle,
+          'style'
+        )}
+
+        {/* ============================================================ */}
+        {/* 15. FOR WEDDINGS — CATEGORY GRID                             */}
+        {/* ============================================================ */}
+        {renderCategoryGrid(
+          'For Weddings & Ceremonies',
+          "Aso-Ebi luxury textiles, bridal coral, and groom's majesty",
+          forWeddings,
+          'weddings'
+        )}
+
+        {/* ============================================================ */}
+        {/* 16. COLLECTOR'S PICKS — CATEGORY GRID                        */}
+        {/* ============================================================ */}
+        {renderCategoryGrid(
+          "Collector's Picks",
+          'High-end couture, museum-grade vintage jewelry, and timeless relics',
+          collectorsPicks,
+          'collectors'
+        )}
+
+        {/* ============================================================ */}
+        {/* 17. HOME BEAUTIFICATION — CATEGORY GRID                      */}
+        {/* ============================================================ */}
+        {renderCategoryGrid(
+          'Home Beautification',
+          'Handmade woven furniture, ornamental pottery, and sculpted wall art',
+          homeBeautification,
+          'home-beautification'
+        )}
+
+        {/* ============================================================ */}
+        {/* 18. ONE-OF-A-KIND FINDS — CATEGORY GRID                      */}
+        {/* ============================================================ */}
+        {renderCategoryGrid(
+          'One-of-a-Kind Finds',
+          'Rare vintage bronzes, bespoke stone carvings, and heirloom masks',
+          oneOfAKind,
+          'one-of-a-kind'
+        )}
+
+        {/* ============================================================ */}
+        {/* 19. NEW ARRIVALS CURATED — CATEGORY GRID                     */}
+        {/* ============================================================ */}
+        {renderCategoryGrid(
+          'New Arrivals',
+          'Fresh off the artisan loom, vibrant leather footwear, and crafts',
+          newArrivalsCurated,
+          'new-arrivals'
+        )}
+
+        {/* ============================================================ */}
+        {/* 20. BEST SELLERS IN DÉCOR — PRODUCT RAIL                     */}
+        {/* ============================================================ */}
+        {renderProductRail(
+          'Best Sellers in Home & Décor',
+          'Transform your living space with handcrafted African decor',
+          decorationsProducts,
+          () =>
+            router.push({
+              pathname: '/(user)/explore',
+              params: { category: 'CRAFTS' },
+            }),
+          isDecorationsLoading
+        )}
+
+        {/* ============================================================ */}
+        {/* 21. EDITORIAL MID-PAGE BANNER 2                              */}
         {/* ============================================================ */}
         <TouchableOpacity
           style={[styles.editorialBannerWrapper, Shadows.md]}
@@ -1037,75 +1080,18 @@ export default function UserHomeScreen() {
         </TouchableOpacity>
 
         {/* ============================================================ */}
-        {/* 10. INSPIRED BY CULTURE — CULTURAL APPAREL & ACCESSORIES     */}
+        {/* 22. INSPIRED BY CULTURE — PRODUCT RAIL                       */}
         {/* ============================================================ */}
-        {cultureProducts.length > 0 && (
-          <View style={styles.sectionBlock}>
-            <View style={styles.sectionHeaderRow}>
-              <View>
-                <Text style={styles.sectionEditorialTitle}>Inspired by Culture</Text>
-                <Text style={styles.sectionEditorialSubtitle}>
-                  Rooted in tradition, re-imagined for contemporary life
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => router.push('/(user)/explore')}
-                style={styles.curatedViewAll}
-              >
-                <Text style={styles.viewAllOrange}>See More</Text>
-              </TouchableOpacity>
-            </View>
-
-            {isCultureProductsLoading ? (
-              <View style={styles.sectionLoader}>
-                <ActivityIndicator size="small" color="#C46C27" />
-              </View>
-            ) : (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.paintingsScroll}
-              >
-                {cultureProducts.map((item) => (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={[styles.cultureProductCard, Shadows.sm]}
-                    activeOpacity={0.9}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      router.push({
-                        pathname: '/product/[id]',
-                        params: { id: item.id },
-                      });
-                    }}
-                  >
-                    <Image
-                      source={{ uri: item.mainImage }}
-                      style={styles.cultureProductImage}
-                      contentFit="cover"
-                      cachePolicy="memory-disk"
-                    />
-                    <LinearGradient
-                      colors={['transparent', 'rgba(0,0,0,0.85)']}
-                      style={StyleSheet.absoluteFill}
-                    />
-                    <View style={styles.cultureProductContent}>
-                      <Text style={styles.cultureProductTitle} numberOfLines={2}>
-                        {item.name}
-                      </Text>
-                      <Text style={styles.cultureProductPrice}>
-                        {formatPrice(item.price)}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
-          </View>
+        {renderProductRail(
+          'Inspired by Culture',
+          'Rooted in tradition, re-imagined for contemporary life',
+          cultureProducts,
+          () => router.push('/(user)/explore'),
+          isCultureProductsLoading
         )}
 
-        {/* Bottom Spacing */}
-        <View style={{ height: Spacing.xxl * 1.5 }} />
+        {/* Bottom Padding for Floating Actions */}
+        <View style={{ height: Spacing.xxl * 2 }} />
       </ScrollView>
 
       {/* Outside Dismiss Backdrop for Expanded Cart FAB */}
@@ -1140,22 +1126,25 @@ export default function UserHomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  // Root Screen Background: Exact warm African Artisan Parchment matching explore.tsx and web
   screenContainer: {
     flex: 1,
     backgroundColor: '#FAF6F0',
   },
   mainScrollView: {
     flex: 1,
+    backgroundColor: '#FAF6F0',
   },
   scrollContentContainer: {
     paddingBottom: Spacing.xxl,
+    backgroundColor: '#FAF6F0',
   },
 
   // ─── HERO SECTION ──────────────────────────────────────────
   heroWrapper: {
     position: 'relative',
-    minHeight: 580,
-    backgroundColor: '#1E1208',
+    minHeight: 570,
+    backgroundColor: '#FAF6F0',
     paddingBottom: Spacing.md,
   },
   heroBody: {
@@ -1325,10 +1314,10 @@ const styles = StyleSheet.create({
 
   // ─── ROLE BANNER ───────────────────────────────────────────
   roleBannerContainer: {
-    marginTop: Spacing.sm,
+    marginTop: Spacing.xs,
   },
 
-  // ─── SECTION STYLES ────────────────────────────────────────
+  // ─── COMMON SECTION BLOCK ──────────────────────────────────
   sectionBlock: {
     marginTop: Spacing.xl,
     paddingHorizontal: Spacing.md,
@@ -1350,7 +1339,6 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.latoRegular,
     color: Colors.textSecondary,
     marginTop: 2,
-    maxWidth: width * 0.72,
   },
   curatedViewAll: {
     paddingBottom: 2,
@@ -1365,85 +1353,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // ─── 2-COLUMN PRODUCTS GRID ────────────────────────────────
-  productsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-
-  // ─── OCCASION SCROLL CARDS ─────────────────────────────────
-  occasionScroll: {
+  // ─── PRODUCT RAIL HORIZONTAL SCROLL ────────────────────────
+  railCardsScroll: {
     gap: 12,
     paddingVertical: 4,
   },
-  occasionCard: {
-    width: 170,
-    height: 125,
-    borderRadius: Radius.lg,
-    overflow: 'hidden',
-    position: 'relative',
-    justifyContent: 'flex-end',
-    borderWidth: 1,
-    borderColor: '#E8DAC8',
-  },
-  occasionCardBody: {
-    padding: Spacing.sm + 2,
-    zIndex: 10,
-  },
-  occasionCardTitle: {
-    fontSize: 13,
-    fontFamily: FontFamily.cormorantBold,
-    color: '#FFF8EA',
-  },
-  occasionCardAction: {
-    fontSize: 10,
-    fontFamily: FontFamily.poppinsMedium,
-    color: '#E8BA7A',
-    marginTop: 2,
-  },
-
-  // ─── AFRICAN PAINTINGS GALLERY ─────────────────────────────
-  paintingsScroll: {
-    gap: ART_GAP,
-    paddingVertical: 4,
-  },
-  artCard: {
-    width: ART_CARD_WIDTH,
-    backgroundColor: Colors.surface,
+  railCard: {
+    width: PRODUCT_RAIL_CARD_WIDTH,
+    backgroundColor: '#FFFFFF',
     borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: '#EFE6D8',
+    borderColor: '#EDE5D8',
     overflow: 'hidden',
   },
-  artImageWrapper: {
-    height: 165,
-    backgroundColor: '#F5ECE1',
+  railImageWrapper: {
+    height: 155,
+    backgroundColor: '#F8F4EE',
     position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  artImage: {
+  railImage: {
     width: '100%',
     height: '100%',
   },
-  artBadgePill: {
+  badgePill: {
     position: 'absolute',
-    top: 8,
-    left: 8,
+    top: 7,
+    left: 7,
     backgroundColor: 'rgba(255, 255, 255, 0.94)',
-    paddingHorizontal: 7,
+    paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: Radius.full,
   },
-  artBadgeText: {
+  badgePillText: {
     fontSize: 8.5,
     fontFamily: FontFamily.poppinsBold,
     color: '#C46C27',
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
-  artFavBtn: {
+  railFavBtn: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: 7,
+    right: 7,
     width: 26,
     height: 26,
     borderRadius: 13,
@@ -1451,45 +1403,83 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  artDetails: {
-    padding: Spacing.sm + 2,
+  railDetails: {
+    padding: Spacing.sm,
+    backgroundColor: '#FFFFFF',
   },
-  artTitle: {
-    fontSize: Typography.fontSize.xs + 1,
-    fontFamily: FontFamily.poppinsSemiBold,
-    color: Colors.textPrimary,
-    lineHeight: 17,
-    minHeight: 34,
-  },
-  artArtist: {
-    fontSize: 10.5,
-    fontFamily: FontFamily.poppinsMedium,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  artPriceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: Spacing.xs + 2,
-  },
-  artPrice: {
+  railPrice: {
     fontSize: 12.5,
     fontFamily: FontFamily.poppinsBold,
-    color: Colors.primaryDark,
-  },
-  artViewTag: {
-    backgroundColor: '#FAF2E6',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: Radius.sm,
-    borderWidth: 1,
-    borderColor: '#E8DAC8',
-  },
-  artViewTagText: {
-    fontSize: 9.5,
-    fontFamily: FontFamily.poppinsSemiBold,
     color: '#C46C27',
+    marginBottom: 2,
+  },
+  railTitle: {
+    fontSize: Typography.fontSize.xs,
+    fontFamily: FontFamily.poppinsSemiBold,
+    color: Colors.textPrimary,
+    lineHeight: 16,
+    minHeight: 32,
+  },
+  railVendorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  railVendorText: {
+    fontSize: 10,
+    fontFamily: FontFamily.poppinsMedium,
+    color: Colors.textSecondary,
+    flex: 1,
+  },
+  railRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 4,
+  },
+  railRatingScore: {
+    fontSize: 10.5,
+    fontFamily: FontFamily.poppinsBold,
+    color: Colors.textPrimary,
+  },
+  railReviewsCount: {
+    fontSize: 9.5,
+    fontFamily: FontFamily.latoRegular,
+    color: Colors.textMuted,
+  },
+
+  // ─── CATEGORY GRID CARDS ───────────────────────────────────
+  categoryCardsScroll: {
+    gap: 12,
+    paddingVertical: 4,
+  },
+  categoryCard: {
+    width: CATEGORY_CARD_WIDTH,
+    height: 125,
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
+    position: 'relative',
+    justifyContent: 'flex-end',
+    borderWidth: 1,
+    borderColor: '#EDE5D8',
+    backgroundColor: '#F8F4EE',
+  },
+  categoryCardBody: {
+    padding: Spacing.sm + 2,
+    zIndex: 10,
+  },
+  categoryCardTitle: {
+    fontSize: 13,
+    fontFamily: FontFamily.cormorantBold,
+    color: '#FFF8EA',
+    lineHeight: 16,
+  },
+  categoryCardAction: {
+    fontSize: 9.5,
+    fontFamily: FontFamily.poppinsMedium,
+    color: '#E8BA7A',
+    marginTop: 3,
   },
 
   // ─── EDITORIAL BANNERS ─────────────────────────────────────
@@ -1498,145 +1488,14 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xl,
     borderRadius: Radius.xl,
     overflow: 'hidden',
-    height: 140,
-    backgroundColor: '#2A170A',
+    height: 135,
+    backgroundColor: '#F8F4EE',
+    borderWidth: 1,
+    borderColor: '#EDE5D8',
   },
   editorialBannerImage: {
     width: '100%',
     height: '100%',
-  },
-
-  // ─── SPOTLIGHT CARD ────────────────────────────────────────
-  spotlightCard: {
-    marginHorizontal: Spacing.md,
-    marginTop: Spacing.xl,
-    backgroundColor: '#2A170A',
-    borderRadius: Radius.xl,
-    padding: Spacing.lg,
-    borderWidth: 1,
-    borderColor: '#4A2B15',
-  },
-  spotlightTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  spotlightBadge: {
-    backgroundColor: '#C46C27',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: Radius.full,
-  },
-  spotlightBadgeText: {
-    fontSize: 9,
-    fontFamily: FontFamily.poppinsBold,
-    color: '#FFF',
-    letterSpacing: 0.6,
-  },
-  verifiedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  verifiedText: {
-    fontSize: 11,
-    fontFamily: FontFamily.poppinsMedium,
-    color: '#E8BA7A',
-  },
-  spotlightHeading: {
-    fontSize: 18,
-    fontFamily: FontFamily.cormorantBold,
-    color: '#FFF5DE',
-    marginBottom: 4,
-  },
-  spotlightDescription: {
-    fontSize: 12,
-    lineHeight: 18,
-    fontFamily: FontFamily.latoRegular,
-    color: '#D8C7B8',
-    marginBottom: Spacing.md,
-  },
-  spotlightActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: '#3E2210',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs + 3,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: '#62381B',
-    gap: 6,
-  },
-  spotlightActionText: {
-    fontSize: 11,
-    fontFamily: FontFamily.poppinsBold,
-    color: '#E8BA7A',
-  },
-
-  // ─── CULTURE CARDS ─────────────────────────────────────────
-  cultureCardsScroll: {
-    gap: CULTURE_GAP,
-    paddingVertical: 4,
-  },
-  cultureCard: {
-    width: CULTURE_CARD_WIDTH,
-    height: 140,
-    borderRadius: Radius.lg,
-    overflow: 'hidden',
-    position: 'relative',
-    justifyContent: 'flex-end',
-    borderWidth: 1,
-    borderColor: '#E8DAC8',
-  },
-  cultureCardBody: {
-    padding: Spacing.md,
-    zIndex: 10,
-  },
-  cultureCardTitle: {
-    fontSize: 14,
-    fontFamily: FontFamily.cormorantBold,
-    color: '#FFF8EA',
-  },
-  cultureCardSub: {
-    fontSize: 10,
-    fontFamily: FontFamily.latoRegular,
-    color: '#E0D0BF',
-    marginTop: 2,
-  },
-
-  // ─── CULTURE PRODUCT CARDS ─────────────────────────────────
-  cultureProductCard: {
-    width: 175,
-    height: 220,
-    borderRadius: Radius.lg,
-    overflow: 'hidden',
-    position: 'relative',
-    justifyContent: 'flex-end',
-    borderWidth: 1,
-    borderColor: '#EFE6D8',
-  },
-  cultureProductImage: {
-    width: '100%',
-    height: '100%',
-    position: 'absolute',
-  },
-  cultureProductContent: {
-    padding: Spacing.sm + 2,
-    zIndex: 10,
-  },
-  cultureProductTitle: {
-    fontSize: 12.5,
-    fontFamily: FontFamily.poppinsSemiBold,
-    color: '#FFF8EA',
-    lineHeight: 16,
-  },
-  cultureProductPrice: {
-    fontSize: 12,
-    fontFamily: FontFamily.poppinsBold,
-    color: '#E8BA7A',
-    marginTop: 2,
   },
 
   cartBackdropDismiss: {
