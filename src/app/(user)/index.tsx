@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,6 +8,8 @@ import {
   Dimensions,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,8 +21,18 @@ import { BrandStoryModal } from '@/components/common/BrandStoryModal';
 import { AuthPromptModal } from '@/components/common/AuthPromptModal';
 import { CartFloatingButton, CartFloatingButtonRef } from '@/components/common/CartFloatingButton';
 import { RoleSwitchBanner } from '@/components/common/RoleSwitchBanner';
+import { ProductCard } from '@/components/products/ProductCard';
 import { Colors, FontFamily, Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useAppSelector } from '@/store';
+import {
+  useGetTopPicksWeekQuery,
+  useGetAfricanPaintingsQuery,
+  useGetBestsellersDecorationsQuery,
+  useGetInspiredByCultureQuery,
+  useGetArtisanSpotlightQuery,
+  useGetHomeFilterMetadataQuery,
+  Product,
+} from '@/store/api/productApi';
 
 const { width } = Dimensions.get('window');
 
@@ -31,6 +43,9 @@ const HERITAGE_SNAP_INTERVAL = HERITAGE_CARD_WIDTH + HERITAGE_GAP;
 const CULTURE_CARD_WIDTH = 210;
 const CULTURE_GAP = 12;
 const CULTURE_SNAP_INTERVAL = CULTURE_CARD_WIDTH + CULTURE_GAP;
+
+const ART_CARD_WIDTH = 220;
+const ART_GAP = 14;
 
 interface HeritageCardItem {
   id: string;
@@ -46,108 +61,110 @@ const HERITAGE_CARDS: HeritageCardItem[] = [
     title: 'Ready to Wear (Aṣọ)',
     copy: 'Timeless African fashion',
     image: require('../../../assets/revamp/ready-to-wear.webp'),
-    category: 'Wears',
+    category: 'WEARS',
   },
   {
     id: 'shoes',
     title: 'Shoes (Bàtà)',
     copy: 'Rooted steps, crafted sole',
     image: require('../../../assets/revamp/shoes-card.webp'),
-    category: 'Shoes',
+    category: 'SHOES',
   },
   {
     id: 'bags',
     title: 'Bags (Akpa)',
     copy: 'Handcrafted for every journey',
     image: require('../../../assets/revamp/bags-card.webp'),
-    category: 'Bags',
+    category: 'BAGS',
   },
   {
     id: 'accessories',
     title: 'Accessories (Ọ̀ṣọ́)',
     copy: 'Bold details. Rooted in culture',
     image: require('../../../assets/revamp/accessories-card.webp'),
-    category: 'Accessories',
+    category: 'ACCESSORIES',
   },
   {
     id: 'crafts',
     title: 'Crafts (Nka)',
     copy: 'Made by hands that tell stories',
     image: require('../../../assets/revamp/crafts-card.webp'),
-    category: 'Crafts',
+    category: 'CRAFTS',
   },
   {
     id: 'art',
     title: 'Art (Ọnà)',
     copy: 'African expression for every home',
     image: require('../../../assets/revamp/art-card.webp'),
-    category: 'Paintings',
+    category: 'PAINTINGS',
   },
   {
     id: 'antiques',
     title: 'Antiques (Àtijọ́)',
     copy: 'Timeless relics of our ancestors',
     image: require('../../../assets/revamp/antiques-card.webp'),
-    category: 'Antiques',
+    category: 'ANTIQUES',
   },
 ];
 
-interface ProductItem {
-  id: string;
-  title: string;
-  artisan: string;
-  origin: string;
-  price: string;
-  rating: number;
-  reviews: number;
-  image: any;
-  badge: string;
-}
-
-const TOP_PICKS_PRODUCTS: ProductItem[] = [
+const FALLBACK_TOP_PICKS: Product[] = [
   {
     id: 'top-1',
-    title: 'Patchwork Loose-Fit Denim Aso Oke Jorts',
-    artisan: 'Faustaze Studio',
-    origin: 'Lagos, Nigeria',
-    price: 'NGN 54,000.00',
-    rating: 4.9,
-    reviews: 18,
-    image: require('../../../assets/revamp/asoke-shorts-grid.webp'),
-    badge: 'Popular',
+    name: 'Patchwork Loose-Fit Denim Aso Oke Jorts',
+    description: 'Crafted from premium authentic Aso Oke fabric with frayed fringe hem.',
+    price: '54000',
+    stockQuantity: 10,
+    condition: 'new',
+    productCategory: 'WEARS',
+    mainImage: 'https://res.cloudinary.com/dpr3pf3kw/image/upload/v1781276755/ethnikraft/products/dmfjyrvvk6iaiydrtmsx.jpg',
+    imageList: ['https://res.cloudinary.com/dpr3pf3kw/image/upload/v1781278649/ethnikraft/products/toqsouycscgnkjl0sbsc.jpg'],
+    isCustomizable: true,
+    isRequestable: true,
+    isTrending: true,
+    vendor: { id: 'v-1', businessName: 'Faustaze Studio', rating: 4.9 },
   },
   {
     id: 'top-2',
-    title: 'Indigo Royal Tapestry & Chain Shorts',
-    artisan: 'Abeokuta Indigo Guild',
-    origin: 'Ogun, Nigeria',
-    price: 'NGN 18,000.00',
-    rating: 4.8,
-    reviews: 24,
-    image: require('../../../assets/revamp/asoke-blue-shorts-model.webp'),
-    badge: 'Bestseller',
+    name: 'Indigo Royal Tapestry & Chain Shorts',
+    description: 'Deep indigo hand-dyed textile with antique brass chain links.',
+    price: '18000',
+    stockQuantity: 12,
+    condition: 'new',
+    productCategory: 'WEARS',
+    mainImage: 'https://res.cloudinary.com/dpr3pf3kw/image/upload/v1781278649/ethnikraft/products/toqsouycscgnkjl0sbsc.jpg',
+    imageList: [],
+    isCustomizable: false,
+    isRequestable: true,
+    isBestseller: true,
+    vendor: { id: 'v-2', businessName: 'Abeokuta Indigo Guild', rating: 4.8 },
   },
   {
     id: 'top-3',
-    title: 'Handwoven Striped Emerald Aso Oke Pants',
-    artisan: 'Master Kwame Studios',
-    origin: 'Kumasi, Ghana',
-    price: 'NGN 72,000.00',
-    rating: 5.0,
-    reviews: 31,
-    image: require('../../../assets/revamp/asoke-pants.webp'),
-    badge: 'Masterwork',
+    name: 'Handwoven Striped Emerald Aso Oke Pants',
+    description: 'Fine metallic weft threads woven on traditional Yoruba broadloom.',
+    price: '72000',
+    stockQuantity: 5,
+    condition: 'new',
+    productCategory: 'WEARS',
+    mainImage: 'https://res.cloudinary.com/deda2pipj/image/upload/v1747294754/Landing_page_banner_4_mid_nzrgjc.png',
+    imageList: [],
+    isCustomizable: true,
+    isRequestable: true,
+    vendor: { id: 'v-3', businessName: 'Master Kwame Studios', rating: 5.0 },
   },
   {
     id: 'top-4',
-    title: 'Classic African Silhouette Beachwear Shorts',
-    artisan: 'Ethnikraft Atelier',
-    origin: 'Accra, Ghana',
-    price: 'NGN 18,000.00',
-    rating: 4.7,
-    reviews: 12,
-    image: require('../../../assets/revamp/asoke-model.webp'),
-    badge: 'Trending',
+    name: 'Classic African Silhouette Beachwear Shorts',
+    description: 'Breathable lightweight weave featuring subtle geometric accents.',
+    price: '18000',
+    stockQuantity: 18,
+    condition: 'new',
+    productCategory: 'WEARS',
+    mainImage: 'https://res.cloudinary.com/deda2pipj/image/upload/v1747294753/Landing_page_banner_5_mid_dtgxle.png',
+    imageList: [],
+    isCustomizable: false,
+    isRequestable: false,
+    vendor: { id: 'v-4', businessName: 'Ethnikraft Atelier', rating: 4.7 },
   },
 ];
 
@@ -178,6 +195,33 @@ const CURATED_CULTURE_CARDS = [
   },
 ];
 
+const OCCASION_FALLBACK = [
+  {
+    id: '2-1',
+    name: 'Holidays & Travel (Ije)',
+    image: 'https://res.cloudinary.com/deda2pipj/image/upload/v1766493582/Hotel_and_Travel_mn6szz.png',
+    slug: 'holidays-travel',
+  },
+  {
+    id: '2-2',
+    name: 'Summer Vibes (Ìgbà Ẹ̀rùn)',
+    image: 'https://res.cloudinary.com/deda2pipj/image/upload/v1766493775/Summer_vibes_e4mypj.png',
+    slug: 'summer-vibes',
+  },
+  {
+    id: '2-3',
+    name: 'Harmattan (Hunturu)',
+    image: 'https://res.cloudinary.com/deda2pipj/image/upload/v1766493579/Harmattan_essentials_onkfiy.png',
+    slug: 'harmattan-essentials',
+  },
+  {
+    id: '2-4',
+    name: 'Weddings (Igba Nkwu)',
+    image: 'https://res.cloudinary.com/deda2pipj/image/upload/v1766493789/Weddings_ihyegg.png',
+    slug: 'weddings',
+  },
+];
+
 export default function UserHomeScreen() {
   const router = useRouter();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
@@ -185,9 +229,128 @@ export default function UserHomeScreen() {
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
-  const [favorites, setFavorites] = useState<Record<string, boolean>>({});
   const [isCartExpanded, setIsCartExpanded] = useState(false);
+  const [artFavorites, setArtFavorites] = useState<Record<string, boolean>>({});
   const cartFabRef = useRef<CartFloatingButtonRef>(null);
+
+  // ─── LIVE RTK QUERY HOOKS ──────────────────────────────────
+  const {
+    data: topPicksData,
+    isLoading: isTopPicksLoading,
+    refetch: refetchTopPicks,
+  } = useGetTopPicksWeekQuery({ limit: 6 });
+
+  const {
+    data: paintingsData,
+    isLoading: isPaintingsLoading,
+    refetch: refetchPaintings,
+  } = useGetAfricanPaintingsQuery({ limit: 8 });
+
+  const {
+    data: decorationsData,
+    isLoading: isDecorationsLoading,
+    refetch: refetchDecorations,
+  } = useGetBestsellersDecorationsQuery({ limit: 6 });
+
+  const {
+    data: cultureProductsData,
+    isLoading: isCultureProductsLoading,
+    refetch: refetchCulture,
+  } = useGetInspiredByCultureQuery({ limit: 8 });
+
+  const {
+    data: metadataData,
+    refetch: refetchMetadata,
+  } = useGetHomeFilterMetadataQuery();
+
+  const {
+    data: spotlightData,
+    refetch: refetchSpotlight,
+  } = useGetArtisanSpotlightQuery('heritageMasters');
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      await Promise.all([
+        refetchTopPicks(),
+        refetchPaintings(),
+        refetchDecorations(),
+        refetchCulture(),
+        refetchMetadata(),
+        refetchSpotlight(),
+      ]);
+    } catch {
+      // Ignore network refresh errors
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refetchTopPicks, refetchPaintings, refetchDecorations, refetchCulture, refetchMetadata, refetchSpotlight]);
+
+  // Derived Products with graceful fallback
+  const topPicksProducts = useMemo(() => {
+    if (topPicksData && topPicksData.length > 0) {
+      return topPicksData.slice(0, 6);
+    }
+    return FALLBACK_TOP_PICKS;
+  }, [topPicksData]);
+
+  const africanPaintings = useMemo(() => {
+    return paintingsData || [];
+  }, [paintingsData]);
+
+  const decorationsProducts = useMemo(() => {
+    return decorationsData || [];
+  }, [decorationsData]);
+
+  const cultureProducts = useMemo(() => {
+    return cultureProductsData || [];
+  }, [cultureProductsData]);
+
+  // Dynamic occasion categories from metadata
+  const occasionItems = useMemo(() => {
+    const cat = metadataData?.categories?.find(
+      (c) => c.slug === 'discover-by-occasion' || c.id === '2'
+    );
+    if (cat?.filters?.length) {
+      return cat.filters.map((f) => {
+        let culturalName = f.name;
+        const lower = f.name.toLowerCase();
+        if (lower.includes('holiday') || lower.includes('travel')) culturalName = 'Holidays & Travel (Ije)';
+        else if (lower.includes('summer')) culturalName = 'Summer Vibes (Ìgbà Ẹ̀rùn)';
+        else if (lower.includes('harmattan')) culturalName = 'Harmattan (Hunturu)';
+        else if (lower.includes('wedding')) culturalName = 'Weddings (Igba Nkwu)';
+        return {
+          id: f.id,
+          name: culturalName,
+          image: f.image,
+          slug: f.slug,
+        };
+      });
+    }
+    return OCCASION_FALLBACK;
+  }, [metadataData]);
+
+  // Featured artisan spotlight info
+  const featuredArtisan = useMemo(() => {
+    if (spotlightData && spotlightData.length > 0) {
+      const p = spotlightData[0];
+      return {
+        name: p.vendor?.businessName || p.createdBy || 'Master Ejiro & The Abeokuta Weavers',
+        tagline: 'Certified Provenance',
+        bio: p.description
+          ? p.description.replace(/<[^>]*>?/gm, '').slice(0, 140) + '...'
+          : 'Carrying forward three generations of indigenous craftsmanship and traditional weaving techniques.',
+      };
+    }
+    return {
+      name: 'Master Ejiro & The Abeokuta Weavers',
+      tagline: 'Certified Provenance',
+      bio: 'Carrying forward three generations of indigo vat dyeing and handloom weaving. Each garment takes over 40 hours of focused craftsmanship.',
+    };
+  }, [spotlightData]);
 
   // ─── SLIDE ANIMATION REFS ──────────────────────────────────
   const heritageScrollRef = useRef<ScrollView>(null);
@@ -305,18 +468,17 @@ export default function UserHomeScreen() {
     []
   );
 
-  const toggleFavorite = (id: string) => {
+  const toggleArtFavorite = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setFavorites((prev) => ({ ...prev, [id]: !prev[id] }));
+    setArtFavorites((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const handleProtectedAction = (target: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (isAuthenticated) {
-      router.push(target as any);
-    } else {
-      setIsAuthModalOpen(true);
-    }
+  const formatPrice = (price: string | number | undefined): string => {
+    if (price === undefined || price === null) return 'NGN 0.00';
+    const num = typeof price === 'string' ? parseFloat(price) : price;
+    return isNaN(num)
+      ? 'NGN 0.00'
+      : `NGN ${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   return (
@@ -325,12 +487,19 @@ export default function UserHomeScreen() {
         style={styles.mainScrollView}
         contentContainerStyle={styles.scrollContentContainer}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={['#C46C27']}
+            tintColor="#C46C27"
+          />
+        }
       >
         {/* ============================================================ */}
-        {/* HERO SECTION — 1:1 REPLICATION OF WEB LUXURY LANDING        */}
+        {/* 1. HERO SECTION — LUXURY ETHNIKRAFT EDITORIAL LANDING        */}
         {/* ============================================================ */}
         <View style={styles.heroWrapper}>
-          {/* High-Resolution Hero Background Image */}
           <Image
             source={require('../../../assets/revamp/main-background.webp')}
             style={StyleSheet.absoluteFill}
@@ -339,7 +508,6 @@ export default function UserHomeScreen() {
             transition={300}
           />
 
-          {/* Layer 1: Horizontal Deep Forest & Coffee Atmospheric Gradient */}
           <LinearGradient
             colors={[
               'rgba(11, 16, 11, 0.94)',
@@ -352,18 +520,16 @@ export default function UserHomeScreen() {
             style={StyleSheet.absoluteFill}
           />
 
-          {/* Layer 2: Vertical Dark Fade towards Bottom for Seamless Flow */}
           <LinearGradient
             colors={['transparent', 'rgba(0, 0, 0, 0.25)', 'rgba(38, 20, 9, 0.95)']}
             style={StyleSheet.absoluteFill}
           />
 
-          {/* Top Parity Header (with Safe Area Inset) */}
+          {/* Web Parity Header with Notification & Cart access */}
           <WebParityHeader />
 
           {/* Hero Content Area */}
           <View style={styles.heroBody}>
-            {/* Editorial Headline */}
             <View style={styles.headlineContainer}>
               <Text style={styles.headlineLine}>Discover Africa.</Text>
               <Text style={styles.headlineLine}>Own a piece</Text>
@@ -372,12 +538,10 @@ export default function UserHomeScreen() {
               </Text>
             </View>
 
-            {/* Subtitle */}
             <Text style={styles.heroSubtitle}>
               Exclusive collections handcrafted by master artisans across Africa.
             </Text>
 
-            {/* CTA Buttons Row */}
             <View style={styles.ctaRow}>
               <TouchableOpacity
                 style={styles.primaryCtaBtn}
@@ -408,7 +572,7 @@ export default function UserHomeScreen() {
           </View>
 
           {/* ============================================================ */}
-          {/* SHOP BY HERITAGE SECTION — LUXURY EMBEDDED CAROUSEL         */}
+          {/* SHOP BY HERITAGE — INTERACTIVE CATEGORY CAROUSEL            */}
           {/* ============================================================ */}
           <View style={[styles.heritageSectionContainer, Shadows.md]}>
             <View style={styles.heritageSectionHeader}>
@@ -423,7 +587,6 @@ export default function UserHomeScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Horizontal Heritage Cards Scroll with Smooth Slide Animations */}
             <ScrollView
               ref={heritageScrollRef}
               horizontal
@@ -447,7 +610,10 @@ export default function UserHomeScreen() {
                   style={[styles.heritageCard, Shadows.sm]}
                   onPress={() => {
                     Haptics.selectionAsync();
-                    router.push('/(user)/explore');
+                    router.push({
+                      pathname: '/(user)/explore',
+                      params: { category: item.category },
+                    });
                   }}
                   activeOpacity={0.88}
                 >
@@ -457,7 +623,6 @@ export default function UserHomeScreen() {
                     contentFit="cover"
                     cachePolicy="memory-disk"
                   />
-                  {/* Subtle Darkening Overlay */}
                   <LinearGradient
                     colors={['rgba(0,0,0,0.68)', 'rgba(0,0,0,0.22)', 'rgba(0,0,0,0.72)']}
                     style={StyleSheet.absoluteFill}
@@ -471,7 +636,6 @@ export default function UserHomeScreen() {
               ))}
             </ScrollView>
 
-            {/* Sleek Progress Indicator Bar */}
             <View style={styles.progressBarWrapper}>
               <View style={styles.progressBarTrack}>
                 <View
@@ -491,7 +655,7 @@ export default function UserHomeScreen() {
         </View>
 
         {/* ============================================================ */}
-        {/* TOP PICKS THIS WEEK — PRODUCT SHOWCASE                       */}
+        {/* 2. TOP PICKS THIS WEEK — DYNAMIC LIVE PRODUCTS               */}
         {/* ============================================================ */}
         <View style={styles.sectionBlock}>
           <View style={styles.sectionHeaderRow}>
@@ -509,81 +673,230 @@ export default function UserHomeScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.productsGrid}>
-            {TOP_PICKS_PRODUCTS.map((prod) => {
-              const isFav = !!favorites[prod.id];
-              return (
-                <View key={prod.id} style={[styles.productCard, Shadows.sm]}>
-                  {/* Visual Image Container */}
-                  <View style={styles.productImageWrapper}>
-                    <Image
-                      source={prod.image}
-                      style={styles.productImage}
-                      contentFit="cover"
-                      cachePolicy="memory-disk"
-                    />
-
-                    {/* Badge Pill */}
-                    <View style={styles.badgePill}>
-                      <Text style={styles.badgePillText}>{prod.badge}</Text>
-                    </View>
-
-                    {/* Favorite Heart Button */}
-                    <TouchableOpacity
-                      style={styles.favIconBtn}
-                      onPress={() => toggleFavorite(prod.id)}
-                      activeOpacity={0.8}
-                    >
-                      <Ionicons
-                        name={isFav ? 'heart' : 'heart-outline'}
-                        size={17}
-                        color={isFav ? '#D96225' : '#221208'}
-                      />
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Product Details */}
-                  <View style={styles.productDetails}>
-                    <Text style={styles.productOriginTag}>{prod.origin}</Text>
-                    <Text style={styles.productItemTitle} numberOfLines={2}>
-                      {prod.title}
-                    </Text>
-
-                    {/* Artisan Signature */}
-                    <View style={styles.artisanRow}>
-                      <Ionicons name="storefront-outline" size={12} color="#C46C27" />
-                      <Text style={styles.artisanNameText} numberOfLines={1}>
-                        {prod.artisan}
-                      </Text>
-                    </View>
-
-                    {/* Rating Stars */}
-                    <View style={styles.ratingRow}>
-                      <Ionicons name="star" size={12} color="#E8BA7A" />
-                      <Text style={styles.ratingScore}>{prod.rating}</Text>
-                      <Text style={styles.reviewsCount}>({prod.reviews})</Text>
-                    </View>
-
-                    {/* Price and Add to Bag */}
-                    <View style={styles.priceActionRow}>
-                      <Text style={styles.priceValue}>{prod.price}</Text>
-                      <TouchableOpacity
-                        style={styles.addMiniBtn}
-                        onPress={() => handleProtectedAction('/(user)/orders')}
-                        activeOpacity={0.85}
-                      >
-                        <Ionicons name="add" size={17} color="#FFF" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
+          {isTopPicksLoading && !topPicksProducts.length ? (
+            <View style={styles.sectionLoader}>
+              <ActivityIndicator size="small" color="#C46C27" />
+            </View>
+          ) : (
+            <View style={styles.productsGrid}>
+              {topPicksProducts.map((prod) => (
+                <ProductCard
+                  key={prod.id}
+                  product={prod}
+                  onAddToCart={() => {
+                    if (!isAuthenticated) setIsAuthModalOpen(true);
+                  }}
+                  onCustomize={() => {
+                    router.push({
+                      pathname: '/product/[id]',
+                      params: { id: prod.id },
+                    });
+                  }}
+                />
+              ))}
+            </View>
+          )}
         </View>
 
         {/* ============================================================ */}
-        {/* ONE-OF-A-KIND FINDS — CURATED HORIZONTAL SLIDER             */}
+        {/* 3. DISCOVER BY OCCASION — CEREMONY & LIFESTYLE SHOWCASE     */}
+        {/* ============================================================ */}
+        <View style={styles.sectionBlock}>
+          <View style={styles.sectionHeaderRow}>
+            <View>
+              <Text style={styles.sectionEditorialTitle}>Discover by Occasion</Text>
+              <Text style={styles.sectionEditorialSubtitle}>
+                Find curated pieces perfect for celebrations, travel, and lifestyle
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => router.push('/(user)/explore')}
+              style={styles.curatedViewAll}
+            >
+              <Text style={styles.viewAllOrange}>View All</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.occasionScroll}
+          >
+            {occasionItems.map((occ) => (
+              <TouchableOpacity
+                key={occ.id}
+                style={[styles.occasionCard, Shadows.sm]}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  router.push({
+                    pathname: '/(user)/explore',
+                    params: { search: occ.slug },
+                  });
+                }}
+                activeOpacity={0.88}
+              >
+                <Image
+                  source={{ uri: occ.image }}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                />
+                <LinearGradient
+                  colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.78)']}
+                  style={StyleSheet.absoluteFill}
+                />
+                <View style={styles.occasionCardBody}>
+                  <Text style={styles.occasionCardTitle}>{occ.name}</Text>
+                  <Text style={styles.occasionCardAction}>Explore Collection →</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* ============================================================ */}
+        {/* 4. AFRICAN PAINTINGS & FINE ART GALLERY                      */}
+        {/* ============================================================ */}
+        <View style={styles.sectionBlock}>
+          <View style={styles.sectionHeaderRow}>
+            <View>
+              <Text style={styles.sectionEditorialTitle}>African Paintings & Fine Art</Text>
+              <Text style={styles.sectionEditorialSubtitle}>
+                Original canvases and expressive works from master painters
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => {
+                router.push({
+                  pathname: '/(user)/explore',
+                  params: { category: 'PAINTINGS' },
+                });
+              }}
+              style={styles.curatedViewAll}
+            >
+              <Text style={styles.viewAllOrange}>View Gallery</Text>
+            </TouchableOpacity>
+          </View>
+
+          {isPaintingsLoading && !africanPaintings.length ? (
+            <View style={styles.sectionLoader}>
+              <ActivityIndicator size="small" color="#C46C27" />
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.paintingsScroll}
+            >
+              {africanPaintings.map((art) => {
+                const isFav = !!artFavorites[art.id];
+                return (
+                  <TouchableOpacity
+                    key={art.id}
+                    style={[styles.artCard, Shadows.sm]}
+                    activeOpacity={0.92}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      router.push({
+                        pathname: '/product/[id]',
+                        params: { id: art.id },
+                      });
+                    }}
+                  >
+                    <View style={styles.artImageWrapper}>
+                      <Image
+                        source={{ uri: art.mainImage }}
+                        style={styles.artImage}
+                        contentFit="cover"
+                        cachePolicy="memory-disk"
+                      />
+                      <View style={styles.artBadgePill}>
+                        <Text style={styles.artBadgeText}>FINE ART</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.artFavBtn}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          toggleArtFavorite(art.id);
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons
+                          name={isFav ? 'heart' : 'heart-outline'}
+                          size={15}
+                          color={isFav ? '#D96225' : '#221208'}
+                        />
+                      </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.artDetails}>
+                      <Text style={styles.artTitle} numberOfLines={2}>
+                        {art.name}
+                      </Text>
+                      <Text style={styles.artArtist} numberOfLines={1}>
+                        By {art.vendor?.businessName || art.createdBy || 'Authentic African Painter'}
+                      </Text>
+                      <View style={styles.artPriceRow}>
+                        <Text style={styles.artPrice}>{formatPrice(art.price)}</Text>
+                        <View style={styles.artViewTag}>
+                          <Text style={styles.artViewTagText}>View Piece</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
+        </View>
+
+        {/* ============================================================ */}
+        {/* 5. MID-PAGE EDITORIAL BANNER 1                               */}
+        {/* ============================================================ */}
+        <TouchableOpacity
+          style={[styles.editorialBannerWrapper, Shadows.md]}
+          activeOpacity={0.92}
+          onPress={() => router.push('/(user)/explore')}
+        >
+          <Image
+            source={{
+              uri: 'https://res.cloudinary.com/deda2pipj/image/upload/v1747294754/Landing_page_banner_4_mid_nzrgjc.png',
+            }}
+            style={styles.editorialBannerImage}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+          />
+        </TouchableOpacity>
+
+        {/* ============================================================ */}
+        {/* 6. ARTISAN GUILD SPOTLIGHT — EDITORIAL HERO CARD             */}
+        {/* ============================================================ */}
+        <View style={[styles.spotlightCard, Shadows.md]}>
+          <View style={styles.spotlightTop}>
+            <View style={styles.spotlightBadge}>
+              <Text style={styles.spotlightBadgeText}>ARTISAN GUILD SPOTLIGHT</Text>
+            </View>
+            <View style={styles.verifiedRow}>
+              <Ionicons name="shield-checkmark" size={14} color="#E8BA7A" />
+              <Text style={styles.verifiedText}>{featuredArtisan.tagline}</Text>
+            </View>
+          </View>
+
+          <Text style={styles.spotlightHeading}>{featuredArtisan.name}</Text>
+          <Text style={styles.spotlightDescription}>{featuredArtisan.bio}</Text>
+
+          <TouchableOpacity
+            style={styles.spotlightActionBtn}
+            onPress={() => router.push('/(user)/studio')}
+            activeOpacity={0.88}
+          >
+            <Text style={styles.spotlightActionText}>Commission Bespoke Piece</Text>
+            <Ionicons name="sparkles" size={14} color="#FFF5DE" />
+          </TouchableOpacity>
+        </View>
+
+        {/* ============================================================ */}
+        {/* 7. ONE-OF-A-KIND FINDS — CURATED HORIZONTAL SLIDER           */}
         {/* ============================================================ */}
         <View style={styles.sectionBlock}>
           <View style={styles.sectionHeaderRow}>
@@ -593,6 +906,17 @@ export default function UserHomeScreen() {
                 Rare artifacts, antique relics, and bespoke sculpture
               </Text>
             </View>
+            <TouchableOpacity
+              onPress={() => {
+                router.push({
+                  pathname: '/(user)/explore',
+                  params: { category: 'ANTIQUES' },
+                });
+              }}
+              style={styles.curatedViewAll}
+            >
+              <Text style={styles.viewAllOrange}>See More</Text>
+            </TouchableOpacity>
           </View>
 
           <ScrollView
@@ -616,7 +940,12 @@ export default function UserHomeScreen() {
               <TouchableOpacity
                 key={card.id}
                 style={[styles.cultureCard, Shadows.sm]}
-                onPress={() => router.push('/(user)/explore')}
+                onPress={() => {
+                  router.push({
+                    pathname: '/(user)/explore',
+                    params: { category: 'ANTIQUES' },
+                  });
+                }}
                 activeOpacity={0.88}
               >
                 <Image
@@ -639,37 +968,144 @@ export default function UserHomeScreen() {
         </View>
 
         {/* ============================================================ */}
-        {/* ARTISAN SPOTLIGHT — EDITORIAL HERO CARD                      */}
+        {/* 8. BESTSELLERS IN HOME & DÉCOR                               */}
         {/* ============================================================ */}
-        <View style={[styles.spotlightCard, Shadows.md]}>
-          <View style={styles.spotlightTop}>
-            <View style={styles.spotlightBadge}>
-              <Text style={styles.spotlightBadgeText}>ARTISAN GUILD SPOTLIGHT</Text>
+        {decorationsProducts.length > 0 && (
+          <View style={styles.sectionBlock}>
+            <View style={styles.sectionHeaderRow}>
+              <View>
+                <Text style={styles.sectionEditorialTitle}>Bestsellers in Home & Décor</Text>
+                <Text style={styles.sectionEditorialSubtitle}>
+                  Transform your living space with handcrafted African decor
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => {
+                  router.push({
+                    pathname: '/(user)/explore',
+                    params: { category: 'CRAFTS' },
+                  });
+                }}
+                style={styles.curatedViewAll}
+              >
+                <Text style={styles.viewAllOrange}>Explore Décor</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.verifiedRow}>
-              <Ionicons name="shield-checkmark" size={14} color="#E8BA7A" />
-              <Text style={styles.verifiedText}>Certified Provenance</Text>
-            </View>
+
+            {isDecorationsLoading ? (
+              <View style={styles.sectionLoader}>
+                <ActivityIndicator size="small" color="#C46C27" />
+              </View>
+            ) : (
+              <View style={styles.productsGrid}>
+                {decorationsProducts.map((prod) => (
+                  <ProductCard
+                    key={prod.id}
+                    product={prod}
+                    onAddToCart={() => {
+                      if (!isAuthenticated) setIsAuthModalOpen(true);
+                    }}
+                    onCustomize={() => {
+                      router.push({
+                        pathname: '/product/[id]',
+                        params: { id: prod.id },
+                      });
+                    }}
+                  />
+                ))}
+              </View>
+            )}
           </View>
+        )}
 
-          <Text style={styles.spotlightHeading}>Master Ejiro & The Abeokuta Weavers</Text>
-          <Text style={styles.spotlightDescription}>
-            Carrying forward three generations of indigo vat dyeing and handloom weaving.
-            Each garment takes over 40 hours of focused craftsmanship.
-          </Text>
+        {/* ============================================================ */}
+        {/* 9. MID-PAGE EDITORIAL BANNER 2                               */}
+        {/* ============================================================ */}
+        <TouchableOpacity
+          style={[styles.editorialBannerWrapper, Shadows.md]}
+          activeOpacity={0.92}
+          onPress={() => router.push('/(user)/explore')}
+        >
+          <Image
+            source={{
+              uri: 'https://res.cloudinary.com/deda2pipj/image/upload/v1747294753/Landing_page_banner_5_mid_dtgxle.png',
+            }}
+            style={styles.editorialBannerImage}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+          />
+        </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.spotlightActionBtn}
-            onPress={() => router.push('/(user)/studio')}
-            activeOpacity={0.88}
-          >
-            <Text style={styles.spotlightActionText}>Commission Bespoke Piece</Text>
-            <Ionicons name="sparkles" size={14} color="#FFF5DE" />
-          </TouchableOpacity>
-        </View>
+        {/* ============================================================ */}
+        {/* 10. INSPIRED BY CULTURE — CULTURAL APPAREL & ACCESSORIES     */}
+        {/* ============================================================ */}
+        {cultureProducts.length > 0 && (
+          <View style={styles.sectionBlock}>
+            <View style={styles.sectionHeaderRow}>
+              <View>
+                <Text style={styles.sectionEditorialTitle}>Inspired by Culture</Text>
+                <Text style={styles.sectionEditorialSubtitle}>
+                  Rooted in tradition, re-imagined for contemporary life
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => router.push('/(user)/explore')}
+                style={styles.curatedViewAll}
+              >
+                <Text style={styles.viewAllOrange}>See More</Text>
+              </TouchableOpacity>
+            </View>
+
+            {isCultureProductsLoading ? (
+              <View style={styles.sectionLoader}>
+                <ActivityIndicator size="small" color="#C46C27" />
+              </View>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.paintingsScroll}
+              >
+                {cultureProducts.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[styles.cultureProductCard, Shadows.sm]}
+                    activeOpacity={0.9}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      router.push({
+                        pathname: '/product/[id]',
+                        params: { id: item.id },
+                      });
+                    }}
+                  >
+                    <Image
+                      source={{ uri: item.mainImage }}
+                      style={styles.cultureProductImage}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                    />
+                    <LinearGradient
+                      colors={['transparent', 'rgba(0,0,0,0.85)']}
+                      style={StyleSheet.absoluteFill}
+                    />
+                    <View style={styles.cultureProductContent}>
+                      <Text style={styles.cultureProductTitle} numberOfLines={2}>
+                        {item.name}
+                      </Text>
+                      <Text style={styles.cultureProductPrice}>
+                        {formatPrice(item.price)}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        )}
 
         {/* Bottom Spacing */}
-        <View style={{ height: Spacing.xxl }} />
+        <View style={{ height: Spacing.xxl * 1.5 }} />
       </ScrollView>
 
       {/* Outside Dismiss Backdrop for Expanded Cart FAB */}
@@ -681,7 +1117,7 @@ export default function UserHomeScreen() {
         />
       )}
 
-      {/* 1. Bag / Checkout FAB (draggable) */}
+      {/* Bag / Checkout FAB (draggable) */}
       <CartFloatingButton
         ref={cartFabRef}
         onExpandChange={setIsCartExpanded}
@@ -706,7 +1142,7 @@ export default function UserHomeScreen() {
 const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
-    backgroundColor: '#FAF6F0', // African Warm Parchment
+    backgroundColor: '#FAF6F0',
   },
   mainScrollView: {
     flex: 1,
@@ -739,7 +1175,7 @@ const styles = StyleSheet.create({
   },
   headlineHighlight: {
     fontFamily: FontFamily.cormorantItalic,
-    color: '#D96225', // Terracotta Brand Accent
+    color: '#D96225',
   },
   heroSubtitle: {
     fontSize: 13,
@@ -804,7 +1240,7 @@ const styles = StyleSheet.create({
 
   // ─── SHOP BY HERITAGE CONTAINER ────────────────────────────
   heritageSectionContainer: {
-    backgroundColor: '#3E2413', // Rich dark chocolate container matching web
+    backgroundColor: '#3E2413',
     marginHorizontal: Spacing.md,
     marginTop: Spacing.sm,
     borderRadius: Radius.xl,
@@ -892,9 +1328,9 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
 
-  // ─── TOP PICKS & CURATED SECTIONS ──────────────────────────
+  // ─── SECTION STYLES ────────────────────────────────────────
   sectionBlock: {
-    marginTop: Spacing.lg,
+    marginTop: Spacing.xl,
     paddingHorizontal: Spacing.md,
   },
   sectionHeaderRow: {
@@ -914,7 +1350,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.latoRegular,
     color: Colors.textSecondary,
     marginTop: 2,
-    maxWidth: width * 0.7,
+    maxWidth: width * 0.72,
   },
   curatedViewAll: {
     paddingBottom: 2,
@@ -924,130 +1360,26 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.poppinsSemiBold,
     color: '#C46C27',
   },
+  sectionLoader: {
+    paddingVertical: Spacing.xl,
+    alignItems: 'center',
+  },
+
+  // ─── 2-COLUMN PRODUCTS GRID ────────────────────────────────
   productsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: Spacing.sm,
-  },
-  productCard: {
-    width: (width - Spacing.md * 2 - Spacing.sm) / 2,
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: '#EFE6D8',
-    overflow: 'hidden',
-    marginBottom: Spacing.xs,
-  },
-  productImageWrapper: {
-    height: 160,
-    backgroundColor: '#F7EFE4',
-    position: 'relative',
-  },
-  productImage: {
-    width: '100%',
-    height: '100%',
-  },
-  badgePill: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: Radius.full,
-  },
-  badgePillText: {
-    fontSize: 9,
-    fontFamily: FontFamily.poppinsBold,
-    color: '#C46C27',
-    textTransform: 'uppercase',
-  },
-  favIconBtn: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  productDetails: {
-    padding: Spacing.sm + 2,
-  },
-  productOriginTag: {
-    fontSize: 9,
-    fontFamily: FontFamily.poppinsSemiBold,
-    color: Colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 2,
-  },
-  productItemTitle: {
-    fontSize: Typography.fontSize.xs + 1,
-    fontFamily: FontFamily.poppinsSemiBold,
-    color: Colors.textPrimary,
-    lineHeight: 17,
-    minHeight: 34,
-  },
-  artisanRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
-  },
-  artisanNameText: {
-    fontSize: 11,
-    fontFamily: FontFamily.poppinsMedium,
-    color: Colors.textSecondary,
-    flex: 1,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    marginTop: 4,
-  },
-  ratingScore: {
-    fontSize: 11,
-    fontFamily: FontFamily.poppinsBold,
-    color: Colors.textPrimary,
-  },
-  reviewsCount: {
-    fontSize: 10,
-    fontFamily: FontFamily.latoRegular,
-    color: Colors.textMuted,
-  },
-  priceActionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: Spacing.xs + 2,
-  },
-  priceValue: {
-    fontSize: 13,
-    fontFamily: FontFamily.poppinsBold,
-    color: Colors.primaryDark,
-  },
-  addMiniBtn: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: '#C46C27',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 
-  // ─── CULTURE CARDS ─────────────────────────────────────────
-  cultureCardsScroll: {
-    gap: CULTURE_GAP,
+  // ─── OCCASION SCROLL CARDS ─────────────────────────────────
+  occasionScroll: {
+    gap: 12,
     paddingVertical: 4,
   },
-  cultureCard: {
-    width: CULTURE_CARD_WIDTH,
-    height: 140,
+  occasionCard: {
+    width: 170,
+    height: 125,
     borderRadius: Radius.lg,
     overflow: 'hidden',
     position: 'relative',
@@ -1055,20 +1387,123 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E8DAC8',
   },
-  cultureCardBody: {
-    padding: Spacing.md,
+  occasionCardBody: {
+    padding: Spacing.sm + 2,
     zIndex: 10,
   },
-  cultureCardTitle: {
-    fontSize: 14,
+  occasionCardTitle: {
+    fontSize: 13,
     fontFamily: FontFamily.cormorantBold,
     color: '#FFF8EA',
   },
-  cultureCardSub: {
+  occasionCardAction: {
     fontSize: 10,
-    fontFamily: FontFamily.latoRegular,
-    color: '#E0D0BF',
+    fontFamily: FontFamily.poppinsMedium,
+    color: '#E8BA7A',
     marginTop: 2,
+  },
+
+  // ─── AFRICAN PAINTINGS GALLERY ─────────────────────────────
+  paintingsScroll: {
+    gap: ART_GAP,
+    paddingVertical: 4,
+  },
+  artCard: {
+    width: ART_CARD_WIDTH,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: '#EFE6D8',
+    overflow: 'hidden',
+  },
+  artImageWrapper: {
+    height: 165,
+    backgroundColor: '#F5ECE1',
+    position: 'relative',
+  },
+  artImage: {
+    width: '100%',
+    height: '100%',
+  },
+  artBadgePill: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: Radius.full,
+  },
+  artBadgeText: {
+    fontSize: 8.5,
+    fontFamily: FontFamily.poppinsBold,
+    color: '#C46C27',
+    letterSpacing: 0.5,
+  },
+  artFavBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  artDetails: {
+    padding: Spacing.sm + 2,
+  },
+  artTitle: {
+    fontSize: Typography.fontSize.xs + 1,
+    fontFamily: FontFamily.poppinsSemiBold,
+    color: Colors.textPrimary,
+    lineHeight: 17,
+    minHeight: 34,
+  },
+  artArtist: {
+    fontSize: 10.5,
+    fontFamily: FontFamily.poppinsMedium,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  artPriceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: Spacing.xs + 2,
+  },
+  artPrice: {
+    fontSize: 12.5,
+    fontFamily: FontFamily.poppinsBold,
+    color: Colors.primaryDark,
+  },
+  artViewTag: {
+    backgroundColor: '#FAF2E6',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: '#E8DAC8',
+  },
+  artViewTagText: {
+    fontSize: 9.5,
+    fontFamily: FontFamily.poppinsSemiBold,
+    color: '#C46C27',
+  },
+
+  // ─── EDITORIAL BANNERS ─────────────────────────────────────
+  editorialBannerWrapper: {
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.xl,
+    borderRadius: Radius.xl,
+    overflow: 'hidden',
+    height: 140,
+    backgroundColor: '#2A170A',
+  },
+  editorialBannerImage: {
+    width: '100%',
+    height: '100%',
   },
 
   // ─── SPOTLIGHT CARD ────────────────────────────────────────
@@ -1139,6 +1574,71 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.poppinsBold,
     color: '#E8BA7A',
   },
+
+  // ─── CULTURE CARDS ─────────────────────────────────────────
+  cultureCardsScroll: {
+    gap: CULTURE_GAP,
+    paddingVertical: 4,
+  },
+  cultureCard: {
+    width: CULTURE_CARD_WIDTH,
+    height: 140,
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
+    position: 'relative',
+    justifyContent: 'flex-end',
+    borderWidth: 1,
+    borderColor: '#E8DAC8',
+  },
+  cultureCardBody: {
+    padding: Spacing.md,
+    zIndex: 10,
+  },
+  cultureCardTitle: {
+    fontSize: 14,
+    fontFamily: FontFamily.cormorantBold,
+    color: '#FFF8EA',
+  },
+  cultureCardSub: {
+    fontSize: 10,
+    fontFamily: FontFamily.latoRegular,
+    color: '#E0D0BF',
+    marginTop: 2,
+  },
+
+  // ─── CULTURE PRODUCT CARDS ─────────────────────────────────
+  cultureProductCard: {
+    width: 175,
+    height: 220,
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
+    position: 'relative',
+    justifyContent: 'flex-end',
+    borderWidth: 1,
+    borderColor: '#EFE6D8',
+  },
+  cultureProductImage: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+  },
+  cultureProductContent: {
+    padding: Spacing.sm + 2,
+    zIndex: 10,
+  },
+  cultureProductTitle: {
+    fontSize: 12.5,
+    fontFamily: FontFamily.poppinsSemiBold,
+    color: '#FFF8EA',
+    lineHeight: 16,
+  },
+  cultureProductPrice: {
+    fontSize: 12,
+    fontFamily: FontFamily.poppinsBold,
+    color: '#E8BA7A',
+    marginTop: 2,
+  },
+
   cartBackdropDismiss: {
     ...StyleSheet.absoluteFill,
     zIndex: 115,

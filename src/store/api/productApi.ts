@@ -139,6 +139,38 @@ export interface ProductListResponse {
   };
 }
 
+export interface HomeFilterItem {
+  id: string;
+  name: string;
+  slug: string;
+  image: string;
+  type?: string;
+  endpoint?: string;
+  categorySlug?: string;
+}
+
+export interface HomeFilterCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  filters: HomeFilterItem[];
+  endpoint?: string;
+}
+
+export interface HomeFilterMetadataResponse {
+  categories: HomeFilterCategory[];
+  totalFilters: number;
+}
+
+export interface CollectionResponse {
+  products: Product[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages?: number;
+}
+
 export interface SingleProductResponse {
   success: boolean;
   message?: string;
@@ -196,6 +228,147 @@ export const productApi = baseApi.injectEndpoints({
       },
       providesTags: (_result, _error, { productId }) => [{ type: 'Reviews' as const, id: productId }],
     }),
+
+    getHomeFilterMetadata: builder.query<HomeFilterMetadataResponse, void>({
+      query: () => API_ENDPOINTS.products.homeFilters,
+      transformResponse: (response: any) => {
+        const raw = response?.data || response;
+        return {
+          categories: raw?.categories || [],
+          totalFilters: raw?.totalFilters || (raw?.categories?.length ?? 0),
+        };
+      },
+    }),
+
+    getTopPicksWeek: builder.query<Product[], { limit?: number; page?: number } | void>({
+      query: (options) => {
+        const params = new URLSearchParams();
+        if (options?.limit) params.append('limit', options.limit.toString());
+        if (options?.page) params.append('page', options.page.toString());
+        const qs = params.toString();
+        return `${API_ENDPOINTS.products.collections.topPicks}${qs ? `?${qs}` : ''}`;
+      },
+      transformResponse: (response: any) => {
+        const raw = response?.data || response;
+        return raw?.products || (Array.isArray(raw) ? raw : []);
+      },
+    }),
+
+    getAfricanPaintings: builder.query<Product[], { limit?: number; page?: number } | void>({
+      query: (options) => {
+        const params = new URLSearchParams();
+        if (options?.limit) params.append('limit', options.limit.toString());
+        if (options?.page) params.append('page', options.page.toString());
+        const qs = params.toString();
+        return `${API_ENDPOINTS.products.collections.paintings}${qs ? `?${qs}` : ''}`;
+      },
+      transformResponse: (response: any) => {
+        const raw = response?.data || response;
+        return raw?.products || (Array.isArray(raw) ? raw : []);
+      },
+    }),
+
+    getBestsellersDecorations: builder.query<Product[], { limit?: number; page?: number } | void>({
+      query: (options) => {
+        const params = new URLSearchParams();
+        if (options?.limit) params.append('limit', options.limit.toString());
+        if (options?.page) params.append('page', options.page.toString());
+        const qs = params.toString();
+        return `${API_ENDPOINTS.products.collections.bestsellersDecorations}${qs ? `?${qs}` : ''}`;
+      },
+      transformResponse: (response: any) => {
+        const raw = response?.data || response;
+        return raw?.products || (Array.isArray(raw) ? raw : []);
+      },
+    }),
+
+    getInspiredByCulture: builder.query<Product[], { limit?: number; page?: number } | void>({
+      query: (options) => {
+        const params = new URLSearchParams();
+        if (options?.limit) params.append('limit', options.limit.toString());
+        if (options?.page) params.append('page', options.page.toString());
+        const qs = params.toString();
+        return `${API_ENDPOINTS.products.collections.inspiredByCulture}${qs ? `?${qs}` : ''}`;
+      },
+      transformResponse: (response: any) => {
+        const raw = response?.data || response;
+        return raw?.products || (Array.isArray(raw) ? raw : []);
+      },
+    }),
+
+    getBestsellers: builder.query<Product[], { limit?: number; page?: number } | void>({
+      query: (options) => {
+        const params = new URLSearchParams();
+        if (options?.limit) params.append('limit', options.limit.toString());
+        if (options?.page) params.append('page', options.page.toString());
+        const qs = params.toString();
+        return `${API_ENDPOINTS.products.collections.bestsellers}${qs ? `?${qs}` : ''}`;
+      },
+      transformResponse: (response: any) => {
+        const raw = response?.data || response;
+        return raw?.products || (Array.isArray(raw) ? raw : []);
+      },
+    }),
+
+    getTrending: builder.query<Product[], { limit?: number; page?: number } | void>({
+      query: (options) => {
+        const params = new URLSearchParams();
+        if (options?.limit) params.append('limit', options.limit.toString());
+        if (options?.page) params.append('page', options.page.toString());
+        const qs = params.toString();
+        return `${API_ENDPOINTS.products.collections.trending}${qs ? `?${qs}` : ''}`;
+      },
+      transformResponse: (response: any) => {
+        const raw = response?.data || response;
+        return raw?.products || (Array.isArray(raw) ? raw : []);
+      },
+    }),
+
+    getDeals: builder.query<Product[], { limit?: number; page?: number } | void>({
+      query: (options) => {
+        const params = new URLSearchParams();
+        if (options?.limit) params.append('limit', options.limit.toString());
+        if (options?.page) params.append('page', options.page.toString());
+        const qs = params.toString();
+        return `${API_ENDPOINTS.products.collections.deals}${qs ? `?${qs}` : ''}`;
+      },
+      transformResponse: (response: any) => {
+        const raw = response?.data || response;
+        return raw?.products || (Array.isArray(raw) ? raw : []);
+      },
+    }),
+
+    getNewArrivals: builder.query<Product[], { limit?: number; page?: number } | void>({
+      query: (options) => {
+        const params = new URLSearchParams();
+        if (options?.limit) params.append('limit', options.limit.toString());
+        if (options?.page) params.append('page', options.page.toString());
+        const qs = params.toString();
+        return `${API_ENDPOINTS.products.collections.newArrivals}${qs ? `?${qs}` : ''}`;
+      },
+      transformResponse: (response: any) => {
+        const raw = response?.data || response;
+        return raw?.products || (Array.isArray(raw) ? raw : []);
+      },
+    }),
+
+    getArtisanSpotlight: builder.query<Product[], 'heritageMasters' | 'womenInCraft' | 'mixedMediaInnovators' | 'featuredCreators'>({
+      query: (key) => API_ENDPOINTS.products.artisanSpotlight[key],
+      transformResponse: (response: any) => {
+        const raw = response?.data || response;
+        return raw?.products || (Array.isArray(raw) ? raw : []);
+      },
+    }),
+
+    getProductsByEndpoint: builder.query<Product[], string>({
+      query: (endpoint) => {
+        return endpoint.replace(/^\/api\/v1/, '');
+      },
+      transformResponse: (response: any) => {
+        const raw = response?.data || response;
+        return raw?.products || (Array.isArray(raw) ? raw : []);
+      },
+    }),
   }),
   overrideExisting: true,
 });
@@ -205,4 +378,15 @@ export const {
   useGetProductByIdQuery,
   useGetProductCategoriesQuery,
   useGetProductReviewsQuery,
+  useGetHomeFilterMetadataQuery,
+  useGetTopPicksWeekQuery,
+  useGetAfricanPaintingsQuery,
+  useGetBestsellersDecorationsQuery,
+  useGetInspiredByCultureQuery,
+  useGetBestsellersQuery,
+  useGetTrendingQuery,
+  useGetDealsQuery,
+  useGetNewArrivalsQuery,
+  useGetArtisanSpotlightQuery,
+  useGetProductsByEndpointQuery,
 } = productApi;

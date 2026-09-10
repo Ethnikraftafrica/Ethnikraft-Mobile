@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useGetProductsQuery, Product } from '@/store/api/productApi';
 import { MOCK_PRODUCTS } from '@/constants/mockProducts';
@@ -47,6 +47,7 @@ const INITIAL_FILTERS: FilterState = {
 
 export default function ExploreScreen() {
   const router = useRouter();
+  const { category: urlCategory } = useLocalSearchParams<{ category?: string }>();
   const insets = useSafeAreaInsets();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
 
@@ -56,6 +57,20 @@ export default function ExploreScreen() {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedSort, setSelectedSort] = useState<SortOption>('relevance');
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
+
+  // Sync category param from route/navigation
+  React.useEffect(() => {
+    if (urlCategory) {
+      const match = CATEGORIES.find(
+        (c) => c.id.toUpperCase() === urlCategory.toUpperCase() || c.label.toUpperCase() === urlCategory.toUpperCase()
+      );
+      if (match) {
+        setSelectedCategory(match.id);
+        setFilters((prev) => ({ ...prev, category: match.id }));
+        setPage(1);
+      }
+    }
+  }, [urlCategory]);
 
   // Modals
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
