@@ -123,6 +123,8 @@ export default function ProductDetailScreen() {
 
   const carouselRef = useRef<ScrollView>(null);
   const isInteractingWithCarousel = useRef(false);
+  const isProgrammaticScroll = useRef(false);
+  const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   // Auto-slide carousel effect (rotates every 4.5s when user is not manually interacting)
@@ -130,7 +132,7 @@ export default function ProductDetailScreen() {
     if (!images || images.length <= 1) return;
 
     const interval = setInterval(() => {
-      if (isInteractingWithCarousel.current) return;
+      if (isInteractingWithCarousel.current || isProgrammaticScroll.current) return;
       setActiveImageIndex((prevIndex) => {
         const nextIndex = (prevIndex + 1) % images.length;
         carouselRef.current?.scrollTo({
@@ -145,29 +147,40 @@ export default function ProductDetailScreen() {
   }, [images?.length]);
 
   const scrollToImage = (index: number) => {
+    if (index === activeImageIndex) return;
     Haptics.selectionAsync();
     setActiveImageIndex(index);
+    isProgrammaticScroll.current = true;
+    isInteractingWithCarousel.current = true;
+
     carouselRef.current?.scrollTo({
       x: index * CAROUSEL_CARD_WIDTH,
       animated: true,
     });
+
+    if (scrollTimeout.current) {
+      clearTimeout(scrollTimeout.current);
+    }
+    scrollTimeout.current = setTimeout(() => {
+      isProgrammaticScroll.current = false;
+      isInteractingWithCarousel.current = false;
+    }, 450);
   };
 
   const nextSlide = () => {
     if (!images || images.length <= 1) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const nextIdx = (activeImageIndex + 1) % images.length;
     scrollToImage(nextIdx);
   };
 
   const prevSlide = () => {
     if (!images || images.length <= 1) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const prevIdx = (activeImageIndex - 1 + images.length) % images.length;
     scrollToImage(prevIdx);
   };
 
   const handleCarouselScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (isProgrammaticScroll.current) return;
     const slide = Math.round(event.nativeEvent.contentOffset.x / CAROUSEL_CARD_WIDTH);
     if (slide !== activeImageIndex && slide >= 0 && slide < images.length) {
       setActiveImageIndex(slide);
@@ -355,7 +368,7 @@ export default function ProductDetailScreen() {
             <ScrollView
               ref={carouselRef}
               horizontal
-              pagingEnabled
+              pagingEnabled={false}
               snapToInterval={CAROUSEL_CARD_WIDTH}
               snapToAlignment="center"
               decelerationRate="fast"
@@ -384,8 +397,7 @@ export default function ProductDetailScreen() {
                   <Image
                     source={{ uri: imgUri }}
                     style={styles.carouselImage}
-                    contentFit="contain"
-                    transition={300}
+                    contentFit="cover"
                     cachePolicy="memory-disk"
                   />
                 </View>
@@ -962,13 +974,12 @@ const styles = StyleSheet.create({
   carouselSlide: {
     width: CAROUSEL_CARD_WIDTH,
     height: CAROUSEL_CARD_HEIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FAF6F0',
+    overflow: 'hidden',
   },
   carouselImage: {
-    width: '92%',
-    height: '92%',
+    width: '100%',
+    height: '100%',
   },
   availabilityBadge: {
     position: 'absolute',
