@@ -98,19 +98,24 @@ export const WebParityHeader = () => {
           {/* Combined Favorites & Cart Pill */}
           <View style={styles.combinedPill}>
             <TouchableOpacity
-              onPress={() => handleProtectedAction('/(user)/orders')}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                handleProtectedAction('/(user)/explore');
+              }}
               style={styles.subIconBtn}
               activeOpacity={0.75}
+              accessibilityLabel="Favorites"
             >
-              <Ionicons name="heart-outline" size={16} color="#FFF5DE" />
+              <Ionicons name="heart" size={15} color="#FFF5DE" />
             </TouchableOpacity>
             <View style={styles.pillDivider} />
             <TouchableOpacity
               onPress={() => handleProtectedAction('/(user)/orders')}
               style={styles.subIconBtn}
               activeOpacity={0.75}
+              accessibilityLabel="Cart and Orders"
             >
-              <Ionicons name="cart-outline" size={16} color="#FFF5DE" />
+              <Ionicons name="cart-outline" size={15} color="#FFF5DE" />
             </TouchableOpacity>
           </View>
         </View>
@@ -129,20 +134,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.sm + 4,
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.sm + 2,
     zIndex: 30,
+    width: '100%',
   },
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+    flexShrink: 1,
   },
   logoImage: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    width: 33,
+    height: 33,
+    borderRadius: 9,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.25)',
   },
@@ -150,77 +157,81 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   brandName: {
-    fontSize: 20,
+    fontSize: 17.5,
     fontFamily: FontFamily.cormorantBold,
     color: '#FFF7E8',
     letterSpacing: 0.2,
   },
   brandTagline: {
-    fontSize: 7.5,
+    fontSize: 6.5,
     fontFamily: FontFamily.poppinsBold,
     color: '#E8BA7A',
-    letterSpacing: 1.2,
-    marginTop: 1,
+    letterSpacing: 0.8,
+    marginTop: 0.5,
   },
   actionsIsland: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
+    flexShrink: 0,
   },
   glassPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.42)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: 'rgba(255,255,255,0.2)',
     borderRadius: Radius.full,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 5,
+    gap: 2,
   },
   flagEmoji: {
-    fontSize: 13,
+    fontSize: 12,
   },
   glassPillRound: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.42)',
+    width: 29,
+    height: 29,
+    borderRadius: 15,
+    backgroundColor: 'rgba(0,0,0,0.45)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   signInPill: {
-    backgroundColor: 'rgba(0,0,0,0.42)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.25)',
     borderRadius: Radius.full,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
   },
   signInText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontFamily: FontFamily.poppinsSemiBold,
     color: '#FFF5DE',
   },
   combinedPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.42)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: 'rgba(255,255,255,0.22)',
     borderRadius: Radius.full,
-    paddingHorizontal: 4,
-    paddingVertical: 4,
+    paddingHorizontal: 3,
+    paddingVertical: 3,
+    marginRight: 2,
   },
   subIconBtn: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    width: 26,
+    height: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   pillDivider: {
     width: 1,
     height: 12,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.22)',
   },
 });

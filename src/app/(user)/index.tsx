@@ -672,6 +672,14 @@ export default function UserHomeScreen() {
 
   return (
     <View style={styles.screenContainer}>
+      {/* ── Fixed Global Background Texture Matching Web (globals.css: /revamp/new-background.webp) ── */}
+      <Image
+        source={require('../../../assets/revamp/new-background.webp')}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+      />
+
       <ScrollView
         style={styles.mainScrollView}
         contentContainerStyle={styles.scrollContentContainer}
@@ -696,12 +704,12 @@ export default function UserHomeScreen() {
             cachePolicy="memory-disk"
           />
 
-          {/* Vignette Layer */}
+          {/* Web Parity Horizontal Vignette: Deep on left for typography, open on right for artwork */}
           <LinearGradient
             colors={[
-              'rgba(11, 16, 11, 0.88)',
-              'rgba(16, 22, 14, 0.72)',
-              'rgba(33, 18, 11, 0.32)',
+              'rgba(11, 16, 11, 0.92)',
+              'rgba(16, 22, 14, 0.74)',
+              'rgba(33, 18, 11, 0.25)',
               'rgba(55, 24, 10, 0.15)',
             ]}
             start={{ x: 0, y: 0.5 }}
@@ -709,10 +717,23 @@ export default function UserHomeScreen() {
             style={StyleSheet.absoluteFill}
           />
 
-          {/* SEAMLESS FADE DIRECTLY INTO #FAF6F0 AT BOTTOM OF HERO */}
+          {/* Web Parity Vertical Ambient Lighting: clear center preserves model and hero image */}
           <LinearGradient
-            colors={['transparent', 'rgba(250, 246, 240, 0.45)', '#FAF6F0']}
+            colors={[
+              'rgba(0, 0, 0, 0.25)',
+              'rgba(0, 0, 0, 0.05)',
+              'rgba(26, 14, 8, 0.45)',
+            ]}
+            locations={[0, 0.45, 0.9]}
             style={StyleSheet.absoluteFill}
+          />
+
+          {/* Bottom Edge Fade: Softly dissolves hero base into parchment page background */}
+          <LinearGradient
+            colors={['transparent', 'rgba(250, 246, 240, 0.65)', '#FAF6F0']}
+            locations={[0, 0.6, 1]}
+            style={styles.heroBottomFade}
+            pointerEvents="none"
           />
 
           {/* Web Parity Header with Insets */}
@@ -742,7 +763,7 @@ export default function UserHomeScreen() {
                 activeOpacity={0.88}
               >
                 <Text style={styles.primaryCtaText}>Shop Collections</Text>
-                <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+                <Ionicons name="arrow-forward" size={15} color="#FFFFFF" />
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -755,7 +776,7 @@ export default function UserHomeScreen() {
               >
                 <Text style={styles.secondaryCtaText}>Watch Our Story</Text>
                 <View style={styles.playIconBubble}>
-                  <Ionicons name="play" size={13} color="#FFF5DE" style={{ marginLeft: 2 }} />
+                  <Ionicons name="play" size={12} color="#FFF5DE" style={{ marginLeft: 2 }} />
                 </View>
               </TouchableOpacity>
             </View>
@@ -1133,19 +1154,27 @@ const styles = StyleSheet.create({
   },
   mainScrollView: {
     flex: 1,
-    backgroundColor: '#FAF6F0',
+    backgroundColor: 'transparent',
   },
   scrollContentContainer: {
     paddingBottom: Spacing.xxl,
-    backgroundColor: '#FAF6F0',
+    backgroundColor: 'transparent',
   },
 
   // ─── HERO SECTION ──────────────────────────────────────────
   heroWrapper: {
     position: 'relative',
     minHeight: 570,
-    backgroundColor: '#FAF6F0',
+    backgroundColor: '#1E1208',
     paddingBottom: Spacing.md,
+  },
+  heroBottomFade: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 75,
+    zIndex: 2,
   },
   heroBody: {
     paddingHorizontal: Spacing.lg,
@@ -1177,49 +1206,49 @@ const styles = StyleSheet.create({
   ctaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
     marginBottom: Spacing.sm,
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
   },
   primaryCtaBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#C46C27',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm + 4,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: Radius.full,
-    gap: 8,
+    gap: 6,
     shadowColor: '#C46C27',
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 6,
+    shadowRadius: 12,
+    elevation: 5,
   },
   primaryCtaText: {
     color: '#FFFFFF',
-    fontSize: Typography.fontSize.sm,
+    fontSize: 12.5,
     fontFamily: FontFamily.poppinsBold,
   },
   secondaryCtaBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.42)',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.22)',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm + 2,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
     borderRadius: Radius.full,
-    gap: 8,
+    gap: 6,
   },
   secondaryCtaText: {
     color: '#FFF5DE',
-    fontSize: Typography.fontSize.xs,
+    fontSize: 12,
     fontFamily: FontFamily.poppinsSemiBold,
   },
   playIconBubble: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1229,14 +1258,20 @@ const styles = StyleSheet.create({
 
   // ─── SHOP BY HERITAGE CONTAINER ────────────────────────────
   heritageSectionContainer: {
-    backgroundColor: '#3E2413',
+    backgroundColor: 'rgba(75, 49, 31, 0.82)',
     marginHorizontal: Spacing.md,
     marginTop: Spacing.sm,
     borderRadius: Radius.xl,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.sm + 4,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: 'rgba(255, 255, 255, 0.14)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 8,
+    zIndex: 5,
   },
   heritageSectionHeader: {
     flexDirection: 'row',
