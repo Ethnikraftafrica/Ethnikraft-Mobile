@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, SplashScreen } from 'expo-router';
 import { Image } from 'expo-image';
 import { Provider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -27,6 +27,9 @@ import {
   Lato_400Regular,
   Lato_700Bold,
 } from '@expo-google-fonts/lato';
+
+// Keep the native splash screen visible while fonts and session are loading
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function RootNavigation() {
   const dispatch = useAppDispatch();
@@ -84,21 +87,15 @@ function RootNavigation() {
     restoreSession();
   }, [dispatch]);
 
+  // Hide the native splash screen as soon as fonts and session are hydrated
+  useEffect(() => {
+    if (isHydrated && fontsLoaded) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [isHydrated, fontsLoaded]);
+
   if (!isHydrated || !fontsLoaded) {
-    return (
-      <View style={styles.splash}>
-        <Image
-          source={require('../../assets/revamp/logo.jpg')}
-          style={styles.splashLogo}
-          contentFit="cover"
-        />
-        <Text style={styles.splashBrandName}>Ethnikraft</Text>
-        <Text style={styles.splashTagline}>HERITAGE • CRAFT • LUXURY</Text>
-        <View style={styles.splashIndicatorWrap}>
-          <ActivityIndicator size="small" color="#C46C27" />
-        </View>
-      </View>
-    );
+    return null;
   }
 
   return (
