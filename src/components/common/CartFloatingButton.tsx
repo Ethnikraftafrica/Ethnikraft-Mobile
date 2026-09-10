@@ -19,6 +19,7 @@ import * as Haptics from 'expo-haptics';
 import { DraggableFAB } from './DraggableFAB';
 import { Colors, FontFamily, Radius, Shadows, Spacing } from '@/constants/theme';
 import { useAppSelector } from '@/store';
+import { formatPrice } from '@/utils/price';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -42,10 +43,11 @@ export const CartFloatingButton = forwardRef<
 >(({ onRequireAuth, onExpandChange }, ref) => {
   const router = useRouter();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { code: currencyCode, rate: exchangeRate } = useAppSelector((state) => state.currency);
   const [isExpanded, setIsExpanded] = useState(false);
 
   const itemCount: number = 0;
-  const totalPrice = 'NGN 0.00';
+  const totalPrice = formatPrice(0, currencyCode, exchangeRate);
 
   // Animation values
   const expandAnim = useRef(new Animated.Value(0)).current; // 0 = collapsed, 1 = expanded

@@ -23,6 +23,7 @@ import { CartFloatingButton, CartFloatingButtonRef } from '@/components/common/C
 import { RoleSwitchBanner } from '@/components/common/RoleSwitchBanner';
 import { Colors, FontFamily, Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useAppSelector } from '@/store';
+import { formatPrice } from '@/utils/price';
 import {
   useGetProductsQuery,
   useGetTopPicksWeekQuery,
@@ -258,17 +259,10 @@ const getHeritageName = (name: string): string => {
   return clean;
 };
 
-const formatPrice = (price: string | number | undefined): string => {
-  if (price === undefined || price === null) return 'NGN 0.00';
-  const num = typeof price === 'string' ? parseFloat(price) : price;
-  return isNaN(num)
-    ? 'NGN 0.00'
-    : `NGN ${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-};
-
 export default function UserHomeScreen() {
   const router = useRouter();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { code: currencyCode, rate: exchangeRate } = useAppSelector((state) => state.currency);
 
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -559,7 +553,9 @@ export default function UserHomeScreen() {
                   </View>
 
                   <View style={styles.railDetails}>
-                    <Text style={styles.railPrice}>{formatPrice(prod.price)}</Text>
+                    <Text style={styles.railPrice}>
+                      {formatPrice(prod.price, currencyCode, exchangeRate)}
+                    </Text>
                     <Text style={styles.railTitle} numberOfLines={2}>
                       {prod.name}
                     </Text>
@@ -614,10 +610,13 @@ export default function UserHomeScreen() {
               if (viewAllParam) {
                 router.push({
                   pathname: '/(user)/explore',
-                  params: { search: viewAllParam },
+                  params: { search: viewAllParam, title: title },
                 });
               } else {
-                router.push('/(user)/explore');
+                router.push({
+                  pathname: '/(user)/explore',
+                  params: { title: title },
+                });
               }
             }}
             style={styles.curatedViewAll}
@@ -642,7 +641,7 @@ export default function UserHomeScreen() {
                   Haptics.selectionAsync();
                   router.push({
                     pathname: '/(user)/explore',
-                    params: { search: f.slug || f.name },
+                    params: { search: f.slug || f.name, title: culturalTitle },
                   });
                 }}
               >
@@ -789,7 +788,12 @@ export default function UserHomeScreen() {
                 - Shop by <Text style={styles.heritageTitleAccent}>Heritage</Text>
               </Text>
               <TouchableOpacity
-                onPress={() => router.push('/(user)/explore')}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(user)/explore',
+                    params: { title: 'All Collections' },
+                  })
+                }
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Text style={styles.seeAllHeritageText}>Explore All →</Text>
@@ -821,7 +825,7 @@ export default function UserHomeScreen() {
                     Haptics.selectionAsync();
                     router.push({
                       pathname: '/(user)/explore',
-                      params: { category: item.category },
+                      params: { category: item.category, title: item.title },
                     });
                   }}
                   activeOpacity={0.88}
@@ -870,7 +874,11 @@ export default function UserHomeScreen() {
           'Top picks this week',
           'Handcrafted pieces trending across our artisan network',
           topPicks,
-          () => router.push('/(user)/explore'),
+          () =>
+            router.push({
+              pathname: '/(user)/explore',
+              params: { collection: 'top-picks-week', title: 'Top Picks of the Week' },
+            }),
           isTopPicksLoading
         )}
 
@@ -914,7 +922,11 @@ export default function UserHomeScreen() {
           () =>
             router.push({
               pathname: '/(user)/explore',
-              params: { category: 'PAINTINGS' },
+              params: {
+                collection: 'african-paintings',
+                category: 'PAINTINGS',
+                title: 'African Paintings & Fine Art',
+              },
             }),
           isPaintingsLoading
         )}
@@ -949,7 +961,7 @@ export default function UserHomeScreen() {
           () =>
             router.push({
               pathname: '/(user)/explore',
-              params: { category: 'WEARS' },
+              params: { category: 'WEARS', title: 'Menswear' },
             }),
           isMenswearLoading
         )}
@@ -964,7 +976,7 @@ export default function UserHomeScreen() {
           () =>
             router.push({
               pathname: '/(user)/explore',
-              params: { category: 'ACCESSORIES' },
+              params: { category: 'ACCESSORIES', title: 'Accessories' },
             }),
           isAccessoriesLoading
         )}
@@ -1077,7 +1089,11 @@ export default function UserHomeScreen() {
           () =>
             router.push({
               pathname: '/(user)/explore',
-              params: { category: 'CRAFTS' },
+              params: {
+                collection: 'bestsellers-decorations',
+                category: 'CRAFTS',
+                title: 'Home & Décor',
+              },
             }),
           isDecorationsLoading
         )}
@@ -1107,7 +1123,14 @@ export default function UserHomeScreen() {
           'Inspired by Culture',
           'Rooted in tradition, re-imagined for contemporary life',
           cultureProducts,
-          () => router.push('/(user)/explore'),
+          () =>
+            router.push({
+              pathname: '/(user)/explore',
+              params: {
+                collection: 'inspired-by-culture',
+                title: 'Inspired by Culture',
+              },
+            }),
           isCultureProductsLoading
         )}
 

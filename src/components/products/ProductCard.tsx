@@ -11,6 +11,8 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { useAppSelector } from '@/store';
+import { formatPrice } from '@/utils/price';
 import { Product } from '@/store/api/productApi';
 import { Colors, FontFamily, Radius, Shadows, Spacing } from '@/constants/theme';
 
@@ -31,6 +33,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onToggleWishlist,
 }) => {
   const router = useRouter();
+  const { code: currencyCode, rate: exchangeRate } = useAppSelector((state) => state.currency);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const heartScale = useRef(new Animated.Value(1)).current;
@@ -109,11 +112,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     }
   };
 
-  // Format currency
-  const numPrice = typeof product.price === 'string' ? parseFloat(product.price) : product.price;
-  const formattedPrice = isNaN(numPrice)
-    ? 'NGN 0.00'
-    : `NGN ${numPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  // Format currency dynamically based on active Redux currency
+  const formattedPrice = formatPrice(product.price, currencyCode, exchangeRate);
 
   const isOutOfStock = product.stockQuantity === 0 && !product.isRequestable;
   const brandName = product.vendor?.businessName || 'Ethnikraft';

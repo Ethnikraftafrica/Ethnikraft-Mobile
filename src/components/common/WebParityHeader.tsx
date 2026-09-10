@@ -7,14 +7,16 @@ import * as Haptics from 'expo-haptics';
 import { useAppSelector } from '@/store';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AuthPromptModal } from './AuthPromptModal';
+import { CurrencyPickerModal } from './CurrencyPickerModal';
 import { FontFamily, Radius, Shadows, Spacing } from '@/constants/theme';
 
 export const WebParityHeader = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
+  const activeCurrency = useAppSelector((state) => state.currency);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [currency, setCurrency] = useState('NGN');
+  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
 
   const handleProtectedAction = (target: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -56,13 +58,13 @@ export const WebParityHeader = () => {
           <TouchableOpacity
             style={styles.glassPill}
             onPress={() => {
-              Haptics.selectionAsync();
-              setCurrency(currency === 'NGN' ? 'USD' : 'NGN');
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setShowCurrencyModal(true);
             }}
             activeOpacity={0.8}
             accessibilityLabel="Switch currency"
           >
-            <Text style={styles.flagEmoji}>🇳🇬</Text>
+            <Text style={styles.flagEmoji}>{activeCurrency.flag}</Text>
             <Ionicons name="chevron-down" size={10} color="#FFF5DE" style={{ opacity: 0.8 }} />
           </TouchableOpacity>
 
@@ -133,6 +135,11 @@ export const WebParityHeader = () => {
       <AuthPromptModal
         visible={showAuthModal}
         onClose={() => setShowAuthModal(false)}
+      />
+
+      <CurrencyPickerModal
+        visible={showCurrencyModal}
+        onClose={() => setShowCurrencyModal(false)}
       />
     </>
   );
