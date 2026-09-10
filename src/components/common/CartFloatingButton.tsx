@@ -45,6 +45,7 @@ export const CartFloatingButton = forwardRef<
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const { code: currencyCode, rate: exchangeRate } = useAppSelector((state) => state.currency);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isRightSide, setIsRightSide] = useState(false);
 
   const itemCount: number = 0;
   const totalPrice = formatPrice(0, currencyCode, exchangeRate);
@@ -145,6 +146,13 @@ export const CartFloatingButton = forwardRef<
     outputRange: [COLLAPSED_SIZE, EXPANDED_WIDTH],
   });
 
+  // Interpolated horizontal translation compensation for right-aligned expansion:
+  // Expands toward the left while maintaining the right edge at the current gesture position
+  const translateX = expandAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, isRightSide ? -(EXPANDED_WIDTH - COLLAPSED_SIZE) : 0],
+  });
+
   // Interpolated content opacity
   const contentOpacity = expandAnim.interpolate({
     inputRange: [0, 0.4, 1],
@@ -156,6 +164,7 @@ export const CartFloatingButton = forwardRef<
       initialX={16}
       initialY={SCREEN_HEIGHT - 170}
       onPress={handlePress}
+      onPositionChange={(pos) => setIsRightSide(pos.isRightSide)}
       zIndex={120}
     >
       <TouchableOpacity
@@ -168,11 +177,15 @@ export const CartFloatingButton = forwardRef<
         <Animated.View
           style={[
             styles.fabContainer,
+            isRightSide && styles.fabContainerRight,
             Shadows.lg,
-            { width: animatedWidth },
+            {
+              width: animatedWidth,
+              transform: [{ translateX }],
+            },
           ]}
         >
-          {/* Main Bubble / Left Anchor (overflow visible so counter stacks without clipping) */}
+          {/* Main Bubble / Anchor (overflow visible so counter stacks without clipping) */}
           <View style={styles.cartBubble}>
             <Ionicons name="cart" size={19} color="#FFF5DE" />
             <View
@@ -190,39 +203,75 @@ export const CartFloatingButton = forwardRef<
             <Animated.View
               style={[
                 styles.expandedBody,
+                isRightSide && styles.expandedBodyRight,
                 {
                   opacity: contentOpacity,
                 },
               ]}
             >
-              <View style={styles.expandedTextCol}>
-                <Text style={styles.bagTitle}>YOUR BAG</Text>
-                <Text style={styles.bagDetails}>
-                  {itemCount} {itemCount === 1 ? 'Item' : 'Items'} • {totalPrice}
-                </Text>
-              </View>
+              {isRightSide ? (
+                <>
+                  {/* Mini Close Button */}
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      collapseBag();
+                    }}
+                    style={styles.closeCollapseBtn}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="close" size={14} color="#A8998A" />
+                  </TouchableOpacity>
 
-              {/* Checkout Action Pill */}
-              <TouchableOpacity
-                onPress={handleCheckoutPress}
-                activeOpacity={0.85}
-                style={styles.checkoutPillBtn}
-              >
-                <Text style={styles.checkoutPillText}>Checkout</Text>
-                <Ionicons name="arrow-forward" size={12} color="#180C04" />
-              </TouchableOpacity>
+                  <View style={styles.expandedTextCol}>
+                    <Text style={styles.bagTitle}>YOUR BAG</Text>
+                    <Text style={styles.bagDetails}>
+                      {itemCount} {itemCount === 1 ? 'Item' : 'Items'} • {totalPrice}
+                    </Text>
+                  </View>
 
-              {/* Mini Close Button */}
-              <TouchableOpacity
-                onPress={(e) => {
-                  e.stopPropagation();
-                  collapseBag();
-                }}
-                style={styles.closeCollapseBtn}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons name="close" size={14} color="#A8998A" />
-              </TouchableOpacity>
+                  {/* Checkout Action Pill closest to right thumb */}
+                  <TouchableOpacity
+                    onPress={handleCheckoutPress}
+                    activeOpacity={0.85}
+                    style={styles.checkoutPillBtn}
+                  >
+                    <Text style={styles.checkoutPillText}>Checkout</Text>
+                    <Ionicons name="arrow-forward" size={12} color="#180C04" />
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <View style={styles.expandedTextCol}>
+                    <Text style={styles.bagTitle}>YOUR BAG</Text>
+                    <Text style={styles.bagDetails}>
+                      {itemCount} {itemCount === 1 ? 'Item' : 'Items'} • {totalPrice}
+                    </Text>
+                  </View>
+
+                  {/* Checkout Action Pill */}
+                  <TouchableOpacity
+                    onPress={handleCheckoutPress}
+                    activeOpacity={0.85}
+                    style={styles.checkoutPillBtn}
+                  >
+                    <Text style={styles.checkoutPillText}>Checkout</Text>
+                    <Ionicons name="arrow-forward" size={12} color="#180C04" />
+                  </TouchableOpacity>
+
+                  {/* Mini Close Button */}
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      collapseBag();
+                    }}
+                    style={styles.closeCollapseBtn}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="close" size={14} color="#A8998A" />
+                  </TouchableOpacity>
+                </>
+              )}
             </Animated.View>
           )}
         </Animated.View>
@@ -304,6 +353,20 @@ const styles = StyleSheet.create({
     paddingLeft: 2,
     paddingRight: 6,
     overflow: 'hidden',
+  },
+  fabContainerRight: {
+    paddingLeft: 0,
+    paddingRight: 4,
+    flexDirection: 'row-reverse',
+  },
+  expandedBodyRight: {
+    left: undefined,
+    right: COLLAPSED_SIZE,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingLeft: 8,
+    paddingRight: 4,
   },
   expandedTextCol: {
     justifyContent: 'center',

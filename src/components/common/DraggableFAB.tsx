@@ -10,11 +10,18 @@ import * as Haptics from 'expo-haptics';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+export interface FABPosition {
+  x: number;
+  y: number;
+  isRightSide: boolean;
+}
+
 interface DraggableFABProps {
   initialX: number;
   initialY: number;
-  children: React.ReactNode;
+  children: React.ReactNode | ((pos: FABPosition) => React.ReactNode);
   onPress?: () => void;
+  onPositionChange?: (pos: FABPosition) => void;
   zIndex?: number;
 }
 
@@ -23,8 +30,15 @@ export const DraggableFAB: React.FC<DraggableFABProps> = ({
   initialY,
   children,
   onPress,
+  onPositionChange,
   zIndex = 100,
 }) => {
+  const [positionState, setPositionState] = React.useState<FABPosition>({
+    x: initialX,
+    y: initialY,
+    isRightSide: initialX > (SCREEN_WIDTH / 2 - 28),
+  });
+
   // Store the active coordinate offset
   const pan = useRef(new Animated.ValueXY({ x: initialX, y: initialY })).current;
   const currentPos = useRef({ x: initialX, y: initialY });
@@ -63,10 +77,14 @@ export const DraggableFAB: React.FC<DraggableFABProps> = ({
         }
 
         // Clamp inside safe screen boundaries
-        const clampedX = Math.max(12, Math.min(SCREEN_WIDTH - 80, finalX));
+        const clampedX = Math.max(12, Math.min(SCREEN_WIDTH - 68, finalX));
         const clampedY = Math.max(70, Math.min(SCREEN_HEIGHT - 160, finalY));
 
+        const isRight = clampedX > (SCREEN_WIDTH / 2 - 28);
+        const nextPos = { x: clampedX, y: clampedY, isRightSide: isRight };
         currentPos.current = { x: clampedX, y: clampedY };
+        setPositionState(nextPos);
+        onPositionChange?.(nextPos);
 
         Animated.spring(pan, {
           toValue: { x: clampedX, y: clampedY },
@@ -89,7 +107,7 @@ export const DraggableFAB: React.FC<DraggableFABProps> = ({
         },
       ]}
     >
-      {children}
+      {typeof children === 'function' ? children(positionState) : children}
     </Animated.View>
   );
 };
