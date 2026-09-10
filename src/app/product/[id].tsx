@@ -30,7 +30,8 @@ import { ProductReviewsSection } from '@/components/products/ProductReviewsSecti
 import { ProductAlsoViewed } from '@/components/products/ProductAlsoViewed';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const HERO_IMAGE_HEIGHT = SCREEN_WIDTH * 1.12;
+const CAROUSEL_CARD_WIDTH = SCREEN_WIDTH - 32;
+const CAROUSEL_CARD_HEIGHT = Math.round(CAROUSEL_CARD_WIDTH * 1.18);
 
 const COLOR_MAP: Record<string, string> = {
   black: '#141414',
@@ -82,7 +83,20 @@ export default function ProductDetailScreen() {
   const resolvedProduct = (apiProduct as any)?.product || apiProduct;
   const product: Product = resolvedProduct || fallbackProduct;
 
-  const images = product?.imageList?.length ? product.imageList : [product?.mainImage];
+  // Gather all product images: combine mainImage and imageList, deduplicate preserving order
+  const rawImages: string[] = [
+    ...(product?.mainImage ? [product.mainImage] : []),
+    ...(Array.isArray(product?.imageList) ? product.imageList : []),
+  ].filter((img): img is string => typeof img === 'string' && img.trim().length > 0);
+
+  const uniqueImages = Array.from(new Set(rawImages));
+  const images =
+    uniqueImages.length > 0
+      ? uniqueImages
+      : [
+          'https://res.cloudinary.com/dyt4wqv3o/image/upload/v1731671239/ethnikraft/wk79ofiyzsnju9ggmhwa.jpg',
+          'https://res.cloudinary.com/dyt4wqv3o/image/upload/v1731671241/ethnikraft/ma7wqavskymtlnkb3yad.jpg',
+        ];
   const category = detectCategory(product);
 
   const defaultSizes =
@@ -111,7 +125,7 @@ export default function ProductDetailScreen() {
   const isInteractingWithCarousel = useRef(false);
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  // Auto-slide carousel effect
+  // Auto-slide carousel effect (rotates every 4.5s when user is not manually interacting)
   useEffect(() => {
     if (!images || images.length <= 1) return;
 
@@ -120,12 +134,12 @@ export default function ProductDetailScreen() {
       setActiveImageIndex((prevIndex) => {
         const nextIndex = (prevIndex + 1) % images.length;
         carouselRef.current?.scrollTo({
-          x: nextIndex * SCREEN_WIDTH,
+          x: nextIndex * CAROUSEL_CARD_WIDTH,
           animated: true,
         });
         return nextIndex;
       });
-    }, 4000);
+    }, 4500);
 
     return () => clearInterval(interval);
   }, [images?.length]);
@@ -134,20 +148,34 @@ export default function ProductDetailScreen() {
     Haptics.selectionAsync();
     setActiveImageIndex(index);
     carouselRef.current?.scrollTo({
-      x: index * SCREEN_WIDTH,
+      x: index * CAROUSEL_CARD_WIDTH,
       animated: true,
     });
   };
 
+  const nextSlide = () => {
+    if (!images || images.length <= 1) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const nextIdx = (activeImageIndex + 1) % images.length;
+    scrollToImage(nextIdx);
+  };
+
+  const prevSlide = () => {
+    if (!images || images.length <= 1) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const prevIdx = (activeImageIndex - 1 + images.length) % images.length;
+    scrollToImage(prevIdx);
+  };
+
   const handleCarouselScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const slide = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+    const slide = Math.round(event.nativeEvent.contentOffset.x / CAROUSEL_CARD_WIDTH);
     if (slide !== activeImageIndex && slide >= 0 && slide < images.length) {
       setActiveImageIndex(slide);
     }
   };
 
   // Interpolations for sticky app bar
-  const headerThreshold = HERO_IMAGE_HEIGHT - (insets.top + 70);
+  const headerThreshold = 180;
   const headerBgOpacity = scrollY.interpolate({
     inputRange: [Math.max(0, headerThreshold - 80), headerThreshold],
     outputRange: [0, 1],
@@ -314,121 +342,185 @@ export default function ProductDetailScreen() {
 
       <Animated.ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 54 }]}
         scrollEventThrottle={16}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: false }
         )}
       >
-        {/* Hero Image Showcase Carousel */}
-        <View style={styles.carouselContainer}>
-          <ScrollView
-            ref={carouselRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScroll={handleCarouselScroll}
-            scrollEventThrottle={16}
-            onScrollBeginDrag={() => {
-              isInteractingWithCarousel.current = true;
-            }}
-            onScrollEndDrag={() => {
-              // resume auto-slide shortly after user finishes gesture
-              setTimeout(() => {
-                isInteractingWithCarousel.current = false;
-              }, 2000);
-            }}
-            onTouchStart={() => {
-              isInteractingWithCarousel.current = true;
-            }}
-            onTouchEnd={() => {
-              setTimeout(() => {
-                isInteractingWithCarousel.current = false;
-              }, 2000);
-            }}
-          >
-            {images.map((imgUri, index) => (
-              <View key={index} style={styles.carouselSlide}>
-                <Image
-                  source={{ uri: imgUri }}
-                  style={styles.heroImage}
-                  contentFit="cover"
-                  cachePolicy="memory-disk"
-                />
-              </View>
-            ))}
-          </ScrollView>
+        {/* Hero Image Showcase Carousel Card */}
+        <View style={styles.carouselOuterWrapper}>
+          <View style={styles.carouselCard}>
+            <ScrollView
+              ref={carouselRef}
+              horizontal
+              pagingEnabled
+              snapToInterval={CAROUSEL_CARD_WIDTH}
+              snapToAlignment="center"
+              decelerationRate="fast"
+              showsHorizontalScrollIndicator={false}
+              onScroll={handleCarouselScroll}
+              scrollEventThrottle={16}
+              onScrollBeginDrag={() => {
+                isInteractingWithCarousel.current = true;
+              }}
+              onScrollEndDrag={() => {
+                setTimeout(() => {
+                  isInteractingWithCarousel.current = false;
+                }, 3000);
+              }}
+              onTouchStart={() => {
+                isInteractingWithCarousel.current = true;
+              }}
+              onTouchEnd={() => {
+                setTimeout(() => {
+                  isInteractingWithCarousel.current = false;
+                }, 3000);
+              }}
+            >
+              {images.map((imgUri, index) => (
+                <View key={index} style={styles.carouselSlide}>
+                  <Image
+                    source={{ uri: imgUri }}
+                    style={styles.carouselImage}
+                    contentFit="contain"
+                    transition={300}
+                    cachePolicy="memory-disk"
+                  />
+                </View>
+              ))}
+            </ScrollView>
 
-          {/* Availability Pill on image */}
-          <View
-            style={[
-              styles.availabilityBadge,
-              product.isRequestable
-                ? styles.badgeReq
-                : isOutOfStock
-                ? styles.badgeSoldOut
-                : styles.badgeStock,
-            ]}
-          >
+            {/* Availability Pill on image */}
             <View
               style={[
-                styles.badgeDot,
+                styles.availabilityBadge,
                 product.isRequestable
-                  ? { backgroundColor: '#B9472B' }
+                  ? styles.badgeReq
                   : isOutOfStock
-                  ? { backgroundColor: '#D84C23' }
-                  : { backgroundColor: '#2E7D32' },
-              ]}
-            />
-            <Text
-              style={[
-                styles.availabilityBadgeText,
-                product.isRequestable
-                  ? { color: '#B9472B' }
-                  : isOutOfStock
-                  ? { color: '#D84C23' }
-                  : { color: '#2E7D32' },
+                  ? styles.badgeSoldOut
+                  : styles.badgeStock,
               ]}
             >
-              {product.isRequestable
-                ? 'AVAILABLE ON REQUEST'
-                : isOutOfStock
-                ? 'OUT OF STOCK'
-                : 'IN STOCK'}
-            </Text>
+              <View
+                style={[
+                  styles.badgeDot,
+                  product.isRequestable
+                    ? { backgroundColor: '#B9472B' }
+                    : isOutOfStock
+                    ? { backgroundColor: '#D84C23' }
+                    : { backgroundColor: '#2E7D32' },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.availabilityBadgeText,
+                  product.isRequestable
+                    ? { color: '#B9472B' }
+                    : isOutOfStock
+                    ? { color: '#D84C23' }
+                    : { color: '#2E7D32' },
+                ]}
+              >
+                {product.isRequestable
+                  ? 'AVAILABLE ON REQUEST'
+                  : isOutOfStock
+                  ? 'OUT OF STOCK'
+                  : 'IN STOCK'}
+              </Text>
+            </View>
+
+            {/* Floating Wishlist Button */}
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={handleWishlistToggle}
+              style={styles.wishlistHeartBtn}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons
+                name={isWishlisted ? 'heart' : 'heart-outline'}
+                size={20}
+                color={isWishlisted ? '#D32F2F' : '#1C0D05'}
+              />
+            </TouchableOpacity>
+
+            {/* Left & Right Chevrons */}
+            {images.length > 1 && (
+              <>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={prevSlide}
+                  style={[styles.carouselNavBtn, styles.carouselNavBtnLeft]}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="chevron-back" size={18} color="#1C0D05" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={nextSlide}
+                  style={[styles.carouselNavBtn, styles.carouselNavBtnRight]}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="chevron-forward" size={18} color="#1C0D05" />
+                </TouchableOpacity>
+              </>
+            )}
+
+            {/* Carousel Pagination Dots (tap-to-scroll enabled) */}
+            {images.length > 1 && (
+              <View style={styles.dotsCapsule}>
+                {images.map((_, i) => (
+                  <TouchableOpacity
+                    key={i}
+                    activeOpacity={0.8}
+                    onPress={() => scrollToImage(i)}
+                    hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+                    style={[
+                      styles.dot,
+                      activeImageIndex === i && styles.dotActive,
+                    ]}
+                  />
+                ))}
+              </View>
+            )}
+
+            {/* Slide Counter Pill */}
+            {images.length > 1 && (
+              <View style={styles.counterPill}>
+                <Text style={styles.counterPillText}>
+                  {activeImageIndex + 1} / {images.length}
+                </Text>
+              </View>
+            )}
           </View>
 
-          {/* Floating Wishlist Button */}
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={handleWishlistToggle}
-            style={styles.wishlistHeartBtn}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons
-              name={isWishlisted ? 'heart' : 'heart-outline'}
-              size={20}
-              color={isWishlisted ? '#C46C27' : '#1C0D05'}
-            />
-          </TouchableOpacity>
-
-          {/* Carousel Pagination Dots (tap-to-scroll enabled) */}
+          {/* Thumbnail preview strip below card */}
           {images.length > 1 && (
-            <View style={styles.dotsRow}>
-              {images.map((_, i) => (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.thumbnailStrip}
+            >
+              {images.map((thumbUri, i) => (
                 <TouchableOpacity
                   key={i}
-                  activeOpacity={0.8}
+                  activeOpacity={0.85}
                   onPress={() => scrollToImage(i)}
-                  hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
                   style={[
-                    styles.dot,
-                    activeImageIndex === i && styles.dotActive,
+                    styles.thumbnailItem,
+                    activeImageIndex === i && styles.thumbnailItemActive,
                   ]}
-                />
+                >
+                  <Image
+                    source={{ uri: thumbUri }}
+                    style={styles.thumbnailImg}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                  />
+                </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
           )}
         </View>
 
@@ -851,30 +943,44 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 130,
   },
-  carouselContainer: {
+  carouselOuterWrapper: {
     width: SCREEN_WIDTH,
-    height: HERO_IMAGE_HEIGHT,
-    backgroundColor: '#1C0D05',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  carouselCard: {
+    width: CAROUSEL_CARD_WIDTH,
+    height: CAROUSEL_CARD_HEIGHT,
+    borderRadius: 28,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#EFE7DD',
+    overflow: 'hidden',
     position: 'relative',
+    ...Shadows.sm,
   },
   carouselSlide: {
-    width: SCREEN_WIDTH,
-    height: HERO_IMAGE_HEIGHT,
+    width: CAROUSEL_CARD_WIDTH,
+    height: CAROUSEL_CARD_HEIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
   },
-  heroImage: {
-    width: '100%',
-    height: '100%',
+  carouselImage: {
+    width: '92%',
+    height: '92%',
   },
   availabilityBadge: {
     position: 'absolute',
-    bottom: 24,
-    left: 18,
+    top: 14,
+    left: 14,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
+    zIndex: 15,
     ...Shadows.sm,
   },
   badgeReq: {
@@ -902,45 +1008,116 @@ const styles = StyleSheet.create({
   },
   wishlistHeartBtn: {
     position: 'absolute',
-    bottom: 22,
-    right: 18,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    top: 12,
+    right: 12,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: 'rgba(255, 255, 255, 0.94)',
     borderWidth: 1,
     borderColor: '#EADBCC',
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 15,
     ...Shadows.sm,
   },
-  dotsRow: {
+  carouselNavBtn: {
     position: 'absolute',
-    bottom: 8,
+    top: '50%',
+    marginTop: -18,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    borderWidth: 1,
+    borderColor: '#EADBCC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 15,
+    ...Shadows.sm,
+  },
+  carouselNavBtnLeft: {
+    left: 10,
+  },
+  carouselNavBtnRight: {
+    right: 10,
+  },
+  dotsCapsule: {
+    position: 'absolute',
+    bottom: 12,
     alignSelf: 'center',
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
+    backgroundColor: 'rgba(30, 15, 8, 0.38)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    zIndex: 15,
   },
   dot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+    backgroundColor: 'rgba(255, 255, 255, 0.55)',
   },
   dotActive: {
     width: 18,
-    backgroundColor: '#C46C27',
+    backgroundColor: '#FFFFFF',
+  },
+  counterPill: {
+    position: 'absolute',
+    bottom: 12,
+    right: 14,
+    backgroundColor: 'rgba(30, 15, 8, 0.42)',
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 10,
+    zIndex: 15,
+  },
+  counterPillText: {
+    fontSize: 10.5,
+    fontFamily: FontFamily.bodyBold,
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  thumbnailStrip: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 4,
+  },
+  thumbnailItem: {
+    width: 52,
+    height: 52,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#EADBCC',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  thumbnailItemActive: {
+    borderColor: '#C46C27',
+    borderWidth: 2,
+  },
+  thumbnailImg: {
+    width: '100%',
+    height: '100%',
   },
   detailsCard: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    marginTop: -20,
-    paddingHorizontal: 20,
-    paddingTop: 22,
-    paddingBottom: 18,
+    borderRadius: 24,
+    marginHorizontal: 16,
+    marginTop: 14,
+    paddingHorizontal: 18,
+    paddingTop: 20,
+    paddingBottom: 22,
     borderWidth: 1,
-    borderColor: '#EADBCC',
+    borderColor: '#EFE7DD',
+    ...Shadows.sm,
   },
   vendorRow: {
     flexDirection: 'row',

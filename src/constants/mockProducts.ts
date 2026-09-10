@@ -56,9 +56,11 @@ export const MOCK_PRODUCTS: Product[] = [
     stockQuantity: 12,
     condition: 'new',
     mainImage:
-      'https://res.cloudinary.com/dpr3pf3kw/image/upload/v1773941000/ethnikraft/products/ankara-shirt-main.jpg',
+      'https://res.cloudinary.com/dyt4wqv3o/image/upload/v1731671239/ethnikraft/wk79ofiyzsnju9ggmhwa.jpg',
     imageList: [
-      'https://res.cloudinary.com/dpr3pf3kw/image/upload/v1773941000/ethnikraft/products/ankara-shirt-main.jpg',
+      'https://res.cloudinary.com/dyt4wqv3o/image/upload/v1731671239/ethnikraft/wk79ofiyzsnju9ggmhwa.jpg',
+      'https://res.cloudinary.com/dyt4wqv3o/image/upload/v1731671241/ethnikraft/ma7wqavskymtlnkb3yad.jpg',
+      'https://res.cloudinary.com/dpr3pf3kw/image/upload/v1781278649/ethnikraft/products/toqsouycscgnkjl0sbsc.jpg',
     ],
     isCustomizable: false,
     isRequestable: false,
@@ -89,6 +91,8 @@ export const MOCK_PRODUCTS: Product[] = [
       'https://res.cloudinary.com/dpr3pf3kw/image/upload/v1773942000/ethnikraft/products/striped-aso-oke-pants.jpg',
     imageList: [
       'https://res.cloudinary.com/dpr3pf3kw/image/upload/v1773942000/ethnikraft/products/striped-aso-oke-pants.jpg',
+      'https://res.cloudinary.com/dpr3pf3kw/image/upload/v1781276755/ethnikraft/products/dmfjyrvvk6iaiydrtmsx.jpg',
+      'https://res.cloudinary.com/dpr3pf3kw/image/upload/v1781278649/ethnikraft/products/toqsouycscgnkjl0sbsc.jpg',
     ],
     isCustomizable: true,
     isRequestable: true,
@@ -120,6 +124,8 @@ export const MOCK_PRODUCTS: Product[] = [
       'https://res.cloudinary.com/dpr3pf3kw/image/upload/v1773943000/ethnikraft/products/beaded-tote.jpg',
     imageList: [
       'https://res.cloudinary.com/dpr3pf3kw/image/upload/v1773943000/ethnikraft/products/beaded-tote.jpg',
+      'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?auto=format&fit=crop&w=800&q=80',
     ],
     isCustomizable: true,
     isRequestable: true,
@@ -151,6 +157,8 @@ export const MOCK_PRODUCTS: Product[] = [
       'https://res.cloudinary.com/dpr3pf3kw/image/upload/v1773944000/ethnikraft/products/leather-slippers.jpg',
     imageList: [
       'https://res.cloudinary.com/dpr3pf3kw/image/upload/v1773944000/ethnikraft/products/leather-slippers.jpg',
+      'https://images.unsplash.com/photo-1603808033192-082d6919d3e1?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=800&q=80',
     ],
     isCustomizable: false,
     isRequestable: false,
@@ -181,6 +189,8 @@ export const MOCK_PRODUCTS: Product[] = [
       'https://res.cloudinary.com/dpr3pf3kw/image/upload/v1773945000/ethnikraft/products/benin-bronze.jpg',
     imageList: [
       'https://res.cloudinary.com/dpr3pf3kw/image/upload/v1773945000/ethnikraft/products/benin-bronze.jpg',
+      'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1578925518470-4def7a0f08bb?auto=format&fit=crop&w=800&q=80',
     ],
     isCustomizable: false,
     isRequestable: true,
@@ -212,6 +222,8 @@ export const MOCK_PRODUCTS: Product[] = [
       'https://res.cloudinary.com/dpr3pf3kw/image/upload/v1773946000/ethnikraft/products/coral-collar.jpg',
     imageList: [
       'https://res.cloudinary.com/dpr3pf3kw/image/upload/v1773946000/ethnikraft/products/coral-collar.jpg',
+      'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=800&q=80',
     ],
     isCustomizable: true,
     isRequestable: true,
@@ -243,6 +255,8 @@ export const MOCK_PRODUCTS: Product[] = [
       'https://res.cloudinary.com/dpr3pf3kw/image/upload/v1773947000/ethnikraft/products/sacred-grove-painting.jpg',
     imageList: [
       'https://res.cloudinary.com/dpr3pf3kw/image/upload/v1773947000/ethnikraft/products/sacred-grove-painting.jpg',
+      'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1579783928621-7a13d66a62d1?auto=format&fit=crop&w=800&q=80',
     ],
     isCustomizable: false,
     isRequestable: true,
