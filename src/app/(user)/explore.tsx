@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { useGetProductsQuery, Product } from '@/store/api/productApi';
 import { MOCK_PRODUCTS } from '@/constants/mockProducts';
@@ -47,16 +48,31 @@ const INITIAL_FILTERS: FilterState = {
 
 export default function ExploreScreen() {
   const router = useRouter();
-  const { category: urlCategory } = useLocalSearchParams<{ category?: string }>();
+  const { category: urlCategory, autoFocus: autoFocusParam } = useLocalSearchParams<{
+    category?: string;
+    autoFocus?: string;
+    search?: string;
+  }>();
   const insets = useSafeAreaInsets();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
 
   // Search & Filter State
+  const searchInputRef = useRef<TextInput>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedSort, setSelectedSort] = useState<SortOption>('relevance');
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
+
+  // Auto-focus search input when navigated with autoFocus=1
+  React.useEffect(() => {
+    if (autoFocusParam === '1') {
+      const timer = setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [autoFocusParam]);
 
   // Sync category param from route/navigation
   React.useEffect(() => {
@@ -241,12 +257,22 @@ export default function ExploreScreen() {
       <View style={[styles.headerContainer, { paddingTop: insets.top + 6 }]}>
         {/* Top Brand Bar */}
         <View style={styles.topBrandBar}>
-          <View style={styles.brandTitleRow}>
-            <View style={styles.brandEmblem}>
-              <Ionicons name="sparkles" size={12} color="#E8BA7A" />
+          <TouchableOpacity
+            style={styles.brandTitleRow}
+            onPress={() => router.push('/(user)')}
+            activeOpacity={0.8}
+            accessibilityLabel="Ethnikraft Home"
+          >
+            <Image
+              source={require('../../../assets/revamp/logo.jpg')}
+              style={styles.brandLogoImage}
+              contentFit="cover"
+            />
+            <View style={styles.brandTextCol}>
+              <Text style={styles.brandLogoText}>Ethnikraft</Text>
+              <Text style={styles.brandTaglineText}>HERITAGE • CRAFT • LUXURY</Text>
             </View>
-            <Text style={styles.brandLogoText}>ETHNIKRAFT</Text>
-          </View>
+          </TouchableOpacity>
 
           <View style={styles.topRightActions}>
             <TouchableOpacity
@@ -282,12 +308,14 @@ export default function ExploreScreen() {
         <View style={styles.searchBarRow}>
           <View style={styles.searchInputContainer}>
             <TextInput
+              ref={searchInputRef}
               style={styles.searchInput}
               placeholder="Search the shop..."
               placeholderTextColor="#968574"
               value={searchQuery}
               onChangeText={handleSearchChange}
               returnKeyType="search"
+              autoFocus={autoFocusParam === '1'}
             />
             {searchQuery.length > 0 ? (
               <TouchableOpacity
@@ -510,21 +538,30 @@ const styles = StyleSheet.create({
   brandTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
-  brandEmblem: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#1E1208',
+  brandLogoImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2D6C7',
+  },
+  brandTextCol: {
     justifyContent: 'center',
-    alignItems: 'center',
   },
   brandLogoText: {
-    fontSize: 15,
+    fontSize: 18,
     fontFamily: FontFamily.cormorantBold,
     color: '#1C0D05',
-    letterSpacing: 1.8,
+    letterSpacing: 0.2,
+  },
+  brandTaglineText: {
+    fontSize: 6.5,
+    fontFamily: FontFamily.poppinsBold,
+    color: '#8C5824',
+    letterSpacing: 0.8,
+    marginTop: 0.5,
   },
   topRightActions: {
     flexDirection: 'row',

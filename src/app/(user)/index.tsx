@@ -1360,7 +1360,7 @@ const styles = StyleSheet.create({
   sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
     marginBottom: Spacing.sm + 2,
   },
   sectionEditorialTitle: {
@@ -1376,10 +1376,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   curatedViewAll: {
-    paddingBottom: 2,
+    paddingTop: 3,
+    paddingLeft: Spacing.xs,
   },
   viewAllOrange: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontFamily: FontFamily.poppinsSemiBold,
     color: '#C46C27',
   },

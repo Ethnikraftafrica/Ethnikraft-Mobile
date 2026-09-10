@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { Stack } from 'expo-router';
+import { Image } from 'expo-image';
 import { Provider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -80,7 +81,16 @@ function RootNavigation() {
   if (!isHydrated || !fontsLoaded) {
     return (
       <View style={styles.splash}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <Image
+          source={require('../../assets/revamp/logo.jpg')}
+          style={styles.splashLogo}
+          contentFit="cover"
+        />
+        <Text style={styles.splashBrandName}>Ethnikraft</Text>
+        <Text style={styles.splashTagline}>HERITAGE • CRAFT • LUXURY</Text>
+        <View style={styles.splashIndicatorWrap}>
+          <ActivityIndicator size="small" color="#C46C27" />
+        </View>
       </View>
     );
   }
@@ -121,5 +131,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAF6F0',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  splashLogo: {
+    width: 86,
+    height: 86,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: 'rgba(75, 49, 31, 0.16)',
+    marginBottom: 16,
+  },
+  splashBrandName: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1C0D05',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  splashTagline: {
+    fontSize: 8.5,
+    fontWeight: '600',
+    color: '#8C5824',
+    letterSpacing: 1.6,
+    marginBottom: 30,
+  },
+  splashIndicatorWrap: {
+    marginTop: 4,
   },
 });

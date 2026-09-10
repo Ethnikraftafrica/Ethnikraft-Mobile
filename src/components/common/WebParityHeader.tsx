@@ -41,8 +41,12 @@ export const WebParityHeader = () => {
             transition={200}
           />
           <View style={styles.brandTextCol}>
-            <Text style={styles.brandName}>Ethnikraft</Text>
-            <Text style={styles.brandTagline}>HERITAGE • CRAFT • LUXURY</Text>
+            <Text style={styles.brandName} numberOfLines={1}>
+              Ethnikraft
+            </Text>
+            <Text style={styles.brandTagline} numberOfLines={1}>
+              HERITAGE • CRAFT • LUXURY
+            </Text>
           </View>
         </TouchableOpacity>
 
@@ -56,6 +60,7 @@ export const WebParityHeader = () => {
               setCurrency(currency === 'NGN' ? 'USD' : 'NGN');
             }}
             activeOpacity={0.8}
+            accessibilityLabel="Switch currency"
           >
             <Text style={styles.flagEmoji}>🇳🇬</Text>
             <Ionicons name="chevron-down" size={10} color="#FFF5DE" style={{ opacity: 0.8 }} />
@@ -66,9 +71,13 @@ export const WebParityHeader = () => {
             style={styles.glassPillRound}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.push('/(user)/explore');
+              router.push({
+                pathname: '/(user)/explore',
+                params: { autoFocus: '1' },
+              });
             }}
             activeOpacity={0.8}
+            accessibilityLabel="Search products"
           >
             <Ionicons name="search" size={15} color="#FFF5DE" />
           </TouchableOpacity>
@@ -145,6 +154,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     flexShrink: 1,
+    marginRight: 8,
   },
   logoImage: {
     width: 33,
@@ -155,18 +165,19 @@ const styles = StyleSheet.create({
   },
   brandTextCol: {
     justifyContent: 'center',
+    maxWidth: 130,
   },
   brandName: {
-    fontSize: 17.5,
+    fontSize: 17,
     fontFamily: FontFamily.cormorantBold,
     color: '#FFF7E8',
     letterSpacing: 0.2,
   },
   brandTagline: {
-    fontSize: 6.5,
+    fontSize: 6.2,
     fontFamily: FontFamily.poppinsBold,
     color: '#E8BA7A',
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
     marginTop: 0.5,
   },
   actionsIsland: {
