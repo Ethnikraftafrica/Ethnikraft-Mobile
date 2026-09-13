@@ -6,7 +6,7 @@ export default function AuthLayout() {
   return (
     <Stack
       screenOptions={{
-        headerShown: true,
+        headerShown: false,
         headerStyle: {
           backgroundColor: Colors.background,
         },
@@ -36,6 +36,14 @@ export default function AuthLayout() {
         name="otp-verify"
         options={{
           title: 'Verify Code',
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="forgot-password"
+        options={{
+          title: 'Forgot Password',
+          headerShown: false,
         }}
       />
     </Stack>

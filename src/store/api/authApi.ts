@@ -7,6 +7,11 @@ export interface LoginPayload {
   ip?: string;
 }
 
+export interface GoogleLoginPayload {
+  idToken: string;
+  ip?: string;
+}
+
 export interface AuthTokens {
   access_token: string;
   refresh_token: string;
@@ -29,6 +34,7 @@ export interface VendorProfile {
   storeDescription?: string;
   isBusinessInfoComplete?: boolean;
   isDocumentsComplete?: boolean;
+  businessSubmittedAt?: string | null;
   verifiedAt?: string | null;
   approvedAt?: string | null;
 }
@@ -37,6 +43,7 @@ export interface AuthResponse {
   user: UserProfile;
   tokens: AuthTokens;
   vendor?: VendorProfile;
+  locationDetected?: boolean;
 }
 
 export interface InitiateRegisterPayload {
@@ -48,7 +55,7 @@ export interface InitiateRegisterPayload {
 export interface InitiateRegisterResponse {
   registrationToken: string;
   message: string;
-  expiresIn: number;
+  expiresIn?: number;
 }
 
 export interface VerifyOtpPayload {
@@ -59,13 +66,57 @@ export interface VerifyOtpPayload {
 export interface VerifyOtpResponse {
   verificationToken: string;
   message: string;
-  isVerified: boolean;
+  isVerified?: boolean;
 }
 
 export interface CompleteRegisterPayload {
   verificationToken: string;
   password: string;
-  preferredCurrency?: string;
+  ip?: string;
+}
+
+export interface InitiateVendorRegisterPayload {
+  email: string;
+}
+
+export interface CompleteVendorRegisterPayload {
+  verificationToken: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string;
+  password: string;
+  ip?: string;
+}
+
+export interface InitiatePasswordResetPayload {
+  email: string;
+}
+
+export interface InitiatePasswordResetResponse {
+  message: string;
+  email: string;
+}
+
+export interface VerifyPasswordResetOtpPayload {
+  email: string;
+  otp: string;
+}
+
+export interface VerifyPasswordResetOtpResponse {
+  verificationToken: string;
+  message: string;
+}
+
+export interface CompletePasswordResetPayload {
+  email: string;
+  newPassword: string;
+  verificationToken: string;
+}
+
+export interface GenericMessageResponse {
+  message: string;
+  success?: boolean;
 }
 
 export const authApi = baseApi.injectEndpoints({
@@ -75,6 +126,23 @@ export const authApi = baseApi.injectEndpoints({
         url: API_ENDPOINTS.auth.login,
         method: 'POST',
         body,
+      }),
+      invalidatesTags: ['Auth', 'UserProfile', 'VendorProfile'],
+    }),
+
+    googleLogin: builder.mutation<AuthResponse, GoogleLoginPayload>({
+      query: (body) => ({
+        url: API_ENDPOINTS.auth.googleLogin,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Auth', 'UserProfile', 'VendorProfile'],
+    }),
+
+    logout: builder.mutation<GenericMessageResponse, void>({
+      query: () => ({
+        url: API_ENDPOINTS.auth.logout,
+        method: 'POST',
       }),
       invalidatesTags: ['Auth', 'UserProfile', 'VendorProfile'],
     }),
@@ -104,7 +172,7 @@ export const authApi = baseApi.injectEndpoints({
       invalidatesTags: ['Auth', 'UserProfile'],
     }),
 
-    initiateVendorRegister: builder.mutation<InitiateRegisterResponse, InitiateRegisterPayload & { storeName: string }>({
+    initiateVendorRegister: builder.mutation<InitiateRegisterResponse, InitiateVendorRegisterPayload>({
       query: (body) => ({
         url: API_ENDPOINTS.auth.initiateVendorRegister,
         method: 'POST',
@@ -120,13 +188,37 @@ export const authApi = baseApi.injectEndpoints({
       }),
     }),
 
-    completeVendorRegister: builder.mutation<AuthResponse, CompleteRegisterPayload & { storeName: string }>({
+    completeVendorRegister: builder.mutation<AuthResponse, CompleteVendorRegisterPayload>({
       query: (body) => ({
         url: API_ENDPOINTS.auth.completeVendorRegister,
         method: 'POST',
         body,
       }),
       invalidatesTags: ['Auth', 'UserProfile', 'VendorProfile'],
+    }),
+
+    initiatePasswordReset: builder.mutation<InitiatePasswordResetResponse, InitiatePasswordResetPayload>({
+      query: (body) => ({
+        url: API_ENDPOINTS.auth.initiatePasswordReset,
+        method: 'POST',
+        body,
+      }),
+    }),
+
+    verifyPasswordResetOtp: builder.mutation<VerifyPasswordResetOtpResponse, VerifyPasswordResetOtpPayload>({
+      query: (body) => ({
+        url: API_ENDPOINTS.auth.verifyPasswordResetOtp,
+        method: 'POST',
+        body,
+      }),
+    }),
+
+    completePasswordReset: builder.mutation<GenericMessageResponse, CompletePasswordResetPayload>({
+      query: (body) => ({
+        url: API_ENDPOINTS.auth.completePasswordReset,
+        method: 'POST',
+        body,
+      }),
     }),
 
     getProfile: builder.query<UserProfile, void>({
@@ -144,12 +236,17 @@ export const authApi = baseApi.injectEndpoints({
 
 export const {
   useLoginMutation,
+  useGoogleLoginMutation,
+  useLogoutMutation,
   useInitiateRegisterMutation,
   useVerifyOtpMutation,
   useCompleteRegisterMutation,
   useInitiateVendorRegisterMutation,
   useVerifyVendorOtpMutation,
   useCompleteVendorRegisterMutation,
+  useInitiatePasswordResetMutation,
+  useVerifyPasswordResetOtpMutation,
+  useCompletePasswordResetMutation,
   useGetProfileQuery,
   useGetVendorProfileQuery,
 } = authApi;

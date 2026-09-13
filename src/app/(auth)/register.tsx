@@ -18,7 +18,7 @@ import {
   useInitiateRegisterMutation,
   useInitiateVendorRegisterMutation,
 } from '@/store/api/authApi';
-import { Colors, Radius, Shadows, Spacing, Typography } from '@/constants/theme';
+import { Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -31,22 +31,41 @@ export default function RegisterScreen() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('+234');
   const [storeName, setStoreName] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const isSubmitting = isRegisteringUser || isRegisteringVendor;
 
   const handleSubmit = async () => {
-    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
+    const trimmedEmail = email.trim();
+    const trimmedFirstName = firstName.trim();
+    const trimmedLastName = lastName.trim();
+    const trimmedPhone = phoneNumber.trim();
+
+    if (!trimmedFirstName || !trimmedLastName || !trimmedEmail) {
       setErrorMessage('Please fill in all required fields.');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
 
-    if (role === 'vendor' && !storeName.trim()) {
-      setErrorMessage('Please provide your workshop or store name.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setErrorMessage('Please enter a valid email address.');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
+    }
+
+    if (role === 'vendor') {
+      if (!/^\+[1-9]\d{1,14}$/.test(trimmedPhone)) {
+        setErrorMessage('Please enter a valid international phone number (e.g. +2348012345678).');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        return;
+      }
+      if (!storeName.trim()) {
+        setErrorMessage('Please provide your workshop or store name.');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        return;
+      }
     }
 
     setErrorMessage(null);
@@ -55,10 +74,7 @@ export default function RegisterScreen() {
     try {
       if (role === 'vendor') {
         const res = await initiateVendorRegister({
-          email: email.trim(),
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-          storeName: storeName.trim(),
+          email: trimmedEmail,
         }).unwrap();
 
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -66,16 +82,19 @@ export default function RegisterScreen() {
           pathname: '/(auth)/otp-verify',
           params: {
             registrationToken: res.registrationToken,
-            email: email.trim(),
+            email: trimmedEmail,
             role: 'vendor',
+            firstName: trimmedFirstName,
+            lastName: trimmedLastName,
+            phoneNumber: trimmedPhone,
             storeName: storeName.trim(),
           },
         });
       } else {
         const res = await initiateRegister({
-          email: email.trim(),
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
+          email: trimmedEmail,
+          firstName: trimmedFirstName,
+          lastName: trimmedLastName,
         }).unwrap();
 
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -83,8 +102,10 @@ export default function RegisterScreen() {
           pathname: '/(auth)/otp-verify',
           params: {
             registrationToken: res.registrationToken,
-            email: email.trim(),
+            email: trimmedEmail,
             role: 'user',
+            firstName: trimmedFirstName,
+            lastName: trimmedLastName,
           },
         });
       }
@@ -234,6 +255,19 @@ export default function RegisterScreen() {
 
             {role === 'vendor' && (
               <>
+                <Text style={[styles.inputLabel, { marginTop: Spacing.md }]}>PHONE NUMBER (E.164 FORMAT) *</Text>
+                <View style={styles.inputWrap}>
+                  <Ionicons name="call-outline" size={18} color="#662502" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="+2348012345678"
+                    placeholderTextColor="#A8998A"
+                    value={phoneNumber}
+                    onChangeText={setPhoneNumber}
+                    keyboardType="phone-pad"
+                  />
+                </View>
+
                 <Text style={[styles.inputLabel, { marginTop: Spacing.md }]}>WORKSHOP / STORE NAME *</Text>
                 <View style={styles.inputWrap}>
                   <Ionicons name="storefront-outline" size={18} color="#662502" style={styles.inputIcon} />

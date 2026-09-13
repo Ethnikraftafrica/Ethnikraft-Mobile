@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { UserProfile, VendorProfile, AuthResponse } from '../api/authApi';
+import { UserProfile, VendorProfile, AuthResponse, AuthTokens } from '../api/authApi';
 import { StorageService } from '@/services/storage.service';
 
 export type UserRole = 'user' | 'vendor';
@@ -30,12 +30,17 @@ export const authSlice = createSlice({
   reducers: {
     setRole: (state, action: PayloadAction<UserRole>) => {
       state.activeRole = action.payload;
-      StorageService.setActiveRole(action.payload);
+      // Non-blocking fire-and-forget storage write
+      StorageService.setActiveRole(action.payload).catch((e) =>
+        console.warn('Storage active role save failed', e)
+      );
     },
     toggleRole: (state) => {
       const nextRole: UserRole = state.activeRole === 'user' ? 'vendor' : 'user';
       state.activeRole = nextRole;
-      StorageService.setActiveRole(nextRole);
+      StorageService.setActiveRole(nextRole).catch((e) =>
+        console.warn('Storage active role toggle save failed', e)
+      );
     },
     setAuthSuccess: (state, action: PayloadAction<AuthResponse>) => {
       const { user, tokens, vendor } = action.payload;
@@ -45,18 +50,32 @@ export const authSlice = createSlice({
       state.isAuthenticated = true;
       state.hasVendorAccount = user.role === 'VENDOR' || !!vendor;
 
-      // If user is a vendor, default activeRole to vendor if not previously chosen
       if (state.hasVendorAccount && !state.activeRole) {
         state.activeRole = 'vendor';
       }
 
-      // Persist to encrypted / async storage
-      StorageService.setTokens(tokens.access_token, tokens.refresh_token);
-      StorageService.setUserProfile(user);
+      // Non-blocking asynchronous storage persistence to prevent any frame drops/lag
+      StorageService.setTokens(tokens.access_token, tokens.refresh_token).catch((e) =>
+        console.warn('Failed to persist secure tokens', e)
+      );
+      StorageService.setUserProfile(user).catch((e) =>
+        console.warn('Failed to persist user profile', e)
+      );
       if (vendor) {
-        StorageService.setVendorProfile(vendor);
+        StorageService.setVendorProfile(vendor).catch((e) =>
+          console.warn('Failed to persist vendor profile', e)
+        );
       }
-      StorageService.setActiveRole(state.activeRole);
+      StorageService.setActiveRole(state.activeRole).catch((e) =>
+        console.warn('Failed to persist active role', e)
+      );
+    },
+    updateTokens: (state, action: PayloadAction<AuthTokens>) => {
+      state.accessToken = action.payload.access_token;
+      StorageService.setTokens(
+        action.payload.access_token,
+        action.payload.refresh_token
+      ).catch((e) => console.warn('Failed to update tokens in storage', e));
     },
     hydrateSession: (
       state,
@@ -85,11 +104,19 @@ export const authSlice = createSlice({
       state.isAuthenticated = false;
       state.hasVendorAccount = false;
       state.activeRole = 'user';
-      StorageService.clearAll();
+      StorageService.clearAll().catch((e) =>
+        console.warn('Failed to clear storage on logout', e)
+      );
     },
   },
 });
 
-export const { setRole, toggleRole, setAuthSuccess, hydrateSession, logout } =
-  authSlice.actions;
+export const {
+  setRole,
+  toggleRole,
+  setAuthSuccess,
+  updateTokens,
+  hydrateSession,
+  logout,
+} = authSlice.actions;
 export default authSlice.reducer;

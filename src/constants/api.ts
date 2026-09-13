@@ -18,10 +18,13 @@ export const API_ENDPOINTS = {
     completeRegister: '/auth/complete-registration',
     
     // Vendor Registration Flow
-    initiateVendorRegister: '/auth/initiate-vendor-registration',
-    verifyVendorOtp: '/auth/verify-vendor-otp',
-    completeVendorRegister: '/auth/complete-vendor-registration',
+    initiateVendorRegister: '/auth/vendor/initiate-registration',
+    verifyVendorOtp: '/auth/vendor/verify-otp',
+    completeVendorRegister: '/auth/vendor/complete-registration',
     
+    // Token Refresh
+    refresh: '/auth/refresh',
+
     // Password Reset
     initiatePasswordReset: '/auth/password-reset/initiate',
     verifyPasswordResetOtp: '/auth/password-reset/verify-otp',
