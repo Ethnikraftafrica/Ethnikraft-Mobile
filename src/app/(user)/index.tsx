@@ -378,29 +378,29 @@ export default function UserHomeScreen() {
     return cultureProductsData || [];
   }, [cultureProductsData]);
 
-  // Derived category groupings by ID matching web Home.tsx
-  const categoriesList = useMemo(() => {
-    return metadataData?.categories || [];
-  }, [metadataData]);
+  // Derived category map indexed by ID for fast O(1) lookups without array scanning
+  const categoriesMap = useMemo(() => {
+    const map: Record<string, any> = {};
+    const categories = metadataData?.categories || [];
+    for (let i = 0; i < categories.length; i++) {
+      map[categories[i].id] = categories[i];
+    }
+    return map;
+  }, [metadataData?.categories]);
 
-  const getCategoryById = useCallback(
-    (id: string) => categoriesList.find((c) => c.id === id),
-    [categoriesList]
-  );
-
-  const discoverByOccasion = useMemo(() => getCategoryById('2'), [getCategoryById]);
-  const artisanSpotlight = useMemo(() => getCategoryById('3'), [getCategoryById]);
-  const kitchenDining = useMemo(() => getCategoryById('5'), [getCategoryById]);
-  const explorePopular = useMemo(() => getCategoryById('7'), [getCategoryById]);
-  const shopDealsFashion = useMemo(() => getCategoryById('8'), [getCategoryById]);
-  const casualLooks = useMemo(() => getCategoryById('9'), [getCategoryById]);
-  const discoverByStyle = useMemo(() => getCategoryById('10'), [getCategoryById]);
-  const forWeddings = useMemo(() => getCategoryById('11'), [getCategoryById]);
-  const trendingPopular = useMemo(() => getCategoryById('14'), [getCategoryById]);
-  const collectorsPicks = useMemo(() => getCategoryById('15'), [getCategoryById]);
-  const homeBeautification = useMemo(() => getCategoryById('16'), [getCategoryById]);
-  const oneOfAKind = useMemo(() => getCategoryById('17'), [getCategoryById]);
-  const newArrivalsCurated = useMemo(() => getCategoryById('18'), [getCategoryById]);
+  const discoverByOccasion = categoriesMap['2'];
+  const artisanSpotlight = categoriesMap['3'];
+  const kitchenDining = categoriesMap['5'];
+  const explorePopular = categoriesMap['7'];
+  const shopDealsFashion = categoriesMap['8'];
+  const casualLooks = categoriesMap['9'];
+  const discoverByStyle = categoriesMap['10'];
+  const forWeddings = categoriesMap['11'];
+  const trendingPopular = categoriesMap['14'];
+  const collectorsPicks = categoriesMap['15'];
+  const homeBeautification = categoriesMap['16'];
+  const oneOfAKind = categoriesMap['17'];
+  const newArrivalsCurated = categoriesMap['18'];
 
   // ─── SLIDE ANIMATION REFS ──────────────────────────────────
   const heritageScrollRef = useRef<ScrollView>(null);

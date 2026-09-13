@@ -606,6 +606,10 @@ export default function ExploreScreen() {
         columnWrapperStyle={styles.gridColumnWrapper}
         contentContainerStyle={styles.gridContentContainer}
         showsVerticalScrollIndicator={false}
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={5}
+        removeClippedSubviews={true}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}

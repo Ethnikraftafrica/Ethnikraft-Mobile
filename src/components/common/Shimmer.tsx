@@ -46,9 +46,10 @@ export const Shimmer: React.FC<ShimmerProps> = ({
     return () => animation.stop();
   }, [animatedValue]);
 
+  const targetWidth = typeof width === 'number' ? width : 220;
   const translateX = animatedValue.interpolate({
     inputRange: [0, 1],
-    outputRange: [-SCREEN_WIDTH, SCREEN_WIDTH],
+    outputRange: [-targetWidth, targetWidth * 1.5],
   });
 
   return (

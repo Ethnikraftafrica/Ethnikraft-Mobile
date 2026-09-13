@@ -27,7 +27,7 @@ interface ProductCardProps {
   onToggleWishlist?: (product: Product, isWishlisted: boolean) => void;
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({
+const ProductCardComponent: React.FC<ProductCardProps> = ({
   product,
   onAddToCart,
   onCustomize,
@@ -223,6 +223,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     </View>
   );
 };
+
+export const ProductCard = React.memo(ProductCardComponent);
 
 const styles = StyleSheet.create({
   cardContainer: {
