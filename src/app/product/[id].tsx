@@ -12,6 +12,7 @@ import {
   NativeScrollEvent,
   ActivityIndicator,
   Animated,
+  RefreshControl,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -77,11 +78,24 @@ export default function ProductDetailScreen() {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isNotified, setIsNotified] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Fetch product from API with graceful fallback to mock data
-  const { data: apiProduct, isLoading } = useGetProductByIdQuery(id || '', {
+  const { data: apiProduct, isLoading, isFetching, refetch } = useGetProductByIdQuery(id || '', {
     skip: !id,
   });
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      await refetch();
+    } catch {
+      // Ignore
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refetch]);
 
   const fallbackProduct = MOCK_PRODUCTS.find((p) => p.id === id) || MOCK_PRODUCTS[0];
   const resolvedProduct = (apiProduct as any)?.product || apiProduct;
@@ -368,6 +382,14 @@ export default function ProductDetailScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 54 }]}
         scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={['#C46C27']}
+            tintColor="#C46C27"
+          />
+        }
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: false }

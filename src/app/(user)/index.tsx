@@ -276,42 +276,49 @@ export default function UserHomeScreen() {
   const {
     data: metadataData,
     isLoading: isMetadataLoading,
+    isFetching: isMetadataFetching,
     refetch: refetchMetadata,
   } = useGetHomeFilterMetadataQuery();
 
   const {
     data: topPicksData,
     isLoading: isTopPicksLoading,
+    isFetching: isTopPicksFetching,
     refetch: refetchTopPicks,
   } = useGetTopPicksWeekQuery({ limit: 8 });
 
   const {
     data: paintingsData,
     isLoading: isPaintingsLoading,
+    isFetching: isPaintingsFetching,
     refetch: refetchPaintings,
   } = useGetAfricanPaintingsQuery({ limit: 8 });
 
   const {
     data: menswearData,
     isLoading: isMenswearLoading,
+    isFetching: isMenswearFetching,
     refetch: refetchMenswear,
   } = useGetProductsQuery({ productCategory: 'WEARS', take: 8 });
 
   const {
     data: accessoriesData,
     isLoading: isAccessoriesLoading,
+    isFetching: isAccessoriesFetching,
     refetch: refetchAccessories,
   } = useGetProductsQuery({ productCategory: 'ACCESSORIES', take: 8 });
 
   const {
     data: decorationsData,
     isLoading: isDecorationsLoading,
+    isFetching: isDecorationsFetching,
     refetch: refetchDecorations,
   } = useGetBestsellersDecorationsQuery({ limit: 8 });
 
   const {
     data: cultureProductsData,
     isLoading: isCultureProductsLoading,
+    isFetching: isCultureProductsFetching,
     refetch: refetchCulture,
   } = useGetInspiredByCultureQuery({ limit: 8 });
 
@@ -490,7 +497,7 @@ export default function UserHomeScreen() {
           )}
         </View>
 
-        {isLoading && items.length === 0 ? (
+        {(isLoading || isRefreshing) && items.length === 0 ? (
           <ProductRailSkeleton count={4} />
         ) : (
           <ScrollView
@@ -883,7 +890,7 @@ export default function UserHomeScreen() {
               pathname: '/(user)/explore',
               params: { collection: 'top-picks-week', title: 'Top Picks of the Week' },
             }),
-          isTopPicksLoading
+          isTopPicksLoading || isTopPicksFetching
         )}
 
         {/* ============================================================ */}
@@ -894,9 +901,12 @@ export default function UserHomeScreen() {
           'Find curated pieces perfect for celebrations, travel, and lifestyle',
           discoverByOccasion,
           'discover-by-occasion',
-          isMetadataLoading
+          isMetadataLoading || isMetadataFetching
         )}
 
+        {/* ============================================================ */}
+        {/* 4. ARTISAN SPOTLIGHT — CATEGORY GRID                         */}
+        {/* ============================================================ */}
         {/* ============================================================ */}
         {/* 4. ARTISAN SPOTLIGHT — CATEGORY GRID                         */}
         {/* ============================================================ */}
@@ -905,7 +915,7 @@ export default function UserHomeScreen() {
           'Meet master weavers, sculptors, and certified heritage creators',
           artisanSpotlight,
           'artisan-spotlight',
-          isMetadataLoading
+          isMetadataLoading || isMetadataFetching
         )}
 
         {/* ============================================================ */}
@@ -916,7 +926,7 @@ export default function UserHomeScreen() {
           'Artisanal tableware, carved pottery, and indigenous storage',
           kitchenDining,
           'kitchen-dining',
-          isMetadataLoading
+          isMetadataLoading || isMetadataFetching
         )}
 
         {/* ============================================================ */}
@@ -935,7 +945,7 @@ export default function UserHomeScreen() {
                 title: 'African Paintings & Fine Art',
               },
             }),
-          isPaintingsLoading
+          isPaintingsLoading || isPaintingsFetching
         )}
 
         {/* ============================================================ */}
@@ -946,7 +956,7 @@ export default function UserHomeScreen() {
           'Ceremonial royal beads, lighting, and statement crafts',
           explorePopular,
           'popular-picks',
-          isMetadataLoading
+          isMetadataLoading || isMetadataFetching
         )}
 
         {/* ============================================================ */}
@@ -957,7 +967,7 @@ export default function UserHomeScreen() {
           'Curated clearance, couple outfits, and ready-to-wear pieces',
           shopDealsFashion,
           'deals',
-          isMetadataLoading
+          isMetadataLoading || isMetadataFetching
         )}
 
         {/* ============================================================ */}
@@ -972,7 +982,7 @@ export default function UserHomeScreen() {
               pathname: '/(user)/explore',
               params: { category: 'WEARS', title: 'Menswear' },
             }),
-          isMenswearLoading
+          isMenswearLoading || isMenswearFetching
         )}
 
         {/* ============================================================ */}
@@ -987,7 +997,7 @@ export default function UserHomeScreen() {
               pathname: '/(user)/explore',
               params: { category: 'ACCESSORIES', title: 'Accessories' },
             }),
-          isAccessoriesLoading
+          isAccessoriesLoading || isAccessoriesFetching
         )}
 
         {/* ============================================================ */}
@@ -998,7 +1008,7 @@ export default function UserHomeScreen() {
           'Limited editions, weekend styles, and gifted artisan heirlooms',
           trendingPopular,
           'trending',
-          isMetadataLoading
+          isMetadataLoading || isMetadataFetching
         )}
 
         {/* ============================================================ */}
@@ -1027,7 +1037,7 @@ export default function UserHomeScreen() {
           'Relaxed unisex comfort, lightweight boho, and denim-inspired apparel',
           casualLooks,
           'casual-looks',
-          isMetadataLoading
+          isMetadataLoading || isMetadataFetching
         )}
 
         {/* ============================================================ */}
@@ -1038,7 +1048,7 @@ export default function UserHomeScreen() {
           'Youthful streetwear, sleek elegance, and minimalist heritage aesthetics',
           discoverByStyle,
           'style',
-          isMetadataLoading
+          isMetadataLoading || isMetadataFetching
         )}
 
         {/* ============================================================ */}
@@ -1049,7 +1059,7 @@ export default function UserHomeScreen() {
           "Aso-Ebi luxury textiles, bridal coral, and groom's majesty",
           forWeddings,
           'weddings',
-          isMetadataLoading
+          isMetadataLoading || isMetadataFetching
         )}
 
         {/* ============================================================ */}
@@ -1060,7 +1070,7 @@ export default function UserHomeScreen() {
           'High-end couture, museum-grade vintage jewelry, and timeless relics',
           collectorsPicks,
           'collectors',
-          isMetadataLoading
+          isMetadataLoading || isMetadataFetching
         )}
 
         {/* ============================================================ */}
@@ -1071,7 +1081,7 @@ export default function UserHomeScreen() {
           'Handmade woven furniture, ornamental pottery, and sculpted wall art',
           homeBeautification,
           'home-beautification',
-          isMetadataLoading
+          isMetadataLoading || isMetadataFetching
         )}
 
         {/* ============================================================ */}
@@ -1082,7 +1092,7 @@ export default function UserHomeScreen() {
           'Rare vintage bronzes, bespoke stone carvings, and heirloom masks',
           oneOfAKind,
           'one-of-a-kind',
-          isMetadataLoading
+          isMetadataLoading || isMetadataFetching
         )}
 
         {/* ============================================================ */}
@@ -1093,7 +1103,7 @@ export default function UserHomeScreen() {
           'Fresh off the artisan loom, vibrant leather footwear, and crafts',
           newArrivalsCurated,
           'new-arrivals',
-          isMetadataLoading
+          isMetadataLoading || isMetadataFetching
         )}
 
         {/* ============================================================ */}
@@ -1112,7 +1122,7 @@ export default function UserHomeScreen() {
                 title: 'Home & Décor',
               },
             }),
-          isDecorationsLoading
+          isDecorationsLoading || isDecorationsFetching
         )}
 
         {/* ============================================================ */}
@@ -1148,7 +1158,7 @@ export default function UserHomeScreen() {
                 title: 'Inspired by Culture',
               },
             }),
-          isCultureProductsLoading
+          isCultureProductsLoading || isCultureProductsFetching
         )}
 
         {/* Bottom Padding for Floating Actions */}

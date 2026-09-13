@@ -600,7 +600,7 @@ export default function ExploreScreen() {
 
       {/* ─── 3. 2-COLUMN PRODUCT GRID (FLATLIST) ────────────────────── */}
       <FlatList
-        data={displayProducts}
+        data={isRefreshing ? [] : displayProducts}
         numColumns={2}
         keyExtractor={(item) => item.id}
         columnWrapperStyle={styles.gridColumnWrapper}
@@ -630,7 +630,7 @@ export default function ExploreScreen() {
           />
         )}
         ListEmptyComponent={
-          isLoading ? (
+          isLoading || isRefreshing ? (
             <ProductGridSkeleton count={6} />
           ) : (
             <View style={styles.emptyContainer}>

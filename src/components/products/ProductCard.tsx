@@ -36,26 +36,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const router = useRouter();
   const { code: currencyCode, rate: exchangeRate } = useAppSelector((state) => state.currency);
   const [isWishlisted, setIsWishlisted] = useState(false);
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const [imageLoaded, setImageLoaded] = useState(false);
   const heartScale = useRef(new Animated.Value(1)).current;
-
-  const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.965,
-      friction: 8,
-      tension: 100,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      friction: 6,
-      tension: 80,
-      useNativeDriver: true,
-    }).start();
-  };
 
   const handleCardPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -121,31 +103,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const rating = product.vendor?.rating || 0;
 
   return (
-    <Animated.View
-      style={[
-        styles.cardContainer,
-        Shadows.sm,
-        {
-          transform: [{ scale: scaleAnim }],
-        },
-      ]}
-    >
+    <View style={[styles.cardContainer, Shadows.sm]}>
       <TouchableOpacity
-        activeOpacity={1}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
+        activeOpacity={0.88}
         onPress={handleCardPress}
         style={styles.innerTouchable}
       >
         {/* Product Image Container */}
         <View style={styles.imageContainer}>
-          <Shimmer style={StyleSheet.absoluteFill} borderRadius={0} />
+          {!imageLoaded && <Shimmer style={StyleSheet.absoluteFill} borderRadius={0} />}
           <Image
             source={{ uri: product.mainImage }}
             style={styles.productImage}
             contentFit="cover"
-            transition={200}
+            transition={150}
             cachePolicy="memory-disk"
+            onLoad={() => setImageLoaded(true)}
           />
 
           {/* Out of stock dark overlay */}
@@ -247,7 +220,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           )}
         </View>
       </TouchableOpacity>
-    </Animated.View>
+    </View>
   );
 };
 
