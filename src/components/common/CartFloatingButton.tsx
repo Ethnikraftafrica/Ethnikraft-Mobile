@@ -170,7 +170,7 @@ export const CartFloatingButton = forwardRef<
       <TouchableOpacity
         activeOpacity={0.92}
         onLongPress={expandBag}
-        delayLongPress={350}
+        delayLongPress={180}
         onPress={handlePress}
         style={styles.touchableWrapper}
       >

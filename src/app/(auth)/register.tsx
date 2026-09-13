@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -96,232 +97,256 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <LinearGradient
+      colors={['#FCF4E1', '#F5EBD5']}
       style={styles.container}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
     >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
       >
-        {/* Back Button */}
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <Ionicons name="arrow-back" size={20} color={Colors.primaryDark} />
-        </TouchableOpacity>
-
-        <View style={styles.header}>
-          <Text style={styles.title}>Join Ethnikraft</Text>
-          <Text style={styles.subtitle}>
-            Experience luxury African craft or launch your master artisan workshop.
-          </Text>
-        </View>
-
-        {/* Role Toggle Selector */}
-        <View style={[styles.roleCard, Shadows.sm]}>
+          {/* Back Button */}
           <TouchableOpacity
-            style={[styles.roleOption, role === 'user' && styles.roleOptionActive]}
-            onPress={() => {
-              Haptics.selectionAsync();
-              setRole('user');
-            }}
+            style={[styles.backBtn, Shadows.sm]}
+            onPress={() => router.back()}
+            activeOpacity={0.8}
           >
-            <Ionicons
-              name="bag-handle"
-              size={18}
-              color={role === 'user' ? Colors.textInverse : Colors.textSecondary}
-              style={{ marginRight: 6 }}
-            />
-            <Text
-              style={[
-                styles.roleOptionText,
-                role === 'user' && styles.roleOptionTextActive,
-              ]}
-            >
-              I am a Customer
-            </Text>
+            <Ionicons name="arrow-back" size={20} color="#341B00" />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[
-              styles.roleOption,
-              role === 'vendor' && styles.roleOptionActiveVendor,
-            ]}
-            onPress={() => {
-              Haptics.selectionAsync();
-              setRole('vendor');
-            }}
-          >
-            <Ionicons
-              name="hammer"
-              size={18}
-              color={role === 'vendor' ? Colors.textInverse : Colors.textSecondary}
-              style={{ marginRight: 6 }}
-            />
-            <Text
-              style={[
-                styles.roleOptionText,
-                role === 'vendor' && styles.roleOptionTextActive,
-              ]}
-            >
-              I am an Artisan
+          <View style={styles.header}>
+            <Text style={styles.title}>Join Ethnikraft</Text>
+            <Text style={styles.subtitle}>
+              Experience luxury African craft or launch your master artisan workshop.
             </Text>
-          </TouchableOpacity>
-        </View>
-
-        {errorMessage && (
-          <View style={styles.errorBanner}>
-            <Ionicons name="alert-circle" size={18} color={Colors.danger} style={{ marginRight: 6 }} />
-            <Text style={styles.errorText}>{errorMessage}</Text>
-          </View>
-        )}
-
-        {/* Registration Form */}
-        <View style={styles.formCard}>
-          <View style={styles.nameRow}>
-            <View style={{ flex: 1, marginRight: Spacing.xs }}>
-              <Text style={styles.inputLabel}>FIRST NAME</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Kwame"
-                placeholderTextColor={Colors.textMuted}
-                value={firstName}
-                onChangeText={setFirstName}
-              />
-            </View>
-            <View style={{ flex: 1, marginLeft: Spacing.xs }}>
-              <Text style={styles.inputLabel}>LAST NAME</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Mensah"
-                placeholderTextColor={Colors.textMuted}
-                value={lastName}
-                onChangeText={setLastName}
-              />
-            </View>
           </View>
 
-          <Text style={[styles.inputLabel, { marginTop: Spacing.md }]}>EMAIL ADDRESS</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="kwame@artisan.com"
-            placeholderTextColor={Colors.textMuted}
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-
-          {role === 'vendor' && (
-            <>
-              <Text style={[styles.inputLabel, { marginTop: Spacing.md }]}>WORKSHOP / STORE NAME</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. Ashanti Royal Looms"
-                placeholderTextColor={Colors.textMuted}
-                value={storeName}
-                onChangeText={setStoreName}
+          {/* Role Selection Tabs */}
+          <View style={[styles.roleCard, Shadows.sm]}>
+            <TouchableOpacity
+              style={[styles.roleOption, role === 'user' && styles.roleOptionActive]}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setRole('user');
+              }}
+            >
+              <Ionicons
+                name="bag-handle"
+                size={16}
+                color={role === 'user' ? '#FFFFFF' : '#662502'}
+                style={{ marginRight: 6 }}
               />
-            </>
+              <Text
+                style={[
+                  styles.roleOptionText,
+                  role === 'user' && styles.roleOptionTextActive,
+                ]}
+              >
+                Customer Account
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.roleOption,
+                role === 'vendor' && styles.roleOptionActiveVendor,
+              ]}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setRole('vendor');
+              }}
+            >
+              <Ionicons
+                name="hammer"
+                size={16}
+                color={role === 'vendor' ? '#FFFFFF' : '#662502'}
+                style={{ marginRight: 6 }}
+              />
+              <Text
+                style={[
+                  styles.roleOptionText,
+                  role === 'vendor' && styles.roleOptionTextActive,
+                ]}
+              >
+                Artisan Vendor
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {errorMessage && (
+            <View style={styles.errorBanner}>
+              <Ionicons name="alert-circle" size={18} color="#C92929" style={{ marginRight: 6 }} />
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            </View>
           )}
 
-          <TouchableOpacity
-            style={[
-              styles.submitBtn,
-              role === 'vendor' && styles.submitBtnVendor,
-              isSubmitting && { opacity: 0.7 },
-            ]}
-            onPress={handleSubmit}
-            disabled={isSubmitting}
-            activeOpacity={0.85}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator color={Colors.textInverse} />
-            ) : (
-              <Text style={styles.submitBtnText}>Continue to Verification</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+          {/* Registration Form Card */}
+          <View style={[styles.formCard, Shadows.lg]}>
+            <View style={styles.nameRow}>
+              <View style={{ flex: 1, marginRight: Spacing.xs }}>
+                <Text style={styles.inputLabel}>FIRST NAME *</Text>
+                <View style={styles.inputWrap}>
+                  <Ionicons name="person-outline" size={16} color="#662502" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Kwame"
+                    placeholderTextColor="#A8998A"
+                    value={firstName}
+                    onChangeText={setFirstName}
+                  />
+                </View>
+              </View>
+              <View style={{ flex: 1, marginLeft: Spacing.xs }}>
+                <Text style={styles.inputLabel}>LAST NAME *</Text>
+                <View style={styles.inputWrap}>
+                  <Ionicons name="person-outline" size={16} color="#662502" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Mensah"
+                    placeholderTextColor="#A8998A"
+                    value={lastName}
+                    onChangeText={setLastName}
+                  />
+                </View>
+              </View>
+            </View>
 
-        <TouchableOpacity
-          onPress={() => router.replace('/(auth)/login')}
-          style={styles.signinLink}
-        >
-          <Text style={styles.signinText}>
-            Already have an account?{' '}
-            <Text style={styles.signinLinkBold}>Sign in</Text>
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+            <Text style={[styles.inputLabel, { marginTop: Spacing.md }]}>EMAIL ADDRESS *</Text>
+            <View style={styles.inputWrap}>
+              <Ionicons name="mail-outline" size={18} color="#662502" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="kwame@artisan.com"
+                placeholderTextColor="#A8998A"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+            </View>
+
+            {role === 'vendor' && (
+              <>
+                <Text style={[styles.inputLabel, { marginTop: Spacing.md }]}>WORKSHOP / STORE NAME *</Text>
+                <View style={styles.inputWrap}>
+                  <Ionicons name="storefront-outline" size={18} color="#662502" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. Ashanti Royal Looms"
+                    placeholderTextColor="#A8998A"
+                    value={storeName}
+                    onChangeText={setStoreName}
+                  />
+                </View>
+              </>
+            )}
+
+            <TouchableOpacity
+              style={[
+                styles.submitBtn,
+                role === 'vendor' && styles.submitBtnVendor,
+                isSubmitting && { opacity: 0.7 },
+              ]}
+              onPress={handleSubmit}
+              disabled={isSubmitting}
+              activeOpacity={0.88}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.submitBtnText}>Continue to Verification</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Bottom Sign-In Prompt */}
+          <TouchableOpacity
+            onPress={() => router.replace('/(auth)/login')}
+            style={styles.signinLink}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.signinText}>
+              Already have an account?{' '}
+              <Text style={styles.signinLinkBold}>Sign in »</Text>
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAF6F0',
   },
   scrollContent: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
+    paddingTop: Spacing.lg + 10,
     paddingBottom: Spacing.xxl,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.surface,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: '#EFE7DA',
   },
   header: {
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   title: {
     fontSize: 26,
     fontWeight: '800',
-    color: Colors.primaryDark,
+    color: '#341B00',
   },
   subtitle: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
+    fontSize: Typography.fontSize.xs + 1,
+    color: '#662502',
     marginTop: 4,
     lineHeight: 18,
   },
   roleCard: {
     flexDirection: 'row',
-    backgroundColor: '#EAE1D2',
+    backgroundColor: 'rgba(234, 224, 211, 0.7)',
     borderRadius: Radius.full,
     padding: 4,
-    marginBottom: Spacing.lg,
+    marginVertical: Spacing.md,
+    borderWidth: 1,
+    borderColor: '#EFE7DA',
   },
   roleOption: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.sm + 2,
     borderRadius: Radius.full,
   },
   roleOptionActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#C46C27',
   },
   roleOptionActiveVendor: {
-    backgroundColor: Colors.secondary,
+    backgroundColor: '#341B00',
   },
   roleOptionText: {
     fontSize: Typography.fontSize.xs,
     fontWeight: '700',
-    color: Colors.textSecondary,
+    color: '#662502',
   },
   roleOptionTextActive: {
-    color: Colors.textInverse,
+    color: '#FFFFFF',
   },
   errorBanner: {
     flexDirection: 'row',
@@ -340,8 +365,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   formCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.xl,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     padding: Spacing.lg,
     borderWidth: 1,
     borderColor: '#EFE7DA',
@@ -353,44 +378,53 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 10,
     fontWeight: '800',
-    color: Colors.textMuted,
+    color: '#662502',
     letterSpacing: 0.6,
     marginBottom: 6,
   },
-  input: {
+  inputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E4DACB',
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
     backgroundColor: '#FAF7F2',
+  },
+  inputIcon: {
+    marginRight: Spacing.xs,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 12,
     fontSize: Typography.fontSize.sm,
-    color: Colors.textPrimary,
+    color: '#341B00',
   },
   submitBtn: {
-    backgroundColor: Colors.primary,
-    paddingVertical: Spacing.md,
+    backgroundColor: '#C46C27',
+    paddingVertical: 14,
     borderRadius: Radius.md,
     alignItems: 'center',
     marginTop: Spacing.lg,
   },
   submitBtnVendor: {
-    backgroundColor: Colors.secondary,
+    backgroundColor: '#341B00',
   },
   submitBtnText: {
-    color: Colors.textInverse,
+    color: '#FFFFFF',
     fontSize: Typography.fontSize.sm,
     fontWeight: '700',
   },
   signinLink: {
     alignItems: 'center',
+    marginTop: Spacing.xs,
   },
   signinText: {
     fontSize: Typography.fontSize.sm,
-    color: Colors.textSecondary,
+    color: '#662502',
   },
   signinLinkBold: {
-    color: Colors.primary,
+    color: '#C46C27',
     fontWeight: '800',
   },
 });
