@@ -497,7 +497,7 @@ export default function UserHomeScreen() {
           )}
         </View>
 
-        {(isLoading || isRefreshing) && items.length === 0 ? (
+        {(isLoading || isRefreshing) ? (
           <ProductRailSkeleton count={4} />
         ) : (
           <ScrollView
@@ -632,7 +632,7 @@ export default function UserHomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {isLoading && (!filters || filters.length === 0) ? (
+        {(isLoading || isRefreshing) ? (
           <CategoryRailSkeleton count={4} />
         ) : (
           <ScrollView
