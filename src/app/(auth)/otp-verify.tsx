@@ -93,23 +93,32 @@ export default function OtpVerifyScreen() {
       return;
     }
 
+    const activeToken = currentRegistrationToken || params.registrationToken || '';
+    if (!activeToken) {
+      setErrorMessage('Registration token missing. Please return to the registration screen and try again.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      return;
+    }
+
     setErrorMessage(null);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
       if (isVendor) {
         const res = await verifyVendorOtp({
-          registrationToken: currentRegistrationToken,
+          registrationToken: activeToken,
           otp: trimmedOtp,
         }).unwrap();
-        setVerificationToken(res.verificationToken);
+        const vToken = res?.verificationToken || (res as any)?.data?.verificationToken || '';
+        setVerificationToken(vToken);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
         const res = await verifyOtp({
-          registrationToken: currentRegistrationToken,
+          registrationToken: activeToken,
           otp: trimmedOtp,
         }).unwrap();
-        setVerificationToken(res.verificationToken);
+        const vToken = res?.verificationToken || (res as any)?.data?.verificationToken || '';
+        setVerificationToken(vToken);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     } catch (err: any) {
@@ -132,7 +141,8 @@ export default function OtpVerifyScreen() {
         const res = await initiateVendorRegister({
           email: params.email.trim(),
         }).unwrap();
-        setCurrentRegistrationToken(res.registrationToken);
+        const nextToken = res?.registrationToken || (res as any)?.data?.registrationToken || '';
+        if (nextToken) setCurrentRegistrationToken(nextToken);
         setOtp('');
         setTimer(60);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -142,7 +152,8 @@ export default function OtpVerifyScreen() {
           firstName: params.firstName || '',
           lastName: params.lastName || '',
         }).unwrap();
-        setCurrentRegistrationToken(res.registrationToken);
+        const nextToken = res?.registrationToken || (res as any)?.data?.registrationToken || '';
+        if (nextToken) setCurrentRegistrationToken(nextToken);
         setOtp('');
         setTimer(60);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

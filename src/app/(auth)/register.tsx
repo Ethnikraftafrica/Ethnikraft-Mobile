@@ -82,11 +82,16 @@ export default function RegisterScreen() {
           email: trimmedEmail,
         }).unwrap();
 
+        const token =
+          res?.registrationToken ||
+          (res as any)?.data?.registrationToken ||
+          '';
+
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.push({
           pathname: '/(auth)/otp-verify',
           params: {
-            registrationToken: res.registrationToken,
+            registrationToken: token,
             email: trimmedEmail,
             role: 'vendor',
             firstName: trimmedFirstName,
@@ -102,11 +107,16 @@ export default function RegisterScreen() {
           lastName: trimmedLastName,
         }).unwrap();
 
+        const token =
+          res?.registrationToken ||
+          (res as any)?.data?.registrationToken ||
+          '';
+
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.push({
           pathname: '/(auth)/otp-verify',
           params: {
-            registrationToken: res.registrationToken,
+            registrationToken: token,
             email: trimmedEmail,
             role: 'user',
             firstName: trimmedFirstName,

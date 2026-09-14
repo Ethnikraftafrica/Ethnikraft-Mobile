@@ -36,14 +36,33 @@ const addRefreshSubscriber = (callback: (token: string | null) => void) => {
   refreshSubscribers.push(callback);
 };
 
-// Custom base query with seamless automatic token refresh
+// Custom base query with seamless automatic token refresh and transparent Expo terminal error logging
 export const baseQueryWithReauth: BaseQueryFn<
   string | FetchArgs,
   unknown,
   FetchBaseQueryError
 > = async (args, api, extraOptions) => {
+  const url = typeof args === 'string' ? args : args.url;
+  const method = typeof args === 'string' ? 'GET' : args.method || 'GET';
+  const reqBody = typeof args === 'string' ? undefined : args.body;
+
   let result = await rawBaseQuery(args, api, extraOptions);
 
+  // If there's an error from the backend, print formatted details to the Expo terminal logs
+  if (result.error) {
+    const status = result.error.status;
+    const errorData = result.error.data;
+    console.error(
+      `\n======================================================\n` +
+      `🚨 [EXPO API ERROR] ${method} ${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}\n` +
+      `📊 HTTP Status: ${status}\n` +
+      (reqBody ? `📦 Request Body: ${JSON.stringify(reqBody, null, 2)}\n` : '') +
+      `❌ Error Response: ${JSON.stringify(errorData, null, 2)}\n` +
+      `======================================================\n`
+    );
+  }
+
+  // Handle 401 Unauthorized with automatic refresh token exchange
   if (result.error && result.error.status === 401) {
     const refreshToken = await StorageService.getRefreshToken();
 

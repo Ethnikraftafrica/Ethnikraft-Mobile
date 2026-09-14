@@ -90,7 +90,8 @@ export default function ForgotPasswordScreen() {
         otp: trimmedOtp,
       }).unwrap();
 
-      setVerificationToken(res.verificationToken);
+      const vToken = res?.verificationToken || (res as any)?.data?.verificationToken || '';
+      setVerificationToken(vToken);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setStep('NEW_PASSWORD');
     } catch (err: any) {

@@ -119,6 +119,16 @@ export interface GenericMessageResponse {
   success?: boolean;
 }
 
+// Utility to normalize NestJS response envelopes { success: true, data: { ... } }
+const unwrapResponse = (response: any) => {
+  if (response && typeof response === 'object') {
+    if ('data' in response && response.data && typeof response.data === 'object') {
+      return { ...response, ...response.data };
+    }
+  }
+  return response;
+};
+
 export const authApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     login: builder.mutation<AuthResponse, LoginPayload>({
@@ -127,6 +137,7 @@ export const authApi = baseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
+      transformResponse: unwrapResponse,
       invalidatesTags: ['Auth', 'UserProfile', 'VendorProfile'],
     }),
 
@@ -136,6 +147,7 @@ export const authApi = baseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
+      transformResponse: unwrapResponse,
       invalidatesTags: ['Auth', 'UserProfile', 'VendorProfile'],
     }),
 
@@ -144,6 +156,7 @@ export const authApi = baseApi.injectEndpoints({
         url: API_ENDPOINTS.auth.logout,
         method: 'POST',
       }),
+      transformResponse: unwrapResponse,
       invalidatesTags: ['Auth', 'UserProfile', 'VendorProfile'],
     }),
 
@@ -153,6 +166,7 @@ export const authApi = baseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
+      transformResponse: unwrapResponse,
     }),
 
     verifyOtp: builder.mutation<VerifyOtpResponse, VerifyOtpPayload>({
@@ -161,6 +175,7 @@ export const authApi = baseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
+      transformResponse: unwrapResponse,
     }),
 
     completeRegister: builder.mutation<AuthResponse, CompleteRegisterPayload>({
@@ -169,6 +184,7 @@ export const authApi = baseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
+      transformResponse: unwrapResponse,
       invalidatesTags: ['Auth', 'UserProfile'],
     }),
 
@@ -178,6 +194,7 @@ export const authApi = baseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
+      transformResponse: unwrapResponse,
     }),
 
     verifyVendorOtp: builder.mutation<VerifyOtpResponse, VerifyOtpPayload>({
@@ -186,6 +203,7 @@ export const authApi = baseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
+      transformResponse: unwrapResponse,
     }),
 
     completeVendorRegister: builder.mutation<AuthResponse, CompleteVendorRegisterPayload>({
@@ -194,6 +212,7 @@ export const authApi = baseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
+      transformResponse: unwrapResponse,
       invalidatesTags: ['Auth', 'UserProfile', 'VendorProfile'],
     }),
 
@@ -203,6 +222,7 @@ export const authApi = baseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
+      transformResponse: unwrapResponse,
     }),
 
     verifyPasswordResetOtp: builder.mutation<VerifyPasswordResetOtpResponse, VerifyPasswordResetOtpPayload>({
@@ -211,6 +231,7 @@ export const authApi = baseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
+      transformResponse: unwrapResponse,
     }),
 
     completePasswordReset: builder.mutation<GenericMessageResponse, CompletePasswordResetPayload>({
@@ -219,15 +240,18 @@ export const authApi = baseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
+      transformResponse: unwrapResponse,
     }),
 
     getProfile: builder.query<UserProfile, void>({
       query: () => API_ENDPOINTS.auth.profile,
+      transformResponse: (response: any) => response?.data || response,
       providesTags: ['UserProfile'],
     }),
 
     getVendorProfile: builder.query<VendorProfile, void>({
       query: () => API_ENDPOINTS.auth.vendorProfile,
+      transformResponse: (response: any) => response?.data || response,
       providesTags: ['VendorProfile'],
     }),
   }),
