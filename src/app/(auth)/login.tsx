@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -30,6 +30,8 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loginType, setLoginType] = useState<'customer' | 'artisan'>('customer');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const passwordInputRef = useRef<TextInput>(null);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -182,7 +184,13 @@ export default function LoginScreen() {
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
+                autoCorrect={false}
                 keyboardType="email-address"
+                autoComplete="email"
+                textContentType="emailAddress"
+                returnKeyType="next"
+                blurOnSubmit={false}
+                onSubmitEditing={() => passwordInputRef.current?.focus()}
               />
             </View>
 
@@ -201,12 +209,19 @@ export default function LoginScreen() {
             <View style={styles.inputWrap}>
               <Ionicons name="lock-closed-outline" size={18} color="#662502" style={styles.inputIcon} />
               <TextInput
+                ref={passwordInputRef}
                 style={styles.input}
                 placeholder="••••••••••••"
                 placeholderTextColor="#A8998A"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="password"
+                textContentType="password"
+                returnKeyType="done"
+                onSubmitEditing={handleLogin}
               />
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
                 <Ionicons

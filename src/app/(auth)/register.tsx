@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -34,6 +34,11 @@ export default function RegisterScreen() {
   const [phoneNumber, setPhoneNumber] = useState('+234');
   const [storeName, setStoreName] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const lastNameRef = useRef<TextInput>(null);
+  const emailRef = useRef<TextInput>(null);
+  const phoneRef = useRef<TextInput>(null);
+  const storeNameRef = useRef<TextInput>(null);
 
   const isSubmitting = isRegisteringUser || isRegisteringVendor;
 
@@ -221,6 +226,13 @@ export default function RegisterScreen() {
                     placeholderTextColor="#A8998A"
                     value={firstName}
                     onChangeText={setFirstName}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    autoComplete="name-given"
+                    textContentType="givenName"
+                    returnKeyType="next"
+                    blurOnSubmit={false}
+                    onSubmitEditing={() => lastNameRef.current?.focus()}
                   />
                 </View>
               </View>
@@ -229,11 +241,19 @@ export default function RegisterScreen() {
                 <View style={styles.inputWrap}>
                   <Ionicons name="person-outline" size={16} color="#662502" style={styles.inputIcon} />
                   <TextInput
+                    ref={lastNameRef}
                     style={styles.input}
                     placeholder="Mensah"
                     placeholderTextColor="#A8998A"
                     value={lastName}
                     onChangeText={setLastName}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    autoComplete="name-family"
+                    textContentType="familyName"
+                    returnKeyType="next"
+                    blurOnSubmit={false}
+                    onSubmitEditing={() => emailRef.current?.focus()}
                   />
                 </View>
               </View>
@@ -243,13 +263,26 @@ export default function RegisterScreen() {
             <View style={styles.inputWrap}>
               <Ionicons name="mail-outline" size={18} color="#662502" style={styles.inputIcon} />
               <TextInput
+                ref={emailRef}
                 style={styles.input}
                 placeholder="kwame@artisan.com"
                 placeholderTextColor="#A8998A"
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
+                autoCorrect={false}
                 keyboardType="email-address"
+                autoComplete="email"
+                textContentType="emailAddress"
+                returnKeyType={role === 'vendor' ? 'next' : 'done'}
+                blurOnSubmit={role !== 'vendor'}
+                onSubmitEditing={() => {
+                  if (role === 'vendor') {
+                    phoneRef.current?.focus();
+                  } else {
+                    handleSubmit();
+                  }
+                }}
               />
             </View>
 
@@ -259,12 +292,18 @@ export default function RegisterScreen() {
                 <View style={styles.inputWrap}>
                   <Ionicons name="call-outline" size={18} color="#662502" style={styles.inputIcon} />
                   <TextInput
+                    ref={phoneRef}
                     style={styles.input}
                     placeholder="+2348012345678"
                     placeholderTextColor="#A8998A"
                     value={phoneNumber}
                     onChangeText={setPhoneNumber}
                     keyboardType="phone-pad"
+                    autoComplete="tel"
+                    textContentType="telephoneNumber"
+                    returnKeyType="next"
+                    blurOnSubmit={false}
+                    onSubmitEditing={() => storeNameRef.current?.focus()}
                   />
                 </View>
 
@@ -272,11 +311,16 @@ export default function RegisterScreen() {
                 <View style={styles.inputWrap}>
                   <Ionicons name="storefront-outline" size={18} color="#662502" style={styles.inputIcon} />
                   <TextInput
+                    ref={storeNameRef}
                     style={styles.input}
                     placeholder="e.g. Ashanti Royal Looms"
                     placeholderTextColor="#A8998A"
                     value={storeName}
                     onChangeText={setStoreName}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    returnKeyType="done"
+                    onSubmitEditing={handleSubmit}
                   />
                 </View>
               </>

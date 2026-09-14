@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -44,6 +44,8 @@ export default function OtpVerifyScreen() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [verificationToken, setVerificationToken] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const confirmPasswordRef = useRef<TextInput>(null);
 
   const [verifyOtp, { isLoading: isVerifyingUser }] = useVerifyOtpMutation();
   const [completeRegister, { isLoading: isCompletingUser }] = useCompleteRegisterMutation();
@@ -214,6 +216,8 @@ export default function OtpVerifyScreen() {
                 onChangeText={setOtp}
                 keyboardType="number-pad"
                 maxLength={6}
+                returnKeyType="done"
+                onSubmitEditing={handleVerifyOtp}
                 autoFocus
               />
 
@@ -243,6 +247,12 @@ export default function OtpVerifyScreen() {
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="newPassword"
+                  returnKeyType="next"
+                  blurOnSubmit={false}
+                  onSubmitEditing={() => confirmPasswordRef.current?.focus()}
                   autoFocus
                 />
                 <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
@@ -258,12 +268,18 @@ export default function OtpVerifyScreen() {
               <View style={styles.inputWrap}>
                 <Ionicons name="lock-closed-outline" size={18} color="#662502" style={styles.inputIcon} />
                 <TextInput
+                  ref={confirmPasswordRef}
                   style={styles.input}
                   placeholder="Confirm your password"
                   placeholderTextColor="#A8998A"
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry={!showConfirm}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="newPassword"
+                  returnKeyType="done"
+                  onSubmitEditing={handleCompleteRegistration}
                 />
                 <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)} style={styles.eyeBtn}>
                   <Ionicons

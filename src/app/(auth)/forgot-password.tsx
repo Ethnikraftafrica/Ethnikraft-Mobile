@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -34,6 +34,8 @@ export default function ForgotPasswordScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const confirmPasswordRef = useRef<TextInput>(null);
 
   const [initiateReset, { isLoading: isInitiating }] = useInitiatePasswordResetMutation();
   const [verifyResetOtp, { isLoading: isVerifying }] = useVerifyPasswordResetOtpMutation();
@@ -206,7 +208,12 @@ export default function ForgotPasswordScreen() {
                   value={email}
                   onChangeText={setEmail}
                   autoCapitalize="none"
+                  autoCorrect={false}
                   keyboardType="email-address"
+                  autoComplete="email"
+                  textContentType="emailAddress"
+                  returnKeyType="send"
+                  onSubmitEditing={handleInitiateReset}
                   autoFocus
                 />
               </View>
@@ -238,6 +245,8 @@ export default function ForgotPasswordScreen() {
                 onChangeText={setOtp}
                 keyboardType="number-pad"
                 maxLength={6}
+                returnKeyType="done"
+                onSubmitEditing={handleVerifyOtp}
                 autoFocus
               />
 
@@ -277,6 +286,12 @@ export default function ForgotPasswordScreen() {
                   value={newPassword}
                   onChangeText={setNewPassword}
                   secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="newPassword"
+                  returnKeyType="next"
+                  blurOnSubmit={false}
+                  onSubmitEditing={() => confirmPasswordRef.current?.focus()}
                   autoFocus
                 />
                 <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
@@ -292,12 +307,18 @@ export default function ForgotPasswordScreen() {
               <View style={styles.inputWrap}>
                 <Ionicons name="lock-closed-outline" size={18} color="#662502" style={styles.inputIcon} />
                 <TextInput
+                  ref={confirmPasswordRef}
                   style={styles.input}
                   placeholder="••••••••••••"
                   placeholderTextColor="#A8998A"
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry={!showConfirm}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="newPassword"
+                  returnKeyType="done"
+                  onSubmitEditing={handleCompleteReset}
                 />
                 <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)} style={styles.eyeBtn}>
                   <Ionicons
