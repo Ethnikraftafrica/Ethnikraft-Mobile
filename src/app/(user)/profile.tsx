@@ -23,6 +23,8 @@ import ChangePasswordModal from '@/components/profile/ChangePasswordModal';
 import NotificationSettingsModal from '@/components/profile/NotificationSettingsModal';
 import AppearanceModal from '@/components/profile/AppearanceModal';
 import AboutAndTermsModal from '@/components/profile/AboutAndTermsModal';
+import FavoritesModal from '@/components/profile/FavoritesModal';
+import RecentlyViewedModal from '@/components/profile/RecentlyViewedModal';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -45,6 +47,8 @@ export default function ProfileScreen() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showAppearance, setShowAppearance] = useState(false);
   const [showAboutTerms, setShowAboutTerms] = useState(false);
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [showRecentlyViewed, setShowRecentlyViewed] = useState(false);
 
   // Sync auth user details into profile state on load
   useEffect(() => {
@@ -314,7 +318,7 @@ export default function ProfileScreen() {
             style={styles.menuItem}
             onPress={() => {
               Haptics.selectionAsync();
-              router.push('/(user)/explore');
+              setShowFavorites(true);
             }}
             activeOpacity={0.7}
           >
@@ -335,8 +339,8 @@ export default function ProfileScreen() {
           <TouchableOpacity
             style={[styles.menuItem, styles.menuItemBorder]}
             onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.push('/(user)/explore');
+              Haptics.selectionAsync();
+              setShowRecentlyViewed(true);
             }}
             activeOpacity={0.7}
           >
@@ -484,6 +488,16 @@ export default function ProfileScreen() {
         visible={showAboutTerms}
         onClose={() => setShowAboutTerms(false)}
       />
+
+      <FavoritesModal
+        visible={showFavorites}
+        onClose={() => setShowFavorites(false)}
+      />
+
+      <RecentlyViewedModal
+        visible={showRecentlyViewed}
+        onClose={() => setShowRecentlyViewed(false)}
+      />
     </View>
   );
 }
@@ -499,7 +513,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.md,
-    paddingBottom: Spacing.xxl + 20,
+    paddingBottom: 160,
   },
   profileCard: {
     backgroundColor: '#FFFFFF',

@@ -17,7 +17,13 @@ interface Props {
 
 export default function AboutAndTermsModal({ visible, onClose }: Props) {
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
       <View style={styles.overlay}>
         <View style={[styles.modalCard, Shadows.lg]}>
           <View style={styles.headerRow}>
