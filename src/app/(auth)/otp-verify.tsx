@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -19,6 +19,8 @@ import {
   useCompleteRegisterMutation,
   useVerifyVendorOtpMutation,
   useCompleteVendorRegisterMutation,
+  useInitiateRegisterMutation,
+  useInitiateVendorRegisterMutation,
 } from '@/store/api/authApi';
 import { useAppDispatch } from '@/store';
 import { setAuthSuccess, setRole } from '@/store/slices/authSlice';
@@ -42,8 +44,13 @@ export default function OtpVerifyScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [currentRegistrationToken, setCurrentRegistrationToken] = useState(
+    params.registrationToken || ''
+  );
   const [verificationToken, setVerificationToken] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [timer, setTimer] = useState(60);
+  const [isResending, setIsResending] = useState(false);
 
   const confirmPasswordRef = useRef<TextInput>(null);
 
@@ -53,9 +60,21 @@ export default function OtpVerifyScreen() {
   const [completeVendorRegister, { isLoading: isCompletingVendor }] =
     useCompleteVendorRegisterMutation();
 
+  const [initiateRegister] = useInitiateRegisterMutation();
+  const [initiateVendorRegister] = useInitiateVendorRegisterMutation();
+
   const isVendor = params.role === 'vendor';
   const isVerifying = isVerifyingUser || isVerifyingVendor;
   const isCompleting = isCompletingUser || isCompletingVendor;
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (timer <= 0) return;
+    const interval = setInterval(() => {
+      setTimer((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timer]);
 
   // Password validation checklist matching Ethnikraft backend
   const validations = [
@@ -80,14 +99,14 @@ export default function OtpVerifyScreen() {
     try {
       if (isVendor) {
         const res = await verifyVendorOtp({
-          registrationToken: params.registrationToken,
+          registrationToken: currentRegistrationToken,
           otp: trimmedOtp,
         }).unwrap();
         setVerificationToken(res.verificationToken);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
         const res = await verifyOtp({
-          registrationToken: params.registrationToken,
+          registrationToken: currentRegistrationToken,
           otp: trimmedOtp,
         }).unwrap();
         setVerificationToken(res.verificationToken);
@@ -97,6 +116,43 @@ export default function OtpVerifyScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       const msg = err?.data?.message || err?.error || 'Invalid or expired OTP code.';
       setErrorMessage(typeof msg === 'string' ? msg : JSON.stringify(msg));
+    }
+  };
+
+  // Step 1: Resend OTP
+  const handleResendOtp = async () => {
+    if (timer > 0 || isResending || !params.email) return;
+
+    setIsResending(true);
+    setErrorMessage(null);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    try {
+      if (isVendor) {
+        const res = await initiateVendorRegister({
+          email: params.email.trim(),
+        }).unwrap();
+        setCurrentRegistrationToken(res.registrationToken);
+        setOtp('');
+        setTimer(60);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        const res = await initiateRegister({
+          email: params.email.trim(),
+          firstName: params.firstName || '',
+          lastName: params.lastName || '',
+        }).unwrap();
+        setCurrentRegistrationToken(res.registrationToken);
+        setOtp('');
+        setTimer(60);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (err: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      const msg = err?.data?.message || err?.error || 'Failed to resend code.';
+      setErrorMessage(typeof msg === 'string' ? msg : JSON.stringify(msg));
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -233,6 +289,42 @@ export default function OtpVerifyScreen() {
                   <Text style={styles.btnText}>Verify Code & Continue</Text>
                 )}
               </TouchableOpacity>
+
+              {/* Resend OTP Button with Countdown */}
+              <View style={styles.resendContainer}>
+                <Text style={styles.spamHint}>
+                  If you don't see the email, please check your spam or junk folder.
+                </Text>
+
+                <TouchableOpacity
+                  style={[styles.resendBtn, (timer > 0 || isResending) && { opacity: 0.6 }]}
+                  onPress={handleResendOtp}
+                  disabled={timer > 0 || isResending}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons
+                    name="refresh-outline"
+                    size={14}
+                    color="#C46C27"
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={styles.resendText}>
+                    {timer > 0
+                      ? `Resend code in (${timer}s)`
+                      : isResending
+                      ? 'Sending code...'
+                      : 'Resend verification code'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => router.back()}
+                  style={styles.changeEmailBtn}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.changeEmailText}>Wrong email? Change email address</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ) : (
             /* Step 2 Form: Password Creation with Checklist */
@@ -480,5 +572,37 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: Typography.fontSize.sm,
     fontWeight: '700',
+  },
+  resendContainer: {
+    marginTop: Spacing.lg,
+    alignItems: 'center',
+  },
+  spamHint: {
+    fontSize: 11,
+    color: '#662502',
+    textAlign: 'center',
+    marginBottom: Spacing.sm + 2,
+    lineHeight: 16,
+  },
+  resendBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  resendText: {
+    fontSize: Typography.fontSize.xs,
+    color: '#C46C27',
+    fontWeight: '700',
+  },
+  changeEmailBtn: {
+    marginTop: Spacing.sm,
+    paddingVertical: 4,
+  },
+  changeEmailText: {
+    fontSize: 11,
+    color: '#808080',
+    textDecorationLine: 'underline',
   },
 });
