@@ -99,7 +99,13 @@ export default function FavoritesModal({ visible, onClose }: Props) {
             ) : (
               items.map((item) => (
                 <View key={item.id} style={[styles.productCard, Shadows.sm]}>
-                  <Image source={item.image} style={styles.productImage} contentFit="cover" />
+                  <Image
+                    source={item.image}
+                    style={styles.productImage}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    transition={150}
+                  />
                   <View style={styles.productDetails}>
                     <View style={styles.tagRow}>
                       <View style={styles.categoryBadge}>

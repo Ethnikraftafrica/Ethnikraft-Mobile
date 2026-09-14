@@ -25,6 +25,7 @@ import AppearanceModal from '@/components/profile/AppearanceModal';
 import AboutAndTermsModal from '@/components/profile/AboutAndTermsModal';
 import FavoritesModal from '@/components/profile/FavoritesModal';
 import RecentlyViewedModal from '@/components/profile/RecentlyViewedModal';
+import PaymentMethodsModal from '@/components/profile/PaymentMethodsModal';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -33,13 +34,14 @@ export default function ProfileScreen() {
   const {
     profile,
     savedAddresses,
+    savedCards,
     favoritesCount,
     ordersCount,
     recentlyViewedCount,
     profileCompletionPercentage,
   } = useAppSelector((state) => state.profile);
 
-  // Modals visibility state
+  // Modals visibility state (lazy mounted for optimal memory and FPS)
   const [showEditDetails, setShowEditDetails] = useState(false);
   const [showAddresses, setShowAddresses] = useState(false);
   const [showCompleteWizard, setShowCompleteWizard] = useState(false);
@@ -49,6 +51,7 @@ export default function ProfileScreen() {
   const [showAboutTerms, setShowAboutTerms] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const [showRecentlyViewed, setShowRecentlyViewed] = useState(false);
+  const [showPaymentMethods, setShowPaymentMethods] = useState(false);
 
   // Sync auth user details into profile state on load
   useEffect(() => {
@@ -291,8 +294,8 @@ export default function ProfileScreen() {
           <TouchableOpacity
             style={[styles.menuItem, styles.menuItemBorder]}
             onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              Alert.alert('Payment & Wallet', 'Your saved Mastercard (•••• 4242) is active and verified for secure express checkout.');
+              Haptics.selectionAsync();
+              setShowPaymentMethods(true);
             }}
             activeOpacity={0.7}
           >
@@ -304,7 +307,7 @@ export default function ProfileScreen() {
               <Text style={styles.menuSubtitle}>Saved cards and billing</Text>
             </View>
             <View style={styles.counterBadge}>
-              <Text style={styles.counterText}>1</Text>
+              <Text style={styles.counterText}>{savedCards.length}</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color="#A8998A" />
           </TouchableOpacity>
@@ -453,51 +456,76 @@ export default function ProfileScreen() {
         )}
       </ScrollView>
 
-      {/* Sub-modals */}
-      <EditPersonalDetailsModal
-        visible={showEditDetails}
-        onClose={() => setShowEditDetails(false)}
-      />
+      {/* Sub-modals (conditionally mounted to minimize RAM consumption and eliminate memory overhead when hidden) */}
+      {showEditDetails && (
+        <EditPersonalDetailsModal
+          visible={showEditDetails}
+          onClose={() => setShowEditDetails(false)}
+        />
+      )}
 
-      <SavedAddressesModal
-        visible={showAddresses}
-        onClose={() => setShowAddresses(false)}
-      />
+      {showAddresses && (
+        <SavedAddressesModal
+          visible={showAddresses}
+          onClose={() => setShowAddresses(false)}
+        />
+      )}
 
-      <CompleteProfileModal
-        visible={showCompleteWizard}
-        onClose={() => setShowCompleteWizard(false)}
-      />
+      {showCompleteWizard && (
+        <CompleteProfileModal
+          visible={showCompleteWizard}
+          onClose={() => setShowCompleteWizard(false)}
+        />
+      )}
 
-      <ChangePasswordModal
-        visible={showChangePassword}
-        onClose={() => setShowChangePassword(false)}
-      />
+      {showChangePassword && (
+        <ChangePasswordModal
+          visible={showChangePassword}
+          onClose={() => setShowChangePassword(false)}
+        />
+      )}
 
-      <NotificationSettingsModal
-        visible={showNotifications}
-        onClose={() => setShowNotifications(false)}
-      />
+      {showNotifications && (
+        <NotificationSettingsModal
+          visible={showNotifications}
+          onClose={() => setShowNotifications(false)}
+        />
+      )}
 
-      <AppearanceModal
-        visible={showAppearance}
-        onClose={() => setShowAppearance(false)}
-      />
+      {showAppearance && (
+        <AppearanceModal
+          visible={showAppearance}
+          onClose={() => setShowAppearance(false)}
+        />
+      )}
 
-      <AboutAndTermsModal
-        visible={showAboutTerms}
-        onClose={() => setShowAboutTerms(false)}
-      />
+      {showAboutTerms && (
+        <AboutAndTermsModal
+          visible={showAboutTerms}
+          onClose={() => setShowAboutTerms(false)}
+        />
+      )}
 
-      <FavoritesModal
-        visible={showFavorites}
-        onClose={() => setShowFavorites(false)}
-      />
+      {showFavorites && (
+        <FavoritesModal
+          visible={showFavorites}
+          onClose={() => setShowFavorites(false)}
+        />
+      )}
 
-      <RecentlyViewedModal
-        visible={showRecentlyViewed}
-        onClose={() => setShowRecentlyViewed(false)}
-      />
+      {showRecentlyViewed && (
+        <RecentlyViewedModal
+          visible={showRecentlyViewed}
+          onClose={() => setShowRecentlyViewed(false)}
+        />
+      )}
+
+      {showPaymentMethods && (
+        <PaymentMethodsModal
+          visible={showPaymentMethods}
+          onClose={() => setShowPaymentMethods(false)}
+        />
+      )}
     </View>
   );
 }

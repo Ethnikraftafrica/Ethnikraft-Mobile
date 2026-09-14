@@ -55,6 +55,18 @@ export interface UserProfileDetails {
   avatarUrl?: string;
 }
 
+export interface SavedPaymentCard {
+  id: string;
+  cardType: 'mastercard' | 'visa' | 'verve';
+  bankName: string;
+  cardNumberMasked: string;
+  last4: string;
+  expiryMonth: string;
+  expiryYear: string;
+  cardholderName: string;
+  isDefault: boolean;
+}
+
 export interface ProfilePreferences {
   pushNotifications: boolean;
   orderUpdates: boolean;
@@ -66,6 +78,7 @@ export interface ProfilePreferences {
 export interface ProfileState {
   profile: UserProfileDetails;
   savedAddresses: SavedAddress[];
+  savedCards: SavedPaymentCard[];
   measurements: CustomMeasurements;
   preferences: ProfilePreferences;
   favoritesCount: number;
@@ -139,6 +152,31 @@ const initialMeasurements: CustomMeasurements = {
   additionalNotes: 'Prefers relaxed fit on linen tunics with traditional embroidery.',
 };
 
+const initialCards: SavedPaymentCard[] = [
+  {
+    id: 'card_1',
+    cardType: 'mastercard',
+    bankName: 'Access Bank',
+    cardNumberMasked: '5399 83•• •••• 4242',
+    last4: '4242',
+    expiryMonth: '08',
+    expiryYear: '28',
+    cardholderName: 'KWAME MENSAH',
+    isDefault: true,
+  },
+  {
+    id: 'card_2',
+    cardType: 'visa',
+    bankName: 'GTBank',
+    cardNumberMasked: '4242 42•• •••• 1099',
+    last4: '1099',
+    expiryMonth: '11',
+    expiryYear: '27',
+    cardholderName: 'KWAME MENSAH',
+    isDefault: false,
+  },
+];
+
 const calculateCompletion = (profile: UserProfileDetails, measurements: CustomMeasurements, addresses: SavedAddress[]) => {
   let score = 0;
   let total = 6;
@@ -156,6 +194,7 @@ const calculateCompletion = (profile: UserProfileDetails, measurements: CustomMe
 const initialState: ProfileState = {
   profile: initialProfile,
   savedAddresses: initialAddresses,
+  savedCards: initialCards,
   measurements: initialMeasurements,
   preferences: {
     pushNotifications: true,
@@ -237,6 +276,33 @@ export const profileSlice = createSlice({
       });
     },
 
+    addPaymentCard: (state, action: PayloadAction<Omit<SavedPaymentCard, 'id'>>) => {
+      const newId = `card_${Date.now()}`;
+      const newCard: SavedPaymentCard = {
+        ...action.payload,
+        id: newId,
+      };
+      if (newCard.isDefault || state.savedCards.length === 0) {
+        state.savedCards.forEach((c) => (c.isDefault = false));
+        newCard.isDefault = true;
+      }
+      state.savedCards.unshift(newCard);
+    },
+
+    deletePaymentCard: (state, action: PayloadAction<string>) => {
+      const wasDefault = state.savedCards.find((c) => c.id === action.payload)?.isDefault;
+      state.savedCards = state.savedCards.filter((c) => c.id !== action.payload);
+      if (wasDefault && state.savedCards.length > 0) {
+        state.savedCards[0].isDefault = true;
+      }
+    },
+
+    setDefaultPaymentCard: (state, action: PayloadAction<string>) => {
+      state.savedCards.forEach((c) => {
+        c.isDefault = c.id === action.payload;
+      });
+    },
+
     updateMeasurements: (state, action: PayloadAction<Partial<CustomMeasurements>>) => {
       state.measurements = { ...state.measurements, ...action.payload };
       state.profileCompletionPercentage = calculateCompletion(state.profile, state.measurements, state.savedAddresses);
@@ -259,6 +325,9 @@ export const {
   updateSavedAddress,
   deleteSavedAddress,
   setDefaultAddress,
+  addPaymentCard,
+  deletePaymentCard,
+  setDefaultPaymentCard,
   updateMeasurements,
   updatePreferences,
   setTheme,
