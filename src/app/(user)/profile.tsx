@@ -1,18 +1,63 @@
-import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { toggleRole, logout } from '@/store/slices/authSlice';
+import { syncUserFromAuth } from '@/store/slices/profileSlice';
 import { Colors, Radius, Shadows, Spacing, Typography } from '@/constants/theme';
+
+// Profile Modals
+import EditPersonalDetailsModal from '@/components/profile/EditPersonalDetailsModal';
+import SavedAddressesModal from '@/components/profile/SavedAddressesModal';
+import CompleteProfileModal from '@/components/profile/CompleteProfileModal';
+import ChangePasswordModal from '@/components/profile/ChangePasswordModal';
+import NotificationSettingsModal from '@/components/profile/NotificationSettingsModal';
+import AppearanceModal from '@/components/profile/AppearanceModal';
+import AboutAndTermsModal from '@/components/profile/AboutAndTermsModal';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { isAuthenticated, user, hasVendorAccount } = useAppSelector(
-    (state) => state.auth
-  );
+  const { isAuthenticated, user, hasVendorAccount } = useAppSelector((state) => state.auth);
+  const {
+    profile,
+    savedAddresses,
+    favoritesCount,
+    ordersCount,
+    recentlyViewedCount,
+    profileCompletionPercentage,
+  } = useAppSelector((state) => state.profile);
+
+  // Modals visibility state
+  const [showEditDetails, setShowEditDetails] = useState(false);
+  const [showAddresses, setShowAddresses] = useState(false);
+  const [showCompleteWizard, setShowCompleteWizard] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showAppearance, setShowAppearance] = useState(false);
+  const [showAboutTerms, setShowAboutTerms] = useState(false);
+
+  // Sync auth user details into profile state on load
+  useEffect(() => {
+    if (user) {
+      dispatch(
+        syncUserFromAuth({
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+        })
+      );
+    }
+  }, [user, dispatch]);
 
   const handleSwitchToVendor = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -35,163 +80,571 @@ export default function ProfileScreen() {
     ]);
   };
 
-  const menuItems = [
-    { icon: 'location-outline', title: 'Delivery Addresses', subtitle: 'Manage shipping destinations' },
-    { icon: 'card-outline', title: 'Payment & Wallet', subtitle: 'Saved cards and transactions' },
-    { icon: 'heart-outline', title: 'Saved Favorites', subtitle: 'Items you love' },
-    { icon: 'notifications-outline', title: 'Notifications', subtitle: 'Order and custom bid alerts' },
-    { icon: 'help-circle-outline', title: 'Support & FAQs', subtitle: 'Help center' },
-  ];
+  const displayName = `${profile.firstName} ${profile.lastName}`.trim() || 'Ethnikraft Patron';
+  const displayEmail = profile.email || 'patron@ethnikraft.africa';
+  const initial = (profile.firstName?.[0] || 'E').toUpperCase();
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      {/* User Header / Guest State */}
-      {isAuthenticated && user ? (
-        <View style={styles.profileHeader}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {user.firstName ? user.firstName[0].toUpperCase() : 'E'}
-              {user.lastName ? user.lastName[0].toUpperCase() : 'K'}
+    <View style={styles.screenWrapper}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Profile Identity Card */}
+        {isAuthenticated ? (
+          <View style={[styles.profileCard, Shadows.md]}>
+            <View style={styles.cardPatternBar} />
+            <View style={styles.cardInner}>
+              <View style={styles.avatarRow}>
+                <View style={styles.avatarContainer}>
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>{initial}</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.avatarEditBtn}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setShowEditDetails(true);
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="pencil" size={13} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.identityDetails}>
+                  <Text style={styles.userName}>{displayName}</Text>
+                  <Text style={styles.userEmail}>{displayEmail}</Text>
+                  <View style={styles.badgeRow}>
+                    <View style={styles.verifiedBadge}>
+                      <Ionicons name="checkmark-circle" size={13} color="#166534" />
+                      <Text style={styles.verifiedText}>Verified Patron</Text>
+                    </View>
+                    {profile.profileName ? (
+                      <View style={styles.handleBadge}>
+                        <Text style={styles.handleText}>@{profile.profileName}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+              </View>
+
+              {/* Complete Profile Progress Callout */}
+              <TouchableOpacity
+                style={styles.progressCallout}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setShowCompleteWizard(true);
+                }}
+                activeOpacity={0.88}
+              >
+                <View style={styles.progressTextCol}>
+                  <View style={styles.progressTitleRow}>
+                    <Ionicons name="sparkles" size={14} color="#C46C27" style={{ marginRight: 4 }} />
+                    <Text style={styles.progressTitle}>Complete Your Profile</Text>
+                  </View>
+                  <Text style={styles.progressSub}>
+                    Add your custom body dimensions and delivery destinations
+                  </Text>
+                </View>
+
+                <View style={styles.progressBadgeCircle}>
+                  <Text style={styles.progressBadgeText}>{profileCompletionPercentage}%</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={[styles.guestCard, Shadows.sm]}>
+            <View style={styles.guestIcon}>
+              <Ionicons name="person-outline" size={28} color={Colors.primary} />
+            </View>
+            <Text style={styles.guestTitle}>Welcome to Ethnikraft</Text>
+            <Text style={styles.guestSubtitle}>
+              Sign in to track orders, save bespoke measurements, and commission master artisans.
+            </Text>
+            <TouchableOpacity
+              style={styles.signInBtn}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push('/(auth)/login');
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.signInBtnText}>Sign In or Register</Text>
+              <Ionicons name="arrow-forward" size={14} color={Colors.textInverse} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Artisan Vendor Switcher Banner */}
+        <TouchableOpacity
+          style={[styles.vendorSwitchCard, Shadows.sm]}
+          onPress={handleSwitchToVendor}
+          activeOpacity={0.85}
+        >
+          <View style={styles.switchIconCircle}>
+            <Ionicons name="briefcase" size={20} color="#F5EBD5" />
+          </View>
+          <View style={styles.switchTextContainer}>
+            <Text style={styles.switchTitle}>
+              {hasVendorAccount ? 'Switch to Artisan Vendor Hub' : 'Artisan Workshop Mode'}
+            </Text>
+            <Text style={styles.switchSubtitle}>
+              Manage workshop catalog, client commissions, and order fulfillment
             </Text>
           </View>
-          <Text style={styles.userName}>
-            {user.firstName} {user.lastName}
-          </Text>
-          <Text style={styles.userEmail}>{user.email}</Text>
-          <View style={styles.verifiedBadge}>
-            <Ionicons name="checkmark-circle" size={14} color={Colors.success} />
-            <Text style={styles.verifiedText}>Verified Customer</Text>
-          </View>
-        </View>
-      ) : (
-        <View style={[styles.guestCard, Shadows.sm]}>
-          <View style={styles.guestIcon}>
-            <Ionicons name="person-outline" size={28} color={Colors.primary} />
-          </View>
-          <Text style={styles.guestTitle}>Welcome to Ethnikraft</Text>
-          <Text style={styles.guestSubtitle}>
-            Sign in to track orders, save bespoke favorites, or commission verified African artisans.
-          </Text>
+          <Ionicons name="arrow-forward" size={18} color="#C46C27" />
+        </TouchableOpacity>
+
+        {/* Section: Account & Addresses */}
+        <Text style={styles.sectionHeader}>ACCOUNT</Text>
+        <View style={[styles.menuSection, Shadows.sm]}>
+          {/* Personal Details */}
           <TouchableOpacity
-            style={styles.signInBtn}
+            style={styles.menuItem}
             onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.push('/(auth)/login');
+              Haptics.selectionAsync();
+              setShowEditDetails(true);
             }}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.signInBtnText}>Sign In or Register</Text>
-            <Ionicons name="arrow-forward" size={14} color={Colors.textInverse} />
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Switch to Vendor Dashboard Action */}
-      <TouchableOpacity
-        style={[styles.vendorSwitchCard, Shadows.sm]}
-        onPress={handleSwitchToVendor}
-        activeOpacity={0.85}
-      >
-        <View style={styles.switchIconCircle}>
-          <Ionicons name="briefcase" size={22} color={Colors.textInverse} />
-        </View>
-        <View style={styles.switchTextContainer}>
-          <Text style={styles.switchTitle}>
-            {hasVendorAccount ? 'Switch to Artisan Vendor Hub' : 'Artisan Workshop Mode'}
-          </Text>
-          <Text style={styles.switchSubtitle}>
-            Manage your workshop catalog, incoming bespoke bids, and order fulfillment
-          </Text>
-        </View>
-        <Ionicons name="arrow-forward" size={20} color={Colors.primary} />
-      </TouchableOpacity>
-
-      {/* Menu List */}
-      <View style={[styles.menuContainer, Shadows.sm]}>
-        {menuItems.map((item, index) => (
-          <TouchableOpacity key={item.title} style={[styles.menuRow, index > 0 && styles.menuBorder]}>
-            <Ionicons name={item.icon as any} size={20} color={Colors.primaryDark} style={styles.menuIcon} />
-            <View style={styles.menuTextCol}>
-              <Text style={styles.menuTitle}>{item.title}</Text>
-              <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
-          </TouchableOpacity>
-        ))}
-
-        {/* Log Out Button */}
-        {isAuthenticated && (
-          <TouchableOpacity
-            style={[styles.menuRow, styles.menuBorder]}
-            onPress={handleLogout}
             activeOpacity={0.7}
           >
-            <Ionicons name="log-out-outline" size={20} color={Colors.danger} style={styles.menuIcon} />
-            <View style={styles.menuTextCol}>
-              <Text style={[styles.menuTitle, { color: Colors.danger }]}>Sign Out</Text>
-              <Text style={styles.menuSubtitle}>Disconnect current account session</Text>
+            <View style={[styles.menuIconCircle, { backgroundColor: '#F8EFE4' }]}>
+              <Ionicons name="person" size={18} color="#662502" />
             </View>
+            <View style={styles.menuTextContainer}>
+              <Text style={styles.menuTitle}>Personal Details</Text>
+              <Text style={styles.menuSubtitle}>Contact name, phone number, and address</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#A8998A" />
           </TouchableOpacity>
+
+          {/* Delivery Addresses */}
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuItemBorder]}
+            onPress={() => {
+              Haptics.selectionAsync();
+              setShowAddresses(true);
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.menuIconCircle, { backgroundColor: '#F8EFE4' }]}>
+              <Ionicons name="location" size={18} color="#662502" />
+            </View>
+            <View style={styles.menuTextContainer}>
+              <Text style={styles.menuTitle}>Delivery Addresses</Text>
+              <Text style={styles.menuSubtitle}>Manage shipping destinations</Text>
+            </View>
+            <View style={styles.counterBadge}>
+              <Text style={styles.counterText}>{savedAddresses.length}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#A8998A" />
+          </TouchableOpacity>
+
+          {/* Custom Measurements */}
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuItemBorder]}
+            onPress={() => {
+              Haptics.selectionAsync();
+              setShowCompleteWizard(true);
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.menuIconCircle, { backgroundColor: '#F8EFE4' }]}>
+              <Ionicons name="cut" size={18} color="#662502" />
+            </View>
+            <View style={styles.menuTextContainer}>
+              <Text style={styles.menuTitle}>Custom Measurements</Text>
+              <Text style={styles.menuSubtitle}>Bespoke tailoring, shoes, and ring sizing</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#A8998A" />
+          </TouchableOpacity>
+
+          {/* My Orders */}
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuItemBorder]}
+            onPress={() => {
+              Haptics.selectionAsync();
+              router.push('/(user)/orders');
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.menuIconCircle, { backgroundColor: '#F8EFE4' }]}>
+              <Ionicons name="cube" size={18} color="#662502" />
+            </View>
+            <View style={styles.menuTextContainer}>
+              <Text style={styles.menuTitle}>My Orders</Text>
+              <Text style={styles.menuSubtitle}>Track recent shipments and order history</Text>
+            </View>
+            <View style={styles.counterBadge}>
+              <Text style={styles.counterText}>{ordersCount}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#A8998A" />
+          </TouchableOpacity>
+
+          {/* Payment & Cards */}
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuItemBorder]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              Alert.alert('Payment & Wallet', 'Your saved Mastercard (•••• 4242) is active and verified for secure express checkout.');
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.menuIconCircle, { backgroundColor: '#F8EFE4' }]}>
+              <Ionicons name="card" size={18} color="#662502" />
+            </View>
+            <View style={styles.menuTextContainer}>
+              <Text style={styles.menuTitle}>Payment Methods</Text>
+              <Text style={styles.menuSubtitle}>Saved cards and billing</Text>
+            </View>
+            <View style={styles.counterBadge}>
+              <Text style={styles.counterText}>1</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#A8998A" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Section: Activity */}
+        <Text style={[styles.sectionHeader, { marginTop: Spacing.lg }]}>ACTIVITY</Text>
+        <View style={[styles.menuSection, Shadows.sm]}>
+          {/* Favorites */}
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => {
+              Haptics.selectionAsync();
+              router.push('/(user)/explore');
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.menuIconCircle, { backgroundColor: '#FEE2E2' }]}>
+              <Ionicons name="heart" size={18} color="#DC2626" />
+            </View>
+            <View style={styles.menuTextContainer}>
+              <Text style={styles.menuTitle}>Saved Favorites</Text>
+              <Text style={styles.menuSubtitle}>Artisan masterpieces in your wishlist</Text>
+            </View>
+            <View style={styles.counterBadge}>
+              <Text style={styles.counterText}>{favoritesCount}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#A8998A" />
+          </TouchableOpacity>
+
+          {/* Recently Viewed */}
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuItemBorder]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push('/(user)/explore');
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.menuIconCircle, { backgroundColor: '#F8EFE4' }]}>
+              <Ionicons name="eye" size={18} color="#662502" />
+            </View>
+            <View style={styles.menuTextContainer}>
+              <Text style={styles.menuTitle}>Recently Viewed</Text>
+              <Text style={styles.menuSubtitle}>Browse your recent artisan discoveries</Text>
+            </View>
+            <View style={styles.counterBadge}>
+              <Text style={styles.counterText}>{recentlyViewedCount}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#A8998A" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Section: Preferences & Security */}
+        <Text style={[styles.sectionHeader, { marginTop: Spacing.lg }]}>PREFERENCES & SECURITY</Text>
+        <View style={[styles.menuSection, Shadows.sm]}>
+          {/* Notifications */}
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => {
+              Haptics.selectionAsync();
+              setShowNotifications(true);
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.menuIconCircle, { backgroundColor: '#F8EFE4' }]}>
+              <Ionicons name="notifications" size={18} color="#662502" />
+            </View>
+            <View style={styles.menuTextContainer}>
+              <Text style={styles.menuTitle}>Notifications</Text>
+              <Text style={styles.menuSubtitle}>Order milestones and artisan bids</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#A8998A" />
+          </TouchableOpacity>
+
+          {/* Change Password */}
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuItemBorder]}
+            onPress={() => {
+              Haptics.selectionAsync();
+              setShowChangePassword(true);
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.menuIconCircle, { backgroundColor: '#F8EFE4' }]}>
+              <Ionicons name="lock-closed" size={18} color="#662502" />
+            </View>
+            <View style={styles.menuTextContainer}>
+              <Text style={styles.menuTitle}>Change Password</Text>
+              <Text style={styles.menuSubtitle}>Update login security credentials</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#A8998A" />
+          </TouchableOpacity>
+
+          {/* Appearance Palette */}
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuItemBorder]}
+            onPress={() => {
+              Haptics.selectionAsync();
+              setShowAppearance(true);
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.menuIconCircle, { backgroundColor: '#F8EFE4' }]}>
+              <Ionicons name="color-palette" size={18} color="#662502" />
+            </View>
+            <View style={styles.menuTextContainer}>
+              <Text style={styles.menuTitle}>App Appearance</Text>
+              <Text style={styles.menuSubtitle}>System default, Ivory light, Ebony dark</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#A8998A" />
+          </TouchableOpacity>
+
+          {/* About & Terms */}
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuItemBorder]}
+            onPress={() => {
+              Haptics.selectionAsync();
+              setShowAboutTerms(true);
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.menuIconCircle, { backgroundColor: '#F8EFE4' }]}>
+              <Ionicons name="information-circle" size={18} color="#662502" />
+            </View>
+            <View style={styles.menuTextContainer}>
+              <Text style={styles.menuTitle}>About & Legal Terms</Text>
+              <Text style={styles.menuSubtitle}>Authenticity guarantee & membership agreement</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#A8998A" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Section: Sign Out */}
+        {isAuthenticated && (
+          <View style={[styles.logoutSection, Shadows.sm]}>
+            <TouchableOpacity
+              style={styles.logoutBtn}
+              onPress={handleLogout}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="log-out-outline" size={20} color="#DC2626" style={{ marginRight: 8 }} />
+              <Text style={styles.logoutText}>Sign Out of Ethnikraft</Text>
+            </TouchableOpacity>
+          </View>
         )}
-      </View>
-    </ScrollView>
+      </ScrollView>
+
+      {/* Sub-modals */}
+      <EditPersonalDetailsModal
+        visible={showEditDetails}
+        onClose={() => setShowEditDetails(false)}
+      />
+
+      <SavedAddressesModal
+        visible={showAddresses}
+        onClose={() => setShowAddresses(false)}
+      />
+
+      <CompleteProfileModal
+        visible={showCompleteWizard}
+        onClose={() => setShowCompleteWizard(false)}
+      />
+
+      <ChangePasswordModal
+        visible={showChangePassword}
+        onClose={() => setShowChangePassword(false)}
+      />
+
+      <NotificationSettingsModal
+        visible={showNotifications}
+        onClose={() => setShowNotifications(false)}
+      />
+
+      <AppearanceModal
+        visible={showAppearance}
+        onClose={() => setShowAppearance(false)}
+      />
+
+      <AboutAndTermsModal
+        visible={showAboutTerms}
+        onClose={() => setShowAboutTerms(false)}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screenWrapper: {
     flex: 1,
     backgroundColor: '#FAF6F0',
   },
-  content: {
-    padding: Spacing.md,
-    paddingBottom: Spacing.xxl,
+  container: {
+    flex: 1,
   },
-  profileHeader: {
+  content: {
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xxl + 20,
+  },
+  profileCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: '#EFE7DA',
+    overflow: 'hidden',
+    marginBottom: Spacing.md,
+  },
+  cardPatternBar: {
+    height: 14,
+    backgroundColor: '#341B00',
+  },
+  cardInner: {
+    padding: Spacing.md,
+  },
+  avatarRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: Spacing.md,
   },
   avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: Colors.primaryDark,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#341B00',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    borderWidth: 3,
+    borderColor: '#EFE7DA',
   },
   avatarText: {
-    color: Colors.accentGold,
-    fontSize: Typography.fontSize.xl,
-    fontWeight: '800',
+    color: '#F5EBD5',
+    fontSize: 24,
+    fontWeight: '900',
+  },
+  avatarEditBtn: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#C46C27',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  identityDetails: {
+    flex: 1,
   },
   userName: {
-    fontSize: Typography.fontSize.lg,
+    fontSize: 18,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    color: '#341B00',
   },
   userEmail: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textMuted,
+    fontSize: 12,
+    color: '#662502',
     marginTop: 2,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
   },
   verifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#DCFCE7',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     borderRadius: Radius.full,
-    gap: 4,
-    marginTop: 6,
+    gap: 3,
   },
   verifiedText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#166534',
   },
+  handleBadge: {
+    backgroundColor: '#FAF7F2',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: '#EFE7DA',
+  },
+  handleText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#662502',
+  },
+  progressCallout: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FAF7F2',
+    borderRadius: Radius.lg,
+    padding: Spacing.sm + 4,
+    borderWidth: 1,
+    borderColor: '#E8DCCB',
+  },
+  progressTextCol: {
+    flex: 1,
+    paddingRight: Spacing.sm,
+  },
+  progressTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  progressTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#341B00',
+  },
+  progressSub: {
+    fontSize: 10,
+    color: '#662502',
+    lineHeight: 14,
+  },
+  progressBadgeCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#341B00',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#C46C27',
+  },
+  progressBadgeText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#F5EBD5',
+  },
   guestCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: '#FFFFFF',
     borderRadius: Radius.xl,
     padding: Spacing.lg,
     alignItems: 'center',
@@ -211,12 +664,12 @@ const styles = StyleSheet.create({
   guestTitle: {
     fontSize: Typography.fontSize.base,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    color: '#341B00',
     marginBottom: 4,
   },
   guestSubtitle: {
     fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
+    color: '#662502',
     textAlign: 'center',
     lineHeight: 18,
     marginBottom: Spacing.md,
@@ -224,32 +677,32 @@ const styles = StyleSheet.create({
   signInBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primary,
+    backgroundColor: '#C46C27',
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm + 2,
     borderRadius: Radius.full,
     gap: 6,
   },
   signInBtnText: {
-    color: Colors.textInverse,
+    color: '#FFFFFF',
     fontSize: Typography.fontSize.xs,
     fontWeight: '700',
   },
   vendorSwitchCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surface,
+    backgroundColor: '#FFFFFF',
     borderRadius: Radius.lg,
     padding: Spacing.md,
     borderWidth: 1,
     borderColor: '#E2D5C3',
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   switchIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.secondary,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#341B00',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Spacing.md,
@@ -258,46 +711,94 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   switchTitle: {
-    fontSize: Typography.fontSize.sm,
+    fontSize: Typography.fontSize.xs + 1,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    color: '#341B00',
   },
   switchSubtitle: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
+    fontSize: 11,
+    color: '#662502',
     marginTop: 2,
-    lineHeight: 16,
+    lineHeight: 15,
   },
-  menuContainer: {
-    backgroundColor: Colors.surface,
+  sectionHeader: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#662502',
+    letterSpacing: 0.8,
+    marginBottom: 6,
+    marginLeft: 4,
+  },
+  menuSection: {
+    backgroundColor: '#FFFFFF',
     borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: '#EFE7DA',
     paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.xs,
   },
-  menuRow: {
+  menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: Spacing.md,
   },
-  menuBorder: {
+  menuItemBorder: {
     borderTopWidth: 1,
     borderTopColor: '#F3EDE2',
   },
-  menuIcon: {
+  menuIconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: Spacing.md,
   },
-  menuTextCol: {
+  menuTextContainer: {
     flex: 1,
   },
   menuTitle: {
     fontSize: Typography.fontSize.sm,
-    fontWeight: '600',
-    color: Colors.textPrimary,
+    fontWeight: '700',
+    color: '#341B00',
   },
   menuSubtitle: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textMuted,
+    fontSize: 11,
+    color: '#662502',
     marginTop: 2,
+  },
+  counterBadge: {
+    backgroundColor: '#FAF7F2',
+    borderWidth: 1,
+    borderColor: '#E4DACB',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: Radius.full,
+    marginRight: 6,
+  },
+  counterText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#662502',
+  },
+  logoutSection: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
+    marginTop: Spacing.md,
+    overflow: 'hidden',
+  },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    backgroundColor: '#FFF5F5',
+  },
+  logoutText: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: '700',
+    color: '#DC2626',
   },
 });
