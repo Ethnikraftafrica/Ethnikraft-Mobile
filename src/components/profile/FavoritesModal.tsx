@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,10 +6,18 @@ import {
   TouchableOpacity,
   ScrollView,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useAppDispatch } from '@/store';
+import { syncFavoritesCount } from '@/store/slices/profileSlice';
+import {
+  useGetFavoritesQuery,
+  useRemoveFromFavoritesMutation,
+  FavoriteItem,
+} from '@/store/api/profileApi';
 import { Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 
 interface Props {
@@ -17,51 +25,71 @@ interface Props {
   onClose: () => void;
 }
 
-const SAMPLE_FAVORITES = [
+const FALLBACK_FAVORITES = [
   {
     id: 'fav_1',
-    name: 'Royal Ashanti Kente Cloth (Ahenfie)',
-    category: 'WEARS',
-    price: 85000,
-    artisan: 'Master Kwame Mensah',
-    location: 'Kumasi, Ghana',
-    image: require('../../../assets/revamp/ready-to-wear.webp'),
+    productId: 'prod_1',
+    product: {
+      id: 'prod_1',
+      name: 'Royal Ashanti Kente Cloth (Ahenfie)',
+      productCategory: 'WEARS',
+      price: 85000,
+      artisan: 'Master Kwame Mensah',
+      description: 'Handcrafted luxury Ghanaian silk',
+      mainImage: 'https://images.unsplash.com/photo-1590736969955-71cc94801759?q=80&w=800',
+      vendor: {
+        id: 'v_1',
+        businessName: 'Ashanti Heritage Looms',
+        rating: 4.9,
+      },
+    },
   },
   {
     id: 'fav_2',
-    name: 'Hand-Tooled Fulani Leather Satchel',
-    category: 'BAGS',
-    price: 42000,
-    artisan: 'Ogunlesi Guild',
-    location: 'Oyo, Nigeria',
-    image: require('../../../assets/revamp/accessories-card.webp'),
-  },
-  {
-    id: 'fav_3',
-    name: 'Terracotta Nok Heritage Urn',
-    category: 'CRAFTS',
-    price: 68000,
-    artisan: 'Amina Kinteh',
-    location: 'Lamu, Kenya',
-    image: require('../../../assets/revamp/crafts-card.webp'),
-  },
-  {
-    id: 'fav_4',
-    name: 'Bespoke Indigo Adire Silk Tunic',
-    category: 'WEARS',
-    price: 36000,
-    artisan: 'Abeokuta Heritage Dyers',
-    location: 'Ogun, Nigeria',
-    image: require('../../../assets/revamp/main-background.webp'),
+    productId: 'prod_2',
+    product: {
+      id: 'prod_2',
+      name: 'Hand-Tooled Fulani Leather Satchel',
+      productCategory: 'BAGS',
+      price: 42000,
+      artisan: 'Ogunlesi Guild',
+      description: 'Vegetable-tanned full-grain leather',
+      mainImage: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?q=80&w=800',
+      vendor: {
+        id: 'v_2',
+        businessName: 'Oyo Leather Guild',
+        rating: 4.8,
+      },
+    },
   },
 ];
 
 export default function FavoritesModal({ visible, onClose }: Props) {
-  const [items, setItems] = useState(SAMPLE_FAVORITES);
+  const dispatch = useAppDispatch();
+  const { data: remoteFavorites, isLoading, refetch } = useGetFavoritesQuery(undefined, {
+    skip: !visible,
+  });
+  const [removeFromFavoritesApi] = useRemoveFromFavoritesMutation();
 
-  const handleRemove = (id: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setItems((prev) => prev.filter((item) => item.id !== id));
+  const favoritesList = (remoteFavorites && remoteFavorites.length > 0)
+    ? remoteFavorites
+    : (remoteFavorites !== undefined ? [] : FALLBACK_FAVORITES);
+
+  // Sync favorites count to Redux store
+  useEffect(() => {
+    if (remoteFavorites) {
+      dispatch(syncFavoritesCount(remoteFavorites.length));
+    }
+  }, [remoteFavorites, dispatch]);
+
+  const handleRemove = async (productId: string, favoriteId: string) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await removeFromFavoritesApi(productId).unwrap();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e) {
+      console.warn('Failed to remove favorite from server', e);
+    }
   };
 
   return (
@@ -79,7 +107,7 @@ export default function FavoritesModal({ visible, onClose }: Props) {
             <View>
               <Text style={styles.modalTitle}>Saved Favorites</Text>
               <Text style={styles.modalSub}>
-                {items.length} artisan masterpiece{items.length === 1 ? '' : 's'} saved
+                {favoritesList.length} artisan masterpiece{favoritesList.length === 1 ? '' : 's'} saved
               </Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn} activeOpacity={0.7}>
@@ -88,7 +116,12 @@ export default function FavoritesModal({ visible, onClose }: Props) {
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-            {items.length === 0 ? (
+            {isLoading && !remoteFavorites ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color="#C46C27" />
+                <Text style={styles.loadingText}>Loading wishlist...</Text>
+              </View>
+            ) : favoritesList.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <Ionicons name="heart-dislike-outline" size={48} color="#C46C27" style={{ marginBottom: 12 }} />
                 <Text style={styles.emptyTitle}>Your Wishlist is Empty</Text>
@@ -97,52 +130,65 @@ export default function FavoritesModal({ visible, onClose }: Props) {
                 </Text>
               </View>
             ) : (
-              items.map((item) => (
-                <View key={item.id} style={[styles.productCard, Shadows.sm]}>
-                  <Image
-                    source={item.image}
-                    style={styles.productImage}
-                    contentFit="cover"
-                    cachePolicy="memory-disk"
-                    transition={150}
-                  />
-                  <View style={styles.productDetails}>
-                    <View style={styles.tagRow}>
-                      <View style={styles.categoryBadge}>
-                        <Text style={styles.categoryText}>{item.category}</Text>
+              favoritesList.map((item) => {
+                const prod = (item as any).product || item;
+                const formattedPrice = typeof prod.price === 'number'
+                  ? prod.price.toLocaleString()
+                  : Number(prod.price || 0).toLocaleString();
+
+                const imageSource = prod.mainImage
+                  ? { uri: prod.mainImage }
+                  : require('../../../assets/revamp/ready-to-wear.webp');
+
+                const vendorName = prod.vendor?.businessName || prod.artisan || 'Ethnikraft Artisan';
+
+                return (
+                  <View key={item.id} style={[styles.productCard, Shadows.sm]}>
+                    <Image
+                      source={imageSource}
+                      style={styles.productImage}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                      transition={150}
+                    />
+                    <View style={styles.productDetails}>
+                      <View style={styles.tagRow}>
+                        <View style={styles.categoryBadge}>
+                          <Text style={styles.categoryText}>{prod.productCategory || 'CRAFT'}</Text>
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => handleRemove(item.productId || prod.id, item.id)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons name="heart" size={18} color="#DC2626" />
+                        </TouchableOpacity>
                       </View>
-                      <TouchableOpacity
-                        onPress={() => handleRemove(item.id)}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <Ionicons name="heart" size={18} color="#DC2626" />
-                      </TouchableOpacity>
-                    </View>
 
-                    <Text style={styles.productName} numberOfLines={2}>
-                      {item.name}
-                    </Text>
-                    <Text style={styles.artisanName}>
-                      By {item.artisan} • {item.location}
-                    </Text>
-                    <Text style={styles.productPrice}>₦{item.price.toLocaleString()}</Text>
+                      <Text style={styles.productName} numberOfLines={2}>
+                        {prod.name}
+                      </Text>
+                      <Text style={styles.artisanName}>
+                        By {vendorName}
+                      </Text>
+                      <Text style={styles.productPrice}>₦{formattedPrice}</Text>
 
-                    <View style={styles.cardActions}>
-                      <TouchableOpacity
-                        style={styles.addBagBtn}
-                        onPress={() => {
-                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                          onClose();
-                        }}
-                        activeOpacity={0.85}
-                      >
-                        <Ionicons name="bag-handle-outline" size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
-                        <Text style={styles.addBagText}>Add to Bag</Text>
-                      </TouchableOpacity>
+                      <View style={styles.cardActions}>
+                        <TouchableOpacity
+                          style={styles.addBagBtn}
+                          onPress={() => {
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                            onClose();
+                          }}
+                          activeOpacity={0.85}
+                        >
+                          <Ionicons name="bag-handle-outline" size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
+                          <Text style={styles.addBagText}>Add to Bag</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   </View>
-                </View>
-              ))
+                );
+              })
             )}
           </ScrollView>
         </View>
@@ -158,13 +204,13 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalCard: {
-    maxHeight: '90%',
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.xl + 10,
+    maxHeight: '92%',
   },
   headerRow: {
     flexDirection: 'row',
@@ -195,40 +241,52 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#EFE7DA',
   },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xl,
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: 12,
+    color: '#662502',
+  },
   scrollContent: {
     paddingBottom: Spacing.lg,
   },
   emptyContainer: {
     alignItems: 'center',
-    paddingVertical: Spacing.xl,
+    justifyContent: 'center',
+    paddingVertical: Spacing.xl * 1.5,
+    paddingHorizontal: Spacing.lg,
   },
   emptyTitle: {
     fontSize: 16,
     fontWeight: '800',
     color: '#341B00',
-    marginBottom: 6,
   },
   emptySubtitle: {
     fontSize: 12,
     color: '#662502',
     textAlign: 'center',
+    marginTop: 6,
     lineHeight: 18,
-    paddingHorizontal: Spacing.lg,
   },
   productCard: {
     flexDirection: 'row',
     backgroundColor: '#FAF7F2',
     borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: '#E4DACB',
-    padding: Spacing.sm,
+    padding: Spacing.sm + 2,
     marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: '#E8DCCB',
   },
   productImage: {
     width: 90,
-    height: 100,
+    height: 90,
     borderRadius: Radius.md,
-    backgroundColor: '#E8DCCB',
+    backgroundColor: '#EAE0D2',
   },
   productDetails: {
     flex: 1,
@@ -239,34 +297,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 2,
   },
   categoryBadge: {
-    backgroundColor: '#EFE7DA',
+    backgroundColor: '#EFE5D5',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: Radius.sm,
+    borderRadius: Radius.full,
   },
   categoryText: {
     fontSize: 9,
     fontWeight: '800',
     color: '#662502',
+    letterSpacing: 0.5,
   },
   productName: {
-    fontSize: Typography.fontSize.xs + 1,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '700',
     color: '#341B00',
+    marginTop: 3,
   },
   artisanName: {
-    fontSize: 10,
-    color: '#8A7A68',
+    fontSize: 11,
+    color: '#662502',
     marginTop: 1,
   },
   productPrice: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: '900',
+    fontSize: 13,
+    fontWeight: '800',
     color: '#C46C27',
-    marginTop: 2,
+    marginTop: 3,
   },
   cardActions: {
     flexDirection: 'row',
@@ -277,8 +336,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#341B00',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: Radius.full,
   },
   addBagText: {

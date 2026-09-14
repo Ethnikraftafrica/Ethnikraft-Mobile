@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,13 +6,27 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { toggleRole, logout } from '@/store/slices/authSlice';
-import { syncUserFromAuth } from '@/store/slices/profileSlice';
+import {
+  syncUserFromAuth,
+  syncFromFullProfile,
+  syncAddresses,
+  syncFavoritesCount,
+  syncOrdersCount,
+} from '@/store/slices/profileSlice';
+import {
+  useGetProfileQuery,
+  useGetAddressesQuery,
+  useGetFavoritesQuery,
+  useGetCustomerOrdersQuery,
+} from '@/store/api/profileApi';
 import { Colors, Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 
 // Profile Modals
@@ -40,6 +54,70 @@ export default function ProfileScreen() {
     recentlyViewedCount,
     profileCompletionPercentage,
   } = useAppSelector((state) => state.profile);
+
+  // RTK Query Hooks for Live Backend Data
+  const {
+    data: remoteProfile,
+    isLoading: isProfileLoading,
+    refetch: refetchProfile,
+  } = useGetProfileQuery(undefined, { skip: !isAuthenticated });
+
+  const {
+    data: remoteAddresses,
+    refetch: refetchAddresses,
+  } = useGetAddressesQuery(undefined, { skip: !isAuthenticated });
+
+  const {
+    data: remoteFavorites,
+    refetch: refetchFavorites,
+  } = useGetFavoritesQuery(undefined, { skip: !isAuthenticated });
+
+  const {
+    data: remoteOrders,
+    refetch: refetchOrders,
+  } = useGetCustomerOrdersQuery(undefined, { skip: !isAuthenticated });
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    if (!isAuthenticated) return;
+    setRefreshing(true);
+    try {
+      await Promise.allSettled([
+        refetchProfile(),
+        refetchAddresses(),
+        refetchFavorites(),
+        refetchOrders(),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [isAuthenticated, refetchProfile, refetchAddresses, refetchFavorites, refetchOrders]);
+
+  // Sync API Data to Redux Store
+  useEffect(() => {
+    if (remoteProfile) {
+      dispatch(syncFromFullProfile(remoteProfile));
+    }
+  }, [remoteProfile, dispatch]);
+
+  useEffect(() => {
+    if (remoteAddresses) {
+      dispatch(syncAddresses(remoteAddresses as any));
+    }
+  }, [remoteAddresses, dispatch]);
+
+  useEffect(() => {
+    if (remoteFavorites) {
+      dispatch(syncFavoritesCount(remoteFavorites.length));
+    }
+  }, [remoteFavorites, dispatch]);
+
+  useEffect(() => {
+    if (remoteOrders) {
+      dispatch(syncOrdersCount(remoteOrders.length));
+    }
+  }, [remoteOrders, dispatch]);
 
   // Modals visibility state (lazy mounted for optimal memory and FPS)
   const [showEditDetails, setShowEditDetails] = useState(false);
@@ -91,12 +169,24 @@ export default function ProfileScreen() {
   const displayEmail = profile.email || 'patron@ethnikraft.africa';
   const initial = (profile.firstName?.[0] || 'E').toUpperCase();
 
+  const displayedAddressesCount = remoteAddresses?.length ?? savedAddresses.length;
+  const displayedFavoritesCount = remoteFavorites?.length ?? favoritesCount;
+  const displayedOrdersCount = remoteOrders?.length ?? ordersCount;
+
   return (
     <View style={styles.screenWrapper}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#C46C27"
+            colors={['#C46C27']}
+          />
+        }
       >
         {/* Profile Identity Card */}
         {isAuthenticated ? (
@@ -244,7 +334,7 @@ export default function ProfileScreen() {
               <Text style={styles.menuSubtitle}>Manage shipping destinations</Text>
             </View>
             <View style={styles.counterBadge}>
-              <Text style={styles.counterText}>{savedAddresses.length}</Text>
+              <Text style={styles.counterText}>{displayedAddressesCount}</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color="#A8998A" />
           </TouchableOpacity>
@@ -285,7 +375,7 @@ export default function ProfileScreen() {
               <Text style={styles.menuSubtitle}>Track recent shipments and order history</Text>
             </View>
             <View style={styles.counterBadge}>
-              <Text style={styles.counterText}>{ordersCount}</Text>
+              <Text style={styles.counterText}>{displayedOrdersCount}</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color="#A8998A" />
           </TouchableOpacity>
@@ -333,7 +423,7 @@ export default function ProfileScreen() {
               <Text style={styles.menuSubtitle}>Artisan masterpieces in your wishlist</Text>
             </View>
             <View style={styles.counterBadge}>
-              <Text style={styles.counterText}>{favoritesCount}</Text>
+              <Text style={styles.counterText}>{displayedFavoritesCount}</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color="#A8998A" />
           </TouchableOpacity>

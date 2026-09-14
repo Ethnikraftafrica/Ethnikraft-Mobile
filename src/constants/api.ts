@@ -84,6 +84,30 @@ export const API_ENDPOINTS = {
     submitBid: (id: string) => `/custom-requests/${id}/bids`,
   },
 
+  // User Profile & Addresses
+  profile: {
+    get: '/profile',
+    vendor: '/profile/vendor',
+    contactInfo: '/profile/contact-info',
+    notifications: '/profile/notifications',
+    addresses: {
+      list: '/profile/addresses',
+      create: '/profile/addresses',
+      update: (id: string) => `/profile/addresses/${id}`,
+      setDefault: (id: string) => `/profile/addresses/${id}/set-default`,
+      delete: (id: string) => `/profile/addresses/${id}`,
+    },
+  },
+
+  // Wishlist & Favorites
+  favorites: {
+    list: '/favorites',
+    count: '/favorites/count',
+    check: (productId: string) => `/favorites/check/${productId}`,
+    add: (productId: string) => `/favorites/${productId}`,
+    remove: (productId: string) => `/favorites/${productId}`,
+  },
+
   // Vendor Ops & Payouts
   vendor: {
     myProducts: '/products/my-products',

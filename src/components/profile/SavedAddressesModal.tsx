@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,18 +10,25 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppDispatch, useAppSelector } from '@/store';
 import {
-  addSavedAddress,
-  deleteSavedAddress,
-  setDefaultAddress,
-  updateSavedAddress,
+  syncAddresses,
+  SavedAddress as LocalSavedAddress,
+  AddressType as LocalAddressType,
+} from '@/store/slices/profileSlice';
+import {
+  useGetAddressesQuery,
+  useCreateAddressMutation,
+  useUpdateAddressMutation,
+  useDeleteAddressMutation,
+  useSetDefaultAddressMutation,
   SavedAddress,
   AddressType,
-} from '@/store/slices/profileSlice';
+} from '@/store/api/profileApi';
 import { Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 
 interface Props {
@@ -31,7 +38,28 @@ interface Props {
 
 export default function SavedAddressesModal({ visible, onClose }: Props) {
   const dispatch = useAppDispatch();
-  const { savedAddresses } = useAppSelector((state) => state.profile);
+  const { savedAddresses: localAddresses } = useAppSelector((state) => state.profile);
+
+  // RTK Query hooks
+  const { data: remoteAddresses, isLoading: isFetching, refetch } = useGetAddressesQuery(undefined, {
+    skip: !visible,
+  });
+  const [createAddressApi, { isLoading: isCreating }] = useCreateAddressMutation();
+  const [updateAddressApi, { isLoading: isUpdating }] = useUpdateAddressMutation();
+  const [deleteAddressApi, { isLoading: isDeleting }] = useDeleteAddressMutation();
+  const [setDefaultAddressApi, { isLoading: isSettingDefault }] = useSetDefaultAddressMutation();
+
+  const isMutating = isCreating || isUpdating || isDeleting || isSettingDefault;
+
+  // Use remote addresses if available, fallback to local slice
+  const addresses: (SavedAddress | LocalSavedAddress)[] = remoteAddresses || localAddresses || [];
+
+  // Sync to Redux store when remote data updates
+  useEffect(() => {
+    if (remoteAddresses && Array.isArray(remoteAddresses)) {
+      dispatch(syncAddresses(remoteAddresses as any));
+    }
+  }, [remoteAddresses, dispatch]);
 
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -46,6 +74,7 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
   const [additionalDirections, setAdditionalDirections] = useState('');
   const [additionalLabel, setAdditionalLabel] = useState('');
   const [city, setCity] = useState('Lagos');
+  const [stateName, setStateName] = useState('Lagos');
   const [country, setCountry] = useState('Nigeria');
   const [isDefault, setIsDefault] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -60,6 +89,7 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
     setAdditionalDirections('');
     setAdditionalLabel('');
     setCity('Lagos');
+    setStateName('Lagos');
     setCountry('Nigeria');
     setIsDefault(false);
     setFormError(null);
@@ -67,24 +97,26 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
     setEditingId(null);
   };
 
-  const startEdit = (addr: SavedAddress) => {
+  const startEdit = (addr: any) => {
     setEditingId(addr.id);
-    setAddressType(addr.addressType);
-    setStreet(addr.street);
+    setAddressType(addr.addressType || 'HOME');
+    setStreet(addr.street || addr.address || '');
     setBuildingName(addr.buildingName || '');
     setAptNoOrCompany(addr.aptNoOrCompany || '');
     setFloor(addr.floor || '');
-    setPhoneNumber(addr.phoneNumber);
+    setPhoneNumber(addr.phoneNumber || '');
     setAdditionalDirections(addr.additionalDirections || '');
     setAdditionalLabel(addr.additionalLabel || '');
     setCity(addr.city || 'Lagos');
+    setStateName(addr.state || 'Lagos');
     setCountry(addr.country || 'Nigeria');
-    setIsDefault(addr.isDefault);
+    setIsDefault(!!addr.isDefault);
     setIsAddingNew(true);
+    setFormError(null);
     Haptics.selectionAsync();
   };
 
-  const handleSaveAddress = () => {
+  const handleSaveAddress = async () => {
     if (!street.trim() || !phoneNumber.trim()) {
       setFormError('Please provide a street address and contact phone number.');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -94,43 +126,41 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
     setFormError(null);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    if (editingId) {
-      dispatch(
-        updateSavedAddress({
-          id: editingId,
-          addressType,
-          street: street.trim(),
-          buildingName: buildingName.trim() || undefined,
-          aptNoOrCompany: aptNoOrCompany.trim() || undefined,
-          floor: floor.trim() || undefined,
-          phoneNumber: phoneNumber.trim(),
-          additionalDirections: additionalDirections.trim() || undefined,
-          additionalLabel: additionalLabel.trim() || undefined,
-          city: city.trim(),
-          country: country.trim(),
-          isDefault,
-        })
-      );
-    } else {
-      dispatch(
-        addSavedAddress({
-          addressType,
-          street: street.trim(),
-          buildingName: buildingName.trim() || undefined,
-          aptNoOrCompany: aptNoOrCompany.trim() || undefined,
-          floor: floor.trim() || undefined,
-          phoneNumber: phoneNumber.trim(),
-          additionalDirections: additionalDirections.trim() || undefined,
-          additionalLabel: additionalLabel.trim() || undefined,
-          city: city.trim(),
-          country: country.trim(),
-          isDefault,
-        })
-      );
-    }
+    const payload = {
+      address: `${street.trim()}${city.trim() ? `, ${city.trim()}` : ''}`,
+      addressType,
+      street: street.trim(),
+      city: city.trim() || 'Lagos',
+      state: stateName.trim() || 'Lagos',
+      country: country.trim() || 'Nigeria',
+      countryCode: 'NG',
+      phoneNumber: phoneNumber.trim(),
+      buildingName: buildingName.trim() || undefined,
+      aptNoOrCompany: aptNoOrCompany.trim() || undefined,
+      floor: floor.trim() || undefined,
+      additionalDirections: additionalDirections.trim() || undefined,
+      additionalLabel: additionalLabel.trim() || undefined,
+      isDefault,
+    };
 
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    resetForm();
+    try {
+      if (editingId) {
+        await updateAddressApi({ id: editingId, data: payload }).unwrap();
+      } else {
+        await createAddressApi(payload).unwrap();
+      }
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      resetForm();
+    } catch (err: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      const backendError =
+        err?.data?.message ||
+        (Array.isArray(err?.data?.message) ? err.data.message[0] : null) ||
+        err?.message ||
+        'Failed to save address. Please check your inputs.';
+      setFormError(typeof backendError === 'string' ? backendError : JSON.stringify(backendError));
+    }
   };
 
   const handleDelete = (id: string, label: string) => {
@@ -139,17 +169,29 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: () => {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          dispatch(deleteSavedAddress(id));
+        onPress: async () => {
+          try {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            await deleteAddressApi(id).unwrap();
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          } catch (err: any) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert('Error', err?.data?.message || 'Could not delete address. Please try again.');
+          }
         },
       },
     ]);
   };
 
-  const handleSetDefault = (id: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    dispatch(setDefaultAddress(id));
+  const handleSetDefault = async (id: string) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      await setDefaultAddressApi(id).unwrap();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Error', err?.data?.message || 'Could not set default address.');
+    }
   };
 
   return (
@@ -171,7 +213,7 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
               <View>
                 <Text style={styles.modalTitle}>Saved Addresses</Text>
                 <Text style={styles.modalSub}>
-                  {savedAddresses.length} delivery location{savedAddresses.length === 1 ? '' : 's'} available
+                  {addresses.length} delivery location{addresses.length === 1 ? '' : 's'} available
                 </Text>
               </View>
               <TouchableOpacity
@@ -181,12 +223,20 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
                 }}
                 style={styles.closeBtn}
                 activeOpacity={0.7}
+                disabled={isMutating}
               >
                 <Ionicons name="close" size={20} color="#341B00" />
               </TouchableOpacity>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+              {isFetching && !remoteAddresses && (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color="#C46C27" />
+                  <Text style={styles.loadingText}>Fetching addresses...</Text>
+                </View>
+              )}
+
               {!isAddingNew ? (
                 <>
                   {/* Add New Address Trigger Button */}
@@ -195,6 +245,7 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
                     onPress={() => {
                       Haptics.selectionAsync();
                       setIsAddingNew(true);
+                      setFormError(null);
                     }}
                     activeOpacity={0.85}
                   >
@@ -202,8 +253,19 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
                     <Text style={styles.addNewBtnText}>Add New Delivery Address</Text>
                   </TouchableOpacity>
 
+                  {/* Empty State */}
+                  {addresses.length === 0 && !isFetching && (
+                    <View style={styles.emptyContainer}>
+                      <Ionicons name="location-outline" size={42} color="#D1C3B2" />
+                      <Text style={styles.emptyTitle}>No Addresses Saved Yet</Text>
+                      <Text style={styles.emptySub}>
+                        Add your home or office address to speed up bespoke orders and checkout.
+                      </Text>
+                    </View>
+                  )}
+
                   {/* List of Saved Addresses */}
-                  {savedAddresses.map((addr) => (
+                  {addresses.map((addr) => (
                     <View key={addr.id} style={[styles.addressItem, addr.isDefault && styles.addressItemDefault]}>
                       <View style={styles.itemHeader}>
                         <View style={styles.typeBadge}>
@@ -232,7 +294,7 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
                         )}
                       </View>
 
-                      <Text style={styles.addressStreet}>{addr.street}</Text>
+                      <Text style={styles.addressStreet}>{addr.street || (addr as any).address}</Text>
                       {addr.buildingName && (
                         <Text style={styles.addressDetails}>
                           {addr.buildingName} {addr.aptNoOrCompany ? `• ${addr.aptNoOrCompany}` : ''} {addr.floor ? `• ${addr.floor}` : ''}
@@ -250,6 +312,7 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
                             style={styles.actionBtn}
                             onPress={() => handleSetDefault(addr.id)}
                             activeOpacity={0.7}
+                            disabled={isMutating}
                           >
                             <Ionicons name="radio-button-off" size={14} color="#C46C27" style={{ marginRight: 4 }} />
                             <Text style={styles.actionBtnText}>Set Default</Text>
@@ -260,6 +323,7 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
                           style={styles.actionBtn}
                           onPress={() => startEdit(addr)}
                           activeOpacity={0.7}
+                          disabled={isMutating}
                         >
                           <Ionicons name="pencil" size={14} color="#662502" style={{ marginRight: 4 }} />
                           <Text style={styles.actionBtnText}>Edit</Text>
@@ -267,8 +331,9 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
 
                         <TouchableOpacity
                           style={[styles.actionBtn, { marginLeft: 'auto' }]}
-                          onPress={() => handleDelete(addr.id, addr.street)}
+                          onPress={() => handleDelete(addr.id, addr.street || (addr as any).address)}
                           activeOpacity={0.7}
+                          disabled={isMutating}
                         >
                           <Ionicons name="trash-outline" size={14} color="#C92929" />
                         </TouchableOpacity>
@@ -293,7 +358,7 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
                   {/* Type chips */}
                   <Text style={styles.label}>ADDRESS TYPE</Text>
                   <View style={styles.typeChipsRow}>
-                    {(['HOME', 'OFFICE', 'OTHER'] as AddressType[]).map((t) => (
+                    {(['HOME', 'OFFICE', 'APARTMENT', 'OTHER'] as AddressType[]).map((t) => (
                       <TouchableOpacity
                         key={t}
                         style={[styles.typeChip, addressType === t && styles.typeChipActive]}
@@ -301,47 +366,87 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
                           Haptics.selectionAsync();
                           setAddressType(t);
                         }}
+                        activeOpacity={0.8}
                       >
                         <Text style={[styles.typeChipText, addressType === t && styles.typeChipTextActive]}>
-                          {t === 'HOME' ? '🏡 Home' : t === 'OFFICE' ? '🏢 Office' : '📍 Other'}
+                          {t === 'HOME' ? 'Home' : t === 'OFFICE' ? 'Office' : t === 'APARTMENT' ? 'Apt' : 'Other'}
                         </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
 
-                  <Text style={[styles.label, { marginTop: Spacing.md }]}>STREET ADDRESS *</Text>
+                  {/* Custom Label */}
+                  <Text style={[styles.label, { marginTop: Spacing.sm }]}>LABEL (OPTIONAL)</Text>
                   <TextInput
                     style={styles.input}
-                    value={street}
-                    onChangeText={setStreet}
-                    placeholder="e.g. 14 Admiralty Way, Lekki Phase 1"
+                    value={additionalLabel}
+                    onChangeText={setAdditionalLabel}
+                    placeholder="e.g. Grandma's House, Ikoyi Studio"
                     placeholderTextColor="#A8998A"
                   />
 
-                  <View style={[styles.row, { marginTop: Spacing.md }]}>
+                  {/* Street Address */}
+                  <Text style={[styles.label, { marginTop: Spacing.sm }]}>STREET ADDRESS *</Text>
+                  <TextInput
+                    style={[styles.input, styles.multilineInput]}
+                    value={street}
+                    onChangeText={setStreet}
+                    placeholder="15 Admiralty Way, Lekki Phase 1"
+                    placeholderTextColor="#A8998A"
+                    multiline
+                    numberOfLines={2}
+                  />
+
+                  {/* City & State */}
+                  <View style={[styles.row, { marginTop: Spacing.sm }]}>
                     <View style={{ flex: 1, marginRight: Spacing.xs }}>
-                      <Text style={styles.label}>BUILDING / ESTATE</Text>
+                      <Text style={styles.label}>CITY *</Text>
                       <TextInput
                         style={styles.input}
-                        value={buildingName}
-                        onChangeText={setBuildingName}
-                        placeholder="Palm Terraces"
+                        value={city}
+                        onChangeText={setCity}
+                        placeholder="Lagos"
                         placeholderTextColor="#A8998A"
                       />
                     </View>
                     <View style={{ flex: 1, marginLeft: Spacing.xs }}>
-                      <Text style={styles.label}>APT / SUITE / FLOOR</Text>
+                      <Text style={styles.label}>STATE *</Text>
                       <TextInput
                         style={styles.input}
-                        value={aptNoOrCompany}
-                        onChangeText={setAptNoOrCompany}
-                        placeholder="Suite 4B, 2nd Floor"
+                        value={stateName}
+                        onChangeText={setStateName}
+                        placeholder="Lagos"
                         placeholderTextColor="#A8998A"
                       />
                     </View>
                   </View>
 
-                  <Text style={[styles.label, { marginTop: Spacing.md }]}>PHONE NUMBER *</Text>
+                  {/* Building & Apartment */}
+                  <View style={[styles.row, { marginTop: Spacing.sm }]}>
+                    <View style={{ flex: 1, marginRight: Spacing.xs }}>
+                      <Text style={styles.label}>BUILDING NAME</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={buildingName}
+                        onChangeText={setBuildingName}
+                        placeholder="Skyline Plaza"
+                        placeholderTextColor="#A8998A"
+                      />
+                    </View>
+                    <View style={{ flex: 1, marginLeft: Spacing.xs }}>
+                      <Text style={styles.label}>APT / SUITE / CO.</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={aptNoOrCompany}
+                        onChangeText={setAptNoOrCompany}
+                        placeholder="Suite 4B"
+                        placeholderTextColor="#A8998A"
+                      />
+                    </View>
+                  </View>
+
+                  {/* Phone */}
+                  <Text style={[styles.label, { marginTop: Spacing.sm }]}>RECIPIENT PHONE NUMBER *</Text>
                   <TextInput
                     style={styles.input}
                     value={phoneNumber}
@@ -351,16 +456,18 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
                     placeholderTextColor="#A8998A"
                   />
 
-                  <Text style={[styles.label, { marginTop: Spacing.md }]}>LANDMARK / DIRECTIONS</Text>
+                  {/* Landmark / Delivery Directions */}
+                  <Text style={[styles.label, { marginTop: Spacing.sm }]}>LANDMARK / DIRECTIONS</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, styles.multilineInput]}
                     value={additionalDirections}
                     onChangeText={setAdditionalDirections}
-                    placeholder="Opposite grocery store"
+                    placeholder="Opposite GTBank, black gate with bronze bell"
                     placeholderTextColor="#A8998A"
+                    multiline
                   />
 
-                  {/* Make default toggle */}
+                  {/* Default switch toggle */}
                   <TouchableOpacity
                     style={styles.defaultToggleRow}
                     onPress={() => {
@@ -375,27 +482,33 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
                       color={isDefault ? '#C46C27' : '#A8998A'}
                       style={{ marginRight: 8 }}
                     />
-                    <Text style={styles.defaultToggleText}>Set as my default shipping address</Text>
+                    <Text style={styles.defaultToggleLabel}>Set as primary default address</Text>
                   </TouchableOpacity>
 
                   {/* Form Action Buttons */}
-                  <View style={[styles.row, { marginTop: Spacing.lg }]}>
+                  <View style={styles.formBtnRow}>
                     <TouchableOpacity
                       style={styles.cancelBtn}
                       onPress={resetForm}
-                      activeOpacity={0.8}
+                      activeOpacity={0.7}
+                      disabled={isMutating}
                     >
                       <Text style={styles.cancelBtnText}>Cancel</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      style={styles.saveAddressBtn}
+                      style={[styles.saveAddressBtn, isMutating && { opacity: 0.8 }]}
                       onPress={handleSaveAddress}
-                      activeOpacity={0.88}
+                      activeOpacity={0.85}
+                      disabled={isMutating}
                     >
-                      <Text style={styles.saveAddressBtnText}>
-                        {editingId ? 'Update Address' : 'Save Address'}
-                      </Text>
+                      {isMutating ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Text style={styles.saveAddressBtnText}>
+                          {editingId ? 'Update Address' : 'Save Address'}
+                        </Text>
+                      )}
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -455,7 +568,37 @@ const styles = StyleSheet.create({
     borderColor: '#EFE7DA',
   },
   scrollContent: {
-    paddingBottom: Spacing.xl,
+    paddingBottom: Spacing.lg,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.md,
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: 12,
+    color: '#662502',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.lg,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#341B00',
+    marginTop: Spacing.sm,
+  },
+  emptySub: {
+    fontSize: 12,
+    color: '#662502',
+    textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 18,
   },
   addNewBtn: {
     flexDirection: 'row',
@@ -463,42 +606,42 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#FAF7F2',
     borderWidth: 1.5,
-    borderStyle: 'dashed',
     borderColor: '#C46C27',
+    borderStyle: 'dashed',
     borderRadius: Radius.lg,
-    paddingVertical: 14,
+    paddingVertical: 12,
     marginBottom: Spacing.md,
   },
   addNewBtnText: {
-    fontSize: Typography.fontSize.sm,
+    fontSize: 13,
     fontWeight: '700',
     color: '#C46C27',
   },
   addressItem: {
     backgroundColor: '#FAF7F2',
-    borderWidth: 1,
-    borderColor: '#E4DACB',
     borderRadius: Radius.lg,
     padding: Spacing.md,
-    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: '#E8DCCB',
+    marginBottom: Spacing.sm + 2,
   },
   addressItemDefault: {
     borderColor: '#C46C27',
-    backgroundColor: '#FCF9F4',
+    borderWidth: 1.5,
   },
   itemHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 6,
   },
   typeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EFE7DA',
+    backgroundColor: '#F0E7D9',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: Radius.sm,
+    borderRadius: Radius.full,
   },
   typeBadgeText: {
     fontSize: 11,
@@ -509,66 +652,70 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#DCFCE7',
-    paddingHorizontal: 6,
+    paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: Radius.full,
   },
   defaultBadgeText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '800',
     color: '#166534',
   },
   addressStreet: {
-    fontSize: Typography.fontSize.sm,
+    fontSize: 14,
     fontWeight: '700',
     color: '#341B00',
     marginBottom: 2,
   },
   addressDetails: {
-    fontSize: Typography.fontSize.xs,
+    fontSize: 12,
     color: '#662502',
     marginBottom: 2,
   },
   directionsText: {
     fontSize: 11,
-    color: '#8A7A68',
+    color: '#8A6D56',
     fontStyle: 'italic',
     marginBottom: 4,
   },
   phoneText: {
-    fontSize: 11,
-    color: '#341B00',
+    fontSize: 12,
     fontWeight: '600',
+    color: '#341B00',
     marginTop: 2,
   },
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: Spacing.sm,
-    paddingTop: Spacing.xs + 2,
+    paddingTop: Spacing.xs,
     borderTopWidth: 1,
-    borderTopColor: '#EFE7DA',
-    gap: 12,
+    borderTopColor: '#EBE1D3',
+    gap: 8,
   },
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 6,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: '#E0D4C3',
   },
   actionBtnText: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#662502',
+    fontWeight: '600',
+    color: '#341B00',
   },
   formCard: {
-    paddingVertical: Spacing.xs,
+    backgroundColor: '#FFFFFF',
   },
   formHeading: {
     fontSize: 16,
     fontWeight: '800',
     color: '#341B00',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   errorBanner: {
     flexDirection: 'row',
@@ -576,24 +723,33 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEE2E2',
     borderWidth: 1,
     borderColor: '#FCA5A5',
-    padding: Spacing.sm,
     borderRadius: Radius.md,
-    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 8,
+    marginBottom: Spacing.sm,
   },
   errorText: {
     fontSize: 11,
-    color: '#B91C1C',
     fontWeight: '600',
+    color: '#991B1B',
+    flex: 1,
+  },
+  label: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#662502',
+    letterSpacing: 0.6,
+    marginBottom: 4,
   },
   typeChipsRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
     marginBottom: Spacing.xs,
   },
   typeChip: {
     flex: 1,
     paddingVertical: 8,
-    borderRadius: Radius.md,
+    borderRadius: Radius.full,
     backgroundColor: '#FAF7F2',
     borderWidth: 1,
     borderColor: '#E4DACB',
@@ -604,7 +760,7 @@ const styles = StyleSheet.create({
     borderColor: '#C46C27',
   },
   typeChipText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#662502',
   },
@@ -612,22 +768,19 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
   },
-  label: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#662502',
-    letterSpacing: 0.6,
-    marginBottom: 6,
-  },
   input: {
     backgroundColor: '#FAF7F2',
     borderWidth: 1,
     borderColor: '#E4DACB',
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.md,
-    paddingVertical: 10,
+    paddingVertical: 8,
     fontSize: Typography.fontSize.sm,
     color: '#341B00',
+  },
+  multilineInput: {
+    minHeight: 48,
+    textAlignVertical: 'top',
   },
   row: {
     flexDirection: 'row',
@@ -636,38 +789,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: Spacing.md,
-    paddingVertical: 4,
   },
-  defaultToggleText: {
-    fontSize: Typography.fontSize.xs,
+  defaultToggleLabel: {
+    fontSize: 12,
     color: '#341B00',
     fontWeight: '600',
   },
+  formBtnRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: Spacing.lg,
+  },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: Radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#FAF7F2',
     borderWidth: 1,
     borderColor: '#E4DACB',
-    alignItems: 'center',
-    marginRight: Spacing.xs,
+    paddingVertical: 12,
+    borderRadius: Radius.md,
   },
   cancelBtnText: {
-    fontSize: Typography.fontSize.sm,
+    fontSize: 13,
     fontWeight: '700',
     color: '#662502',
   },
   saveAddressBtn: {
     flex: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#C46C27',
     paddingVertical: 12,
     borderRadius: Radius.md,
-    backgroundColor: '#C46C27',
-    alignItems: 'center',
-    marginLeft: Spacing.xs,
   },
   saveAddressBtnText: {
-    fontSize: Typography.fontSize.sm,
+    fontSize: 13,
     fontWeight: '700',
     color: '#FFFFFF',
   },

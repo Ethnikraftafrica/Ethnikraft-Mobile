@@ -230,6 +230,44 @@ export const profileSlice = createSlice({
       state.profileCompletionPercentage = calculateCompletion(state.profile, state.measurements, state.savedAddresses);
     },
 
+    syncFromFullProfile: (state, action: PayloadAction<any>) => {
+      const p = action.payload;
+      if (!p) return;
+      if (p.firstName) state.profile.firstName = p.firstName;
+      if (p.lastName) state.profile.lastName = p.lastName;
+      if (p.email) state.profile.email = p.email;
+      if (p.phoneNumber) state.profile.phoneNumber = p.phoneNumber;
+      if (p.profileName) state.profile.profileName = p.profileName;
+      if (p.address) state.profile.address = p.address;
+      if (p.city) state.profile.city = p.city;
+      if (p.country) state.profile.country = p.country;
+      if (p.gender) state.profile.gender = p.gender;
+      if (p.birthDate) state.profile.birthDate = p.birthDate;
+      if (p.notificationsEnabled !== undefined) {
+        state.preferences.pushNotifications = p.notificationsEnabled;
+        state.preferences.orderUpdates = p.notificationsEnabled;
+      }
+      if (Array.isArray(p.savedAddresses) && p.savedAddresses.length > 0) {
+        state.savedAddresses = p.savedAddresses;
+      }
+      state.profileCompletionPercentage = calculateCompletion(state.profile, state.measurements, state.savedAddresses);
+    },
+
+    syncAddresses: (state, action: PayloadAction<SavedAddress[]>) => {
+      if (Array.isArray(action.payload)) {
+        state.savedAddresses = action.payload;
+        state.profileCompletionPercentage = calculateCompletion(state.profile, state.measurements, state.savedAddresses);
+      }
+    },
+
+    syncFavoritesCount: (state, action: PayloadAction<number>) => {
+      state.favoritesCount = action.payload;
+    },
+
+    syncOrdersCount: (state, action: PayloadAction<number>) => {
+      state.ordersCount = action.payload;
+    },
+
     updatePersonalDetails: (state, action: PayloadAction<Partial<UserProfileDetails>>) => {
       state.profile = { ...state.profile, ...action.payload };
       state.profileCompletionPercentage = calculateCompletion(state.profile, state.measurements, state.savedAddresses);
@@ -320,6 +358,10 @@ export const profileSlice = createSlice({
 
 export const {
   syncUserFromAuth,
+  syncFromFullProfile,
+  syncAddresses,
+  syncFavoritesCount,
+  syncOrdersCount,
   updatePersonalDetails,
   addSavedAddress,
   updateSavedAddress,

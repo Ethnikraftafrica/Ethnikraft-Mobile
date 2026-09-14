@@ -6,11 +6,13 @@ import {
   TouchableOpacity,
   Switch,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { updatePreferences } from '@/store/slices/profileSlice';
+import { useUpdateNotificationsMutation } from '@/store/api/profileApi';
 import { Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 
 interface Props {
@@ -21,15 +23,26 @@ interface Props {
 export default function NotificationSettingsModal({ visible, onClose }: Props) {
   const dispatch = useAppDispatch();
   const { preferences } = useAppSelector((state) => state.profile);
+  const [updateNotificationsApi, { isLoading }] = useUpdateNotificationsMutation();
+
+  const syncBackendNotifications = async (enabled: boolean) => {
+    try {
+      await updateNotificationsApi({ notificationsEnabled: enabled }).unwrap();
+    } catch (e) {
+      console.warn('Failed to sync notification settings to backend', e);
+    }
+  };
 
   const togglePush = (val: boolean) => {
     Haptics.selectionAsync();
     dispatch(updatePreferences({ pushNotifications: val }));
+    syncBackendNotifications(val);
   };
 
   const toggleOrders = (val: boolean) => {
     Haptics.selectionAsync();
     dispatch(updatePreferences({ orderUpdates: val }));
+    syncBackendNotifications(val);
   };
 
   const togglePromotions = (val: boolean) => {
@@ -188,41 +201,40 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAF7F2',
     borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: '#E4DACB',
+    borderColor: '#E8DCCB',
     paddingHorizontal: Spacing.md,
     marginBottom: Spacing.lg,
   },
   settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.md,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#EFE7DA',
+    borderBottomColor: '#EDE3D5',
   },
   settingIcon: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F3EADB',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: Spacing.sm + 2,
-    borderWidth: 1,
-    borderColor: '#E4DACB',
+    marginRight: Spacing.md,
   },
   settingText: {
     flex: 1,
-    paddingRight: Spacing.sm,
+    marginRight: Spacing.sm,
   },
   settingTitle: {
-    fontSize: Typography.fontSize.sm,
+    fontSize: 13,
     fontWeight: '700',
     color: '#341B00',
   },
   settingSub: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#662502',
     marginTop: 2,
+    lineHeight: 14,
   },
   doneBtn: {
     backgroundColor: '#C46C27',

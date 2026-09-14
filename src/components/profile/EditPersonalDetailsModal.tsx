@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,11 +9,13 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { updatePersonalDetails, GenderType } from '@/store/slices/profileSlice';
+import { updatePersonalDetails, syncFromFullProfile, GenderType } from '@/store/slices/profileSlice';
+import { useUpdateContactInfoMutation } from '@/store/api/profileApi';
 import { Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 
 interface Props {
@@ -24,6 +26,7 @@ interface Props {
 export default function EditPersonalDetailsModal({ visible, onClose }: Props) {
   const dispatch = useAppDispatch();
   const { profile } = useAppSelector((state) => state.profile);
+  const [updateContactInfoApi, { isLoading }] = useUpdateContactInfoMutation();
 
   const [firstName, setFirstName] = useState(profile.firstName);
   const [lastName, setLastName] = useState(profile.lastName);
@@ -34,35 +37,84 @@ export default function EditPersonalDetailsModal({ visible, onClose }: Props) {
   const [address, setAddress] = useState(profile.address);
   const [city, setCity] = useState(profile.city);
   const [country, setCountry] = useState(profile.country);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
-  const handleSave = () => {
+  // Sync form values whenever modal opens or profile changes
+  useEffect(() => {
+    if (visible) {
+      setFirstName(profile.firstName || '');
+      setLastName(profile.lastName || '');
+      setProfileName(profile.profileName || '');
+      setPhoneNumber(profile.phoneNumber || '');
+      setGender(profile.gender || '');
+      setBirthDate(profile.birthDate || '');
+      setAddress(profile.address || '');
+      setCity(profile.city || '');
+      setCountry(profile.country || 'Nigeria');
+      setErrorMessage(null);
+      setSavedSuccess(false);
+    }
+  }, [visible, profile]);
+
+  const handleSave = async () => {
+    setErrorMessage(null);
+
     if (!firstName.trim() || !lastName.trim()) {
+      setErrorMessage('First name and last name are required.');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    dispatch(
-      updatePersonalDetails({
+    // Optional phone validation matching backend DTO regex if phone is provided
+    if (phoneNumber.trim()) {
+      const cleanPhone = phoneNumber.trim();
+      const isValidPhone = /^(\+234[789][01]\d{8}|0[789][01]\d{8}|\+[1-9]\d{6,14})$/.test(cleanPhone);
+      if (!isValidPhone) {
+        setErrorMessage('Please provide a valid phone number (e.g. +2348012345678 or 08012345678).');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        return;
+      }
+    }
+
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      
+      const payload = {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        profileName: profileName.trim(),
-        phoneNumber: phoneNumber.trim(),
-        gender,
-        birthDate: birthDate.trim(),
-        address: address.trim(),
-        city: city.trim(),
-        country: country.trim(),
-      })
-    );
+        profileName: profileName.trim() || undefined,
+        phoneNumber: phoneNumber.trim() || undefined,
+        gender: gender ? (gender as GenderType) : undefined,
+        birthDate: birthDate.trim() || undefined,
+        address: address.trim() || undefined,
+        city: city.trim() || undefined,
+        country: country.trim() || undefined,
+      };
 
-    setSavedSuccess(true);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setTimeout(() => {
-      setSavedSuccess(false);
-      onClose();
-    }, 800);
+      const result = await updateContactInfoApi(payload).unwrap();
+
+      // Sync updated profile to Redux
+      dispatch(updatePersonalDetails(payload));
+      if (result) {
+        dispatch(syncFromFullProfile(result));
+      }
+
+      setSavedSuccess(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setTimeout(() => {
+        setSavedSuccess(false);
+        onClose();
+      }, 750);
+    } catch (err: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      const backendError =
+        err?.data?.message ||
+        (Array.isArray(err?.data?.message) ? err.data.message[0] : null) ||
+        err?.message ||
+        'Failed to save personal details. Please check your connection.';
+      setErrorMessage(typeof backendError === 'string' ? backendError : JSON.stringify(backendError));
+    }
   };
 
   return (
@@ -89,10 +141,19 @@ export default function EditPersonalDetailsModal({ visible, onClose }: Props) {
                 onPress={onClose}
                 style={styles.closeBtn}
                 activeOpacity={0.7}
+                disabled={isLoading}
               >
                 <Ionicons name="close" size={20} color="#341B00" />
               </TouchableOpacity>
             </View>
+
+            {/* Error Banner */}
+            {errorMessage ? (
+              <View style={styles.errorBanner}>
+                <Ionicons name="alert-circle" size={16} color="#B91C1C" style={{ marginRight: 6 }} />
+                <Text style={styles.errorText}>{errorMessage}</Text>
+              </View>
+            ) : null}
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.formScroll}>
               {/* Names */}
@@ -105,6 +166,7 @@ export default function EditPersonalDetailsModal({ visible, onClose }: Props) {
                     onChangeText={setFirstName}
                     placeholder="First Name"
                     placeholderTextColor="#A8998A"
+                    editable={!isLoading}
                   />
                 </View>
                 <View style={{ flex: 1, marginLeft: Spacing.xs }}>
@@ -115,6 +177,7 @@ export default function EditPersonalDetailsModal({ visible, onClose }: Props) {
                     onChangeText={setLastName}
                     placeholder="Last Name"
                     placeholderTextColor="#A8998A"
+                    editable={!isLoading}
                   />
                 </View>
               </View>
@@ -129,6 +192,8 @@ export default function EditPersonalDetailsModal({ visible, onClose }: Props) {
                   onChangeText={setProfileName}
                   placeholder="e.g. KwameCrafts"
                   placeholderTextColor="#A8998A"
+                  autoCapitalize="none"
+                  editable={!isLoading}
                 />
               </View>
 
@@ -141,8 +206,9 @@ export default function EditPersonalDetailsModal({ visible, onClose }: Props) {
                   value={phoneNumber}
                   onChangeText={setPhoneNumber}
                   keyboardType="phone-pad"
-                  placeholder="+234..."
+                  placeholder="+2348012345678"
                   placeholderTextColor="#A8998A"
+                  editable={!isLoading}
                 />
               </View>
 
@@ -158,6 +224,7 @@ export default function EditPersonalDetailsModal({ visible, onClose }: Props) {
                       setGender(g);
                     }}
                     activeOpacity={0.8}
+                    disabled={isLoading}
                   >
                     <Text style={[styles.genderChipText, gender === g && styles.genderChipTextActive]}>
                       {g === 'MALE' ? 'Male' : g === 'FEMALE' ? 'Female' : 'Other'}
@@ -176,6 +243,7 @@ export default function EditPersonalDetailsModal({ visible, onClose }: Props) {
                   onChangeText={setBirthDate}
                   placeholder="1995-08-24"
                   placeholderTextColor="#A8998A"
+                  editable={!isLoading}
                 />
               </View>
 
@@ -189,6 +257,7 @@ export default function EditPersonalDetailsModal({ visible, onClose }: Props) {
                 placeholderTextColor="#A8998A"
                 multiline
                 numberOfLines={2}
+                editable={!isLoading}
               />
 
               {/* City & Country */}
@@ -201,6 +270,7 @@ export default function EditPersonalDetailsModal({ visible, onClose }: Props) {
                     onChangeText={setCity}
                     placeholder="Lagos"
                     placeholderTextColor="#A8998A"
+                    editable={!isLoading}
                   />
                 </View>
                 <View style={{ flex: 1, marginLeft: Spacing.xs }}>
@@ -211,25 +281,37 @@ export default function EditPersonalDetailsModal({ visible, onClose }: Props) {
                     onChangeText={setCountry}
                     placeholder="Nigeria"
                     placeholderTextColor="#A8998A"
+                    editable={!isLoading}
                   />
                 </View>
               </View>
 
               {/* Save CTA */}
               <TouchableOpacity
-                style={[styles.saveBtn, savedSuccess && styles.saveBtnSuccess]}
+                style={[
+                  styles.saveBtn,
+                  savedSuccess && styles.saveBtnSuccess,
+                  isLoading && { opacity: 0.8 },
+                ]}
                 onPress={handleSave}
                 activeOpacity={0.88}
+                disabled={isLoading}
               >
-                <Ionicons
-                  name={savedSuccess ? 'checkmark-circle' : 'save-outline'}
-                  size={18}
-                  color="#FFFFFF"
-                  style={{ marginRight: 6 }}
-                />
-                <Text style={styles.saveBtnText}>
-                  {savedSuccess ? 'Details Updated!' : 'Save Changes'}
-                </Text>
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Ionicons
+                      name={savedSuccess ? 'checkmark-circle' : 'save-outline'}
+                      size={18}
+                      color="#FFFFFF"
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text style={styles.saveBtnText}>
+                      {savedSuccess ? 'Details Updated!' : 'Save Changes'}
+                    </Text>
+                  </>
+                )}
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -284,6 +366,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#EFE7DA',
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 8,
+    marginBottom: Spacing.sm,
+  },
+  errorText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#991B1B',
+    flex: 1,
   },
   formScroll: {
     paddingBottom: Spacing.lg,
