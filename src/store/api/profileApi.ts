@@ -146,7 +146,7 @@ export interface CustomerOrdersResponse {
 export const profileApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     // 1. Full Profile
-    getProfile: builder.query<FullUserProfile, void>({
+    getFullUserProfile: builder.query<FullUserProfile, void>({
       query: () => API_ENDPOINTS.profile.get,
       transformResponse: (response: any) => {
         // Handle direct DTO or standard { success, data } envelope
@@ -269,10 +269,11 @@ export const profileApi = baseApi.injectEndpoints({
       providesTags: ['Orders'],
     }),
   }),
+  overrideExisting: true,
 });
 
 export const {
-  useGetProfileQuery,
+  useGetFullUserProfileQuery,
   useUpdateContactInfoMutation,
   useUpdateNotificationsMutation,
   useGetAddressesQuery,

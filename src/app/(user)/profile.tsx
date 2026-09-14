@@ -22,7 +22,7 @@ import {
   syncOrdersCount,
 } from '@/store/slices/profileSlice';
 import {
-  useGetProfileQuery,
+  useGetFullUserProfileQuery,
   useGetAddressesQuery,
   useGetFavoritesQuery,
   useGetCustomerOrdersQuery,
@@ -60,7 +60,7 @@ export default function ProfileScreen() {
     data: remoteProfile,
     isLoading: isProfileLoading,
     refetch: refetchProfile,
-  } = useGetProfileQuery(undefined, { skip: !isAuthenticated });
+  } = useGetFullUserProfileQuery(undefined, { skip: !isAuthenticated });
 
   const {
     data: remoteAddresses,
