@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, memo, useCallback } from 'react';
 import {
   StyleSheet,
   View,
   Text,
   TouchableOpacity,
-  Image,
   Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
@@ -14,9 +14,9 @@ import { StudioCustomRequest } from '@/store/slices/studioSlice';
 
 interface StudioRequestCardProps {
   request: StudioCustomRequest;
-  onPress: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
+  onPress: (request: StudioCustomRequest) => void;
+  onEdit: (request: StudioCustomRequest) => void;
+  onDelete: (request: StudioCustomRequest) => void;
 }
 
 const STATUS_CONFIG: Record<
@@ -49,7 +49,7 @@ const STATUS_CONFIG: Record<
   },
 };
 
-export const StudioRequestCard: React.FC<StudioRequestCardProps> = ({
+const StudioRequestCardComponent: React.FC<StudioRequestCardProps> = ({
   request,
   onPress,
   onEdit,
@@ -62,7 +62,7 @@ export const StudioRequestCard: React.FC<StudioRequestCardProps> = ({
   const bidCount = request.bids?.length || 0;
   const statusCfg = STATUS_CONFIG[request.status] || STATUS_CONFIG.OPEN;
 
-  const formattedDelivery = () => {
+  const formattedDelivery = useCallback(() => {
     if (!request.timeline) return '—';
     try {
       return new Date(request.timeline).toLocaleDateString('en-US', {
@@ -72,18 +72,28 @@ export const StudioRequestCard: React.FC<StudioRequestCardProps> = ({
     } catch {
       return request.timeline;
     }
-  };
+  }, [request.timeline]);
 
-  const handleCardPress = () => {
+  const handleCardPress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setMenuOpen(false);
-    onPress();
-  };
+    onPress(request);
+  }, [onPress, request]);
 
-  const handleMenuToggle = () => {
+  const handleMenuToggle = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setMenuOpen((prev) => !prev);
-  };
+  }, []);
+
+  const handleEditPress = useCallback(() => {
+    setMenuOpen(false);
+    onEdit(request);
+  }, [onEdit, request]);
+
+  const handleDeletePress = useCallback(() => {
+    setMenuOpen(false);
+    onDelete(request);
+  }, [onDelete, request]);
 
   return (
     <TouchableOpacity
@@ -92,10 +102,15 @@ export const StudioRequestCard: React.FC<StudioRequestCardProps> = ({
       style={styles.card}
     >
       <View style={styles.topRow}>
-        {/* Thumbnail Image */}
+        {/* Thumbnail Image with expo-image */}
         <View style={styles.thumbnailContainer}>
           {images[0] ? (
-            <Image source={{ uri: images[0] }} style={styles.thumbnail} />
+            <Image
+              source={{ uri: images[0] }}
+              style={styles.thumbnail}
+              contentFit="cover"
+              transition={150}
+            />
           ) : (
             <View style={styles.placeholderThumbnail}>
               <Ionicons name="sparkles" size={24} color={Colors.primaryLight} />
@@ -146,26 +161,14 @@ export const StudioRequestCard: React.FC<StudioRequestCardProps> = ({
       {/* Menu overlay dropdown */}
       {menuOpen && (
         <View style={styles.menuDropdown}>
-          <TouchableOpacity
-            onPress={() => {
-              setMenuOpen(false);
-              onEdit();
-            }}
-            style={styles.menuItem}
-          >
+          <TouchableOpacity onPress={handleEditPress} style={styles.menuItem}>
             <Ionicons name="pencil-outline" size={14} color={Colors.textPrimary} />
             <Text style={styles.menuItemText}>Edit Terms</Text>
           </TouchableOpacity>
 
           <View style={styles.menuDivider} />
 
-          <TouchableOpacity
-            onPress={() => {
-              setMenuOpen(false);
-              onDelete();
-            }}
-            style={styles.menuItem}
-          >
+          <TouchableOpacity onPress={handleDeletePress} style={styles.menuItem}>
             <Ionicons name="trash-outline" size={14} color="#EF4444" />
             <Text style={[styles.menuItemText, { color: '#EF4444' }]}>
               Delete Request
@@ -205,6 +208,8 @@ export const StudioRequestCard: React.FC<StudioRequestCardProps> = ({
     </TouchableOpacity>
   );
 };
+
+export const StudioRequestCard = memo(StudioRequestCardComponent);
 
 const styles = StyleSheet.create({
   card: {

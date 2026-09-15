@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -6,11 +6,11 @@ import {
   Modal,
   TouchableOpacity,
   ScrollView,
-  Image,
-  SafeAreaView,
   Alert,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppDispatch, useAppSelector } from '@/store';
@@ -18,7 +18,6 @@ import {
   closeDetailModal,
   openEditModal,
   openDeleteModal,
-  StudioCustomRequest,
 } from '@/store/slices/studioSlice';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 
@@ -29,44 +28,49 @@ export const StudioRequestDetailModal: React.FC = () => {
   );
   const [activeImageIdx, setActiveImageIdx] = useState(0);
 
-  if (!req) return null;
-
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     dispatch(closeDetailModal());
-  };
+  }, [dispatch]);
 
-  const handleEdit = () => {
+  const handleEdit = useCallback(() => {
+    if (!req) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     dispatch(closeDetailModal());
     dispatch(openEditModal(req));
-  };
+  }, [dispatch, req]);
 
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
+    if (!req) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     dispatch(closeDetailModal());
     dispatch(openDeleteModal(req));
-  };
+  }, [dispatch, req]);
 
-  const handleAcceptBid = (bidId: string, vendorName: string, amount: number) => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert(
-      'Accept Artisan Quote',
-      `Would you like to accept the quote of ₦${amount.toLocaleString()} from ${vendorName} and fund escrow?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Accept & Lock Escrow',
-          onPress: () => {
-            Alert.alert(
-              'Escrow Funded',
-              `Success! ₦${amount.toLocaleString()} has been safely locked in Ethnikraft Escrow. ${vendorName} has been notified to begin production.`
-            );
+  const handleAcceptBid = useCallback(
+    (bidId: string, vendorName: string, amount: number) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert(
+        'Accept Artisan Quote',
+        `Would you like to accept the quote of ₦${amount.toLocaleString()} from ${vendorName} and fund escrow?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Accept & Lock Escrow',
+            onPress: () => {
+              Alert.alert(
+                'Escrow Funded',
+                `Success! ₦${amount.toLocaleString()} has been safely locked in Ethnikraft Escrow. ${vendorName} has been notified to begin production.`
+              );
+            },
           },
-        },
-      ]
-    );
-  };
+        ]
+      );
+    },
+    []
+  );
+
+  if (!req) return null;
 
   const images = req.inspirationImages || [];
   const statusColor =
@@ -85,7 +89,7 @@ export const StudioRequestDetailModal: React.FC = () => {
       presentationStyle="pageSheet"
       onRequestClose={handleClose}
     >
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
         {/* Header Bar */}
         <View style={styles.topBar}>
           <TouchableOpacity onPress={handleClose} style={styles.iconBtn}>
@@ -115,6 +119,8 @@ export const StudioRequestDetailModal: React.FC = () => {
                 <Image
                   source={{ uri: images[activeImageIdx] || images[0] }}
                   style={styles.mainImage}
+                  contentFit="cover"
+                  transition={200}
                 />
               </View>
 
@@ -136,7 +142,12 @@ export const StudioRequestDetailModal: React.FC = () => {
                         activeImageIdx === idx && styles.thumbWrapperActive,
                       ]}
                     >
-                      <Image source={{ uri: imgUri }} style={styles.thumbImage} />
+                      <Image
+                        source={{ uri: imgUri }}
+                        style={styles.thumbImage}
+                        contentFit="cover"
+                        transition={150}
+                      />
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
@@ -249,6 +260,8 @@ export const StudioRequestDetailModal: React.FC = () => {
                             'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
                         }}
                         style={styles.bidVendorAvatar}
+                        contentFit="cover"
+                        transition={150}
                       />
                       <View style={{ flex: 1 }}>
                         <View style={styles.bidVendorNameRow}>
@@ -261,7 +274,7 @@ export const StudioRequestDetailModal: React.FC = () => {
                             color={Colors.primary}
                           />
                         </View>
-                        {bid.vendor.rating && (
+                        {bid.vendor.rating ? (
                           <View style={styles.bidRatingRow}>
                             <Ionicons name="star" size={12} color="#EAB308" />
                             <Text style={styles.bidRatingText}>
@@ -273,7 +286,7 @@ export const StudioRequestDetailModal: React.FC = () => {
                               </Text>
                             )}
                           </View>
-                        )}
+                        ) : null}
                       </View>
 
                       <View style={styles.bidPriceCol}>

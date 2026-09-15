@@ -1,14 +1,14 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   StyleSheet,
   View,
   Text,
   Modal,
   TouchableOpacity,
-  SafeAreaView,
   Alert,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppDispatch, useAppSelector } from '@/store';
@@ -25,6 +25,8 @@ import {
   selectAllWizardVendors,
   clearWizardVendors,
   submitWizardRequest,
+  StudioImage,
+  StudioDetails,
 } from '@/store/slices/studioSlice';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 import { StudioStepCategory } from './StudioStepCategory';
@@ -32,8 +34,6 @@ import { StudioStepInspiration } from './StudioStepInspiration';
 import { StudioStepDetails } from './StudioStepDetails';
 import { StudioStepVendors } from './StudioStepVendors';
 import { StudioStepSuccess } from './StudioStepSuccess';
-
-const TOTAL_STEPS = 4;
 
 export const CustomStudioWizardModal: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -47,7 +47,7 @@ export const CustomStudioWizardModal: React.FC = () => {
     selectedVendorIds,
   } = useAppSelector((state) => state.studio.wizard);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (currentStep > 0 && currentStep < 4) {
       Alert.alert(
         'Discard Commission Draft?',
@@ -68,7 +68,52 @@ export const CustomStudioWizardModal: React.FC = () => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       dispatch(closeWizard());
     }
-  };
+  }, [currentStep, dispatch]);
+
+  const handleSelectCategory = useCallback(
+    (cat: string) => dispatch(setSelectedCategory(cat)),
+    [dispatch]
+  );
+  const handleSetStep = useCallback(
+    (step: number) => dispatch(setWizardStep(step)),
+    [dispatch]
+  );
+  const handleAddImage = useCallback(
+    (img: StudioImage) => dispatch(addWizardImage(img)),
+    [dispatch]
+  );
+  const handleRemoveImage = useCallback(
+    (idx: number) => dispatch(removeWizardImage(idx)),
+    [dispatch]
+  );
+  const handleClearImages = useCallback(
+    () => dispatch(clearWizardImages()),
+    [dispatch]
+  );
+  const handleUpdateDetails = useCallback(
+    (upd: Partial<StudioDetails>) => dispatch(updateWizardDetails(upd)),
+    [dispatch]
+  );
+  const handleSetVendorMode = useCallback(
+    (mode: 'BROADCAST' | 'DIRECT') => dispatch(setVendorSelectionMode(mode)),
+    [dispatch]
+  );
+  const handleToggleVendor = useCallback(
+    (id: string) => dispatch(toggleWizardVendor(id)),
+    [dispatch]
+  );
+  const handleSelectAllVendors = useCallback(
+    (ids: string[]) => dispatch(selectAllWizardVendors(ids)),
+    [dispatch]
+  );
+  const handleClearVendors = useCallback(
+    () => dispatch(clearWizardVendors()),
+    [dispatch]
+  );
+  const handleSubmitRequest = useCallback(
+    () => dispatch(submitWizardRequest()),
+    [dispatch]
+  );
 
   return (
     <Modal
@@ -77,7 +122,7 @@ export const CustomStudioWizardModal: React.FC = () => {
       presentationStyle="fullScreen"
       onRequestClose={handleClose}
     >
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
         {/* Top Header Bar */}
         <View style={styles.topBar}>
           <TouchableOpacity
@@ -118,8 +163,8 @@ export const CustomStudioWizardModal: React.FC = () => {
           {currentStep === 0 && (
             <StudioStepCategory
               selectedCategory={selectedCategory}
-              onSelectCategory={(cat) => dispatch(setSelectedCategory(cat))}
-              onNext={() => dispatch(setWizardStep(1))}
+              onSelectCategory={handleSelectCategory}
+              onNext={() => handleSetStep(1)}
             />
           )}
 
@@ -127,11 +172,11 @@ export const CustomStudioWizardModal: React.FC = () => {
             <StudioStepInspiration
               images={images}
               selectedCategory={selectedCategory}
-              onAddImage={(img) => dispatch(addWizardImage(img))}
-              onRemoveImage={(idx) => dispatch(removeWizardImage(idx))}
-              onClearImages={() => dispatch(clearWizardImages())}
-              onNext={() => dispatch(setWizardStep(2))}
-              onBack={() => dispatch(setWizardStep(0))}
+              onAddImage={handleAddImage}
+              onRemoveImage={handleRemoveImage}
+              onClearImages={handleClearImages}
+              onNext={() => handleSetStep(2)}
+              onBack={() => handleSetStep(0)}
             />
           )}
 
@@ -139,9 +184,9 @@ export const CustomStudioWizardModal: React.FC = () => {
             <StudioStepDetails
               details={details}
               selectedCategory={selectedCategory}
-              onUpdateDetails={(upd) => dispatch(updateWizardDetails(upd))}
-              onNext={() => dispatch(setWizardStep(3))}
-              onBack={() => dispatch(setWizardStep(1))}
+              onUpdateDetails={handleUpdateDetails}
+              onNext={() => handleSetStep(3)}
+              onBack={() => handleSetStep(1)}
             />
           )}
 
@@ -150,12 +195,12 @@ export const CustomStudioWizardModal: React.FC = () => {
               selectedCategory={selectedCategory}
               vendorSelectionMode={vendorSelectionMode}
               selectedVendorIds={selectedVendorIds}
-              onSetMode={(mode) => dispatch(setVendorSelectionMode(mode))}
-              onToggleVendor={(id) => dispatch(toggleWizardVendor(id))}
-              onSelectAll={(ids) => dispatch(selectAllWizardVendors(ids))}
-              onClearVendors={() => dispatch(clearWizardVendors())}
-              onSubmit={() => dispatch(submitWizardRequest())}
-              onBack={() => dispatch(setWizardStep(2))}
+              onSetMode={handleSetVendorMode}
+              onToggleVendor={handleToggleVendor}
+              onSelectAll={handleSelectAllVendors}
+              onClearVendors={handleClearVendors}
+              onSubmit={handleSubmitRequest}
+              onBack={() => handleSetStep(2)}
             />
           )}
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   TextInput,
   RefreshControl,
+  FlatList,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -49,7 +50,7 @@ export default function StudioScreen() {
 
   const [refreshing, setRefreshing] = React.useState(false);
 
-  const onRefresh = React.useCallback(() => {
+  const onRefresh = useCallback(() => {
     setRefreshing(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setTimeout(() => {
@@ -57,43 +58,68 @@ export default function StudioScreen() {
     }, 600);
   }, []);
 
-  const handleStartCommission = (category?: string) => {
+  const handleStartCommission = useCallback((category?: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     dispatch(openWizard(category));
-  };
+  }, [dispatch]);
 
-  const filteredRequests = requests.filter((r) => {
-    const matchesFilter =
-      activeFilter === 'ALL' || r.status === activeFilter;
-    const q = searchQuery.toLowerCase().trim();
-    const matchesSearch =
-      !q ||
-      r.title?.toLowerCase().includes(q) ||
-      r.description?.toLowerCase().includes(q) ||
-      r.categoryType?.toLowerCase().includes(q) ||
-      r.materialType?.toLowerCase().includes(q);
-    return matchesFilter && matchesSearch;
-  });
+  const handleOpenDetail = useCallback((req: StudioCustomRequest) => {
+    dispatch(openDetailModal(req));
+  }, [dispatch]);
 
-  // Calculate live stats
-  const openCount = requests.filter((r) => r.status === 'OPEN').length;
-  const inProgressCount = requests.filter((r) => r.status === 'CLOSED').length;
-  const completedCount = requests.filter((r) => r.status === 'COMPLETED').length;
+  const handleOpenEdit = useCallback((req: StudioCustomRequest) => {
+    dispatch(openEditModal(req));
+  }, [dispatch]);
 
-  return (
-    <View style={styles.container}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Colors.primary}
-            colors={[Colors.primary]}
-          />
-        }
-      >
+  const handleOpenDelete = useCallback((req: StudioCustomRequest) => {
+    dispatch(openDeleteModal(req));
+  }, [dispatch]);
+
+  const filteredRequests = useMemo(() => {
+    return requests.filter((r) => {
+      const matchesFilter =
+        activeFilter === 'ALL' || r.status === activeFilter;
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        r.title?.toLowerCase().includes(q) ||
+        r.description?.toLowerCase().includes(q) ||
+        r.categoryType?.toLowerCase().includes(q) ||
+        r.materialType?.toLowerCase().includes(q);
+      return matchesFilter && matchesSearch;
+    });
+  }, [requests, activeFilter, searchQuery]);
+
+  // Live stats calculation
+  const { openCount, inProgressCount, completedCount } = useMemo(() => {
+    let open = 0;
+    let inProgress = 0;
+    let completed = 0;
+    requests.forEach((r) => {
+      if (r.status === 'OPEN') open++;
+      else if (r.status === 'CLOSED') inProgress++;
+      else if (r.status === 'COMPLETED') completed++;
+    });
+    return { openCount: open, inProgressCount: inProgress, completedCount: completed };
+  }, [requests]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: StudioCustomRequest }) => (
+      <StudioRequestCard
+        request={item}
+        onPress={handleOpenDetail}
+        onEdit={handleOpenEdit}
+        onDelete={handleOpenDelete}
+      />
+    ),
+    [handleOpenDetail, handleOpenEdit, handleOpenDelete]
+  );
+
+  const keyExtractor = useCallback((item: StudioCustomRequest) => item.id, []);
+
+  const ListHeader = useMemo(
+    () => (
+      <View>
         {/* Luxury Hero Banner */}
         <View style={styles.heroBanner}>
           <View style={styles.heroIconCircle}>
@@ -235,43 +261,69 @@ export default function StudioScreen() {
             })}
           </ScrollView>
         </View>
+      </View>
+    ),
+    [
+      handleStartCommission,
+      openCount,
+      inProgressCount,
+      completedCount,
+      searchQuery,
+      dispatch,
+      activeFilter,
+      requests,
+    ]
+  );
 
-        {/* Requests Feed or Empty State */}
-        {filteredRequests.length > 0 ? (
-          <View style={styles.requestsFeed}>
-            {filteredRequests.map((req: StudioCustomRequest) => (
-              <StudioRequestCard
-                key={req.id}
-                request={req}
-                onPress={() => dispatch(openDetailModal(req))}
-                onEdit={() => dispatch(openEditModal(req))}
-                onDelete={() => dispatch(openDeleteModal(req))}
-              />
-            ))}
-          </View>
-        ) : (
-          <View style={styles.emptyCard}>
-            <View style={styles.emptyIconCircle}>
-              <Ionicons name="sparkles-outline" size={36} color={Colors.accentGold} />
-            </View>
-            <Text style={styles.emptyTitle}>
-              {searchQuery ? 'No matching requests found' : 'No Active Studio Requests'}
-            </Text>
-            <Text style={styles.emptyDesc}>
-              {searchQuery
-                ? `No requests match "${searchQuery}". Try adjusting your search query.`
-                : 'Commission personalized attire, jewelry, or artwork tailored to your exact measurements, fabrics, and occasion.'}
-            </Text>
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => handleStartCommission()}
-              style={styles.emptyBtn}
-            >
-              <Text style={styles.emptyBtnText}>Start First Commission</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </ScrollView>
+  const ListEmpty = useMemo(
+    () => (
+      <View style={styles.emptyCard}>
+        <View style={styles.emptyIconCircle}>
+          <Ionicons name="sparkles-outline" size={36} color={Colors.accentGold} />
+        </View>
+        <Text style={styles.emptyTitle}>
+          {searchQuery ? 'No matching requests found' : 'No Active Studio Requests'}
+        </Text>
+        <Text style={styles.emptyDesc}>
+          {searchQuery
+            ? `No requests match "${searchQuery}". Try adjusting your search query.`
+            : 'Commission personalized attire, jewelry, or artwork tailored to your exact measurements, fabrics, and occasion.'}
+        </Text>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => handleStartCommission()}
+          style={styles.emptyBtn}
+        >
+          <Text style={styles.emptyBtnText}>Start First Commission</Text>
+        </TouchableOpacity>
+      </View>
+    ),
+    [searchQuery, handleStartCommission]
+  );
+
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={filteredRequests}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        ListHeaderComponent={ListHeader}
+        ListEmptyComponent={ListEmpty}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        initialNumToRender={5}
+        maxToRenderPerBatch={7}
+        windowSize={5}
+        removeClippedSubviews={Platform.OS === 'android'}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
+          />
+        }
+      />
 
       {/* Floating Action Button (FAB) */}
       <TouchableOpacity
@@ -513,9 +565,6 @@ const styles = StyleSheet.create({
   },
   filterBadgeTextSelected: {
     color: '#FFFFFF',
-  },
-  requestsFeed: {
-    marginTop: Spacing.xs,
   },
   emptyCard: {
     backgroundColor: Colors.surface,

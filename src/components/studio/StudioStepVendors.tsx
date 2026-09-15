@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,9 +6,9 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  Image,
   Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
@@ -39,42 +39,51 @@ export const StudioStepVendors: React.FC<StudioStepVendorsProps> = ({
 }) => {
   const [search, setSearch] = useState('');
 
-  const relevantArtisans = MOCK_ARTISANS.filter((a) => {
-    const matchesCategory =
-      a.category.toUpperCase() === selectedCategory.toUpperCase() ||
-      selectedCategory === 'ALL' ||
-      MOCK_ARTISANS.length <= 3;
-    const matchesSearch =
-      !search ||
-      a.name.toLowerCase().includes(search.toLowerCase()) ||
-      a.specialty.toLowerCase().includes(search.toLowerCase()) ||
-      a.location.toLowerCase().includes(search.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  const relevantArtisans = useMemo(() => {
+    return MOCK_ARTISANS.filter((a) => {
+      const matchesCategory =
+        a.category.toUpperCase() === selectedCategory.toUpperCase() ||
+        selectedCategory === 'ALL' ||
+        MOCK_ARTISANS.length <= 3;
+      const q = search.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        a.name.toLowerCase().includes(q) ||
+        a.specialty.toLowerCase().includes(q) ||
+        a.location.toLowerCase().includes(q);
+      return matchesCategory && matchesSearch;
+    });
+  }, [selectedCategory, search]);
 
-  const handleModeChange = (mode: 'BROADCAST' | 'DIRECT') => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onSetMode(mode);
-  };
+  const handleModeChange = useCallback(
+    (mode: 'BROADCAST' | 'DIRECT') => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      onSetMode(mode);
+    },
+    [onSetMode]
+  );
 
-  const handleSelectAllToggle = () => {
+  const handleSelectAllToggle = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (selectedVendorIds.length === relevantArtisans.length && relevantArtisans.length > 0) {
       onClearVendors();
     } else {
       onSelectAll(relevantArtisans.map((a) => a.id));
     }
-  };
+  }, [onClearVendors, onSelectAll, relevantArtisans, selectedVendorIds.length]);
 
-  const handleVendorPress = (id: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onToggleVendor(id);
-  };
+  const handleVendorPress = useCallback(
+    (id: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      onToggleVendor(id);
+    },
+    [onToggleVendor]
+  );
 
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     onSubmit();
-  };
+  }, [onSubmit]);
 
   return (
     <View style={styles.container}>
@@ -121,7 +130,11 @@ export const StudioStepVendors: React.FC<StudioStepVendorsProps> = ({
             >
               Public Broadcast
             </Text>
-            {vendorSelectionMode === 'BROADCAST' && <View style={styles.recPill}><Text style={styles.recPillText}>RECOMMENDED</Text></View>}
+            {vendorSelectionMode === 'BROADCAST' && (
+              <View style={styles.recPill}>
+                <Text style={styles.recPillText}>RECOMMENDED</Text>
+              </View>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -195,7 +208,12 @@ export const StudioStepVendors: React.FC<StudioStepVendorsProps> = ({
           <View style={styles.directSection}>
             {/* Search Box */}
             <View style={styles.searchContainer}>
-              <Ionicons name="search" size={16} color={Colors.textMuted} style={styles.searchIcon} />
+              <Ionicons
+                name="search"
+                size={16}
+                color={Colors.textMuted}
+                style={styles.searchIcon}
+              />
               <TextInput
                 value={search}
                 onChangeText={setSearch}
@@ -238,6 +256,8 @@ export const StudioStepVendors: React.FC<StudioStepVendorsProps> = ({
                     <Image
                       source={{ uri: artisan.avatar }}
                       style={styles.artisanAvatar}
+                      contentFit="cover"
+                      transition={150}
                     />
 
                     <View style={styles.artisanInfo}>

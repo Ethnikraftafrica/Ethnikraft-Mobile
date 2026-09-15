@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -42,46 +42,54 @@ export const StudioStepDetails: React.FC<StudioStepDetailsProps> = ({
   onNext,
   onBack,
 }) => {
-  const categoryConfig =
-    CATEGORY_CONFIG[selectedCategory.toUpperCase()] || CATEGORY_CONFIG.WEARS;
-  const materialGroups =
-    CATEGORY_MATERIALS[selectedCategory.toUpperCase()] || CATEGORY_MATERIALS.WEARS;
+  const categoryConfig = useMemo(
+    () => CATEGORY_CONFIG[selectedCategory.toUpperCase()] || CATEGORY_CONFIG.WEARS,
+    [selectedCategory]
+  );
+  const materialGroups = useMemo(
+    () => CATEGORY_MATERIALS[selectedCategory.toUpperCase()] || CATEGORY_MATERIALS.WEARS,
+    [selectedCategory]
+  );
 
-  const handleWeeksSelect = (weeks: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const weeksNum = parseInt(weeks) || 2;
-    const targetDate = new Date();
-    targetDate.setDate(targetDate.getDate() + weeksNum * 7);
-    const isoDate = targetDate.toISOString().split('T')[0];
-    onUpdateDetails({
-      deliveryWeeks: weeks,
-      deliveryDate: isoDate,
-    });
-  };
+  const handleWeeksSelect = useCallback(
+    (weeks: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const weeksNum = parseInt(weeks) || 2;
+      const targetDate = new Date();
+      targetDate.setDate(targetDate.getDate() + weeksNum * 7);
+      const isoDate = targetDate.toISOString().split('T')[0];
+      onUpdateDetails({
+        deliveryWeeks: weeks,
+        deliveryDate: isoDate,
+      });
+    },
+    [onUpdateDetails]
+  );
 
-  const handleBudgetQuickAdd = (delta: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const currentBudget = parseInt(details.budget.replace(/[^0-9]/g, '')) || 20000;
-    const newBudget = Math.max(5000, currentBudget + delta);
-    onUpdateDetails({ budget: newBudget.toString() });
-  };
+  const handleBudgetQuickAdd = useCallback(
+    (delta: number) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const currentBudget = parseInt(details.budget.replace(/[^0-9]/g, '')) || 20000;
+      const newBudget = Math.max(5000, currentBudget + delta);
+      onUpdateDetails({ budget: newBudget.toString() });
+    },
+    [details.budget, onUpdateDetails]
+  );
 
-  const handleQuantityChange = (delta: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const current = parseInt(details.quantity) || 1;
-    const updated = Math.max(1, current + delta);
-    onUpdateDetails({ quantity: updated.toString() });
-  };
+  const handleQuantityChange = useCallback(
+    (delta: number) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const current = parseInt(details.quantity) || 1;
+      const updated = Math.max(1, current + delta);
+      onUpdateDetails({ quantity: updated.toString() });
+    },
+    [details.quantity, onUpdateDetails]
+  );
 
-  const formattedBudget = () => {
-    const num = parseInt(details.budget.replace(/[^0-9]/g, '')) || 0;
-    return `₦${num.toLocaleString()}`;
-  };
-
-  const handleContinue = () => {
+  const handleContinue = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onNext();
-  };
+  }, [onNext]);
 
   return (
     <View style={styles.container}>

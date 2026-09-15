@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
   ScrollView,
-  Image,
   Modal,
   Alert,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
@@ -37,7 +38,7 @@ export const StudioStepInspiration: React.FC<StudioStepInspirationProps> = ({
 }) => {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
-  const handlePickFromGallery = async () => {
+  const handlePickFromGallery = useCallback(async () => {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
@@ -49,7 +50,7 @@ export const StudioStepInspiration: React.FC<StudioStepInspirationProps> = ({
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: false,
         quality: 0.8,
         allowsMultipleSelection: true,
@@ -69,9 +70,9 @@ export const StudioStepInspiration: React.FC<StudioStepInspirationProps> = ({
     } catch {
       Alert.alert('Error', 'Could not open photo gallery.');
     }
-  };
+  }, [onAddImage]);
 
-  const handleTakePhoto = async () => {
+  const handleTakePhoto = useCallback(async () => {
     try {
       const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
       if (!permissionResult.granted) {
@@ -97,21 +98,24 @@ export const StudioStepInspiration: React.FC<StudioStepInspirationProps> = ({
     } catch {
       Alert.alert('Error', 'Could not open camera.');
     }
-  };
+  }, [onAddImage]);
 
-  const handleRemove = (index: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onRemoveImage(index);
-    if (lightboxIndex !== null) {
-      if (index === lightboxIndex) {
-        setLightboxIndex(images.length - 1 > 0 ? Math.max(0, index - 1) : null);
-      } else if (index < lightboxIndex) {
-        setLightboxIndex(lightboxIndex - 1);
+  const handleRemove = useCallback(
+    (index: number) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      onRemoveImage(index);
+      if (lightboxIndex !== null) {
+        if (index === lightboxIndex) {
+          setLightboxIndex(images.length - 1 > 0 ? Math.max(0, index - 1) : null);
+        } else if (index < lightboxIndex) {
+          setLightboxIndex(lightboxIndex - 1);
+        }
       }
-    }
-  };
+    },
+    [images.length, lightboxIndex, onRemoveImage]
+  );
 
-  const handleContinue = () => {
+  const handleContinue = useCallback(() => {
     if (images.length === 0) {
       Alert.alert(
         'Inspiration Photo Recommended',
@@ -131,7 +135,7 @@ export const StudioStepInspiration: React.FC<StudioStepInspirationProps> = ({
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onNext();
-  };
+  }, [images.length, onNext]);
 
   return (
     <View style={styles.container}>
@@ -206,7 +210,12 @@ export const StudioStepInspiration: React.FC<StudioStepInspirationProps> = ({
                     }}
                     style={styles.imageTile}
                   >
-                    <Image source={{ uri: img.uri }} style={styles.thumbnail} />
+                    <Image
+                      source={{ uri: img.uri }}
+                      style={styles.thumbnail}
+                      contentFit="cover"
+                      transition={150}
+                    />
                     <View style={styles.zoomPill}>
                       <Ionicons name="expand" size={12} color="#FFFFFF" />
                     </View>
@@ -259,7 +268,7 @@ export const StudioStepInspiration: React.FC<StudioStepInspirationProps> = ({
           animationType="fade"
           onRequestClose={() => setLightboxIndex(null)}
         >
-          <View style={styles.lightboxContainer}>
+          <SafeAreaView style={styles.lightboxContainer} edges={['top', 'bottom', 'left', 'right']}>
             {/* Header */}
             <View style={styles.lightboxHeader}>
               <Text style={styles.lightboxIndexText}>
@@ -278,7 +287,8 @@ export const StudioStepInspiration: React.FC<StudioStepInspirationProps> = ({
               <Image
                 source={{ uri: images[lightboxIndex].uri }}
                 style={styles.lightboxImage}
-                resizeMode="contain"
+                contentFit="contain"
+                transition={200}
               />
             </View>
 
@@ -326,7 +336,7 @@ export const StudioStepInspiration: React.FC<StudioStepInspirationProps> = ({
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
+          </SafeAreaView>
         </Modal>
       )}
 
@@ -585,9 +595,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 54 : 20,
     paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.sm,
+    paddingVertical: Spacing.sm,
     backgroundColor: 'rgba(0,0,0,0.7)',
   },
   lightboxIndexText: {
