@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,14 +10,11 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { useAppDispatch } from '@/store';
-import { syncFavoritesCount } from '@/store/slices/profileSlice';
-import {
-  useGetFavoritesQuery,
-  useRemoveFromFavoritesMutation,
-  FavoriteItem,
-} from '@/store/api/profileApi';
+import { useAppSelector } from '@/store';
+import { useFavorites } from '@/hooks/useFavorites';
+import { formatPrice } from '@/utils/price';
 import { Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 
 interface Props {
@@ -25,71 +22,28 @@ interface Props {
   onClose: () => void;
 }
 
-const FALLBACK_FAVORITES = [
-  {
-    id: 'fav_1',
-    productId: 'prod_1',
-    product: {
-      id: 'prod_1',
-      name: 'Royal Ashanti Kente Cloth (Ahenfie)',
-      productCategory: 'WEARS',
-      price: 85000,
-      artisan: 'Master Kwame Mensah',
-      description: 'Handcrafted luxury Ghanaian silk',
-      mainImage: 'https://images.unsplash.com/photo-1590736969955-71cc94801759?q=80&w=800',
-      vendor: {
-        id: 'v_1',
-        businessName: 'Ashanti Heritage Looms',
-        rating: 4.9,
-      },
-    },
-  },
-  {
-    id: 'fav_2',
-    productId: 'prod_2',
-    product: {
-      id: 'prod_2',
-      name: 'Hand-Tooled Fulani Leather Satchel',
-      productCategory: 'BAGS',
-      price: 42000,
-      artisan: 'Ogunlesi Guild',
-      description: 'Vegetable-tanned full-grain leather',
-      mainImage: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?q=80&w=800',
-      vendor: {
-        id: 'v_2',
-        businessName: 'Oyo Leather Guild',
-        rating: 4.8,
-      },
-    },
-  },
-];
-
 export default function FavoritesModal({ visible, onClose }: Props) {
-  const dispatch = useAppDispatch();
-  const { data: remoteFavorites, isLoading, refetch } = useGetFavoritesQuery(undefined, {
-    skip: !visible,
-  });
-  const [removeFromFavoritesApi] = useRemoveFromFavoritesMutation();
+  const router = useRouter();
+  const { code: currencyCode, rate: exchangeRate } = useAppSelector((state) => state.currency);
+  const { favorites, isLoading, toggleFavorite } = useFavorites();
 
-  const favoritesList = (remoteFavorites && remoteFavorites.length > 0)
-    ? remoteFavorites
-    : (remoteFavorites !== undefined ? [] : FALLBACK_FAVORITES);
-
-  // Sync favorites count to Redux store
-  useEffect(() => {
-    if (remoteFavorites) {
-      dispatch(syncFavoritesCount(remoteFavorites.length));
-    }
-  }, [remoteFavorites, dispatch]);
-
-  const handleRemove = async (productId: string, favoriteId: string) => {
+  const handleRemove = async (productId: string) => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      await removeFromFavoritesApi(productId).unwrap();
+      await toggleFavorite(productId);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e) {
       console.warn('Failed to remove favorite from server', e);
     }
+  };
+
+  const handleProductPress = (productId: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onClose();
+    router.push({
+      pathname: '/product/[id]',
+      params: { id: productId },
+    });
   };
 
   return (
@@ -107,7 +61,7 @@ export default function FavoritesModal({ visible, onClose }: Props) {
             <View>
               <Text style={styles.modalTitle}>Saved Favorites</Text>
               <Text style={styles.modalSub}>
-                {favoritesList.length} artisan masterpiece{favoritesList.length === 1 ? '' : 's'} saved
+                {favorites.length} artisan masterpiece{favorites.length === 1 ? '' : 's'} saved
               </Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn} activeOpacity={0.7}>
@@ -116,12 +70,12 @@ export default function FavoritesModal({ visible, onClose }: Props) {
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-            {isLoading && !remoteFavorites ? (
+            {isLoading && favorites.length === 0 ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color="#C46C27" />
                 <Text style={styles.loadingText}>Loading wishlist...</Text>
               </View>
-            ) : favoritesList.length === 0 ? (
+            ) : favorites.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <Ionicons name="heart-dislike-outline" size={48} color="#C46C27" style={{ marginBottom: 12 }} />
                 <Text style={styles.emptyTitle}>Your Wishlist is Empty</Text>
@@ -130,11 +84,10 @@ export default function FavoritesModal({ visible, onClose }: Props) {
                 </Text>
               </View>
             ) : (
-              favoritesList.map((item) => {
+              favorites.map((item) => {
                 const prod = (item as any).product || item;
-                const formattedPrice = typeof prod.price === 'number'
-                  ? prod.price.toLocaleString()
-                  : Number(prod.price || 0).toLocaleString();
+                const productId = item.productId || prod.id;
+                const formattedPrice = formatPrice(prod.price, currencyCode, exchangeRate);
 
                 const imageSource = prod.mainImage
                   ? { uri: prod.mainImage }
@@ -143,7 +96,12 @@ export default function FavoritesModal({ visible, onClose }: Props) {
                 const vendorName = prod.vendor?.businessName || prod.artisan || 'Ethnikraft Artisan';
 
                 return (
-                  <View key={item.id} style={[styles.productCard, Shadows.sm]}>
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[styles.productCard, Shadows.sm]}
+                    activeOpacity={0.92}
+                    onPress={() => handleProductPress(productId)}
+                  >
                     <Image
                       source={imageSource}
                       style={styles.productImage}
@@ -157,7 +115,10 @@ export default function FavoritesModal({ visible, onClose }: Props) {
                           <Text style={styles.categoryText}>{prod.productCategory || 'CRAFT'}</Text>
                         </View>
                         <TouchableOpacity
-                          onPress={() => handleRemove(item.productId || prod.id, item.id)}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            handleRemove(productId);
+                          }}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
                           <Ionicons name="heart" size={18} color="#DC2626" />
@@ -170,23 +131,23 @@ export default function FavoritesModal({ visible, onClose }: Props) {
                       <Text style={styles.artisanName}>
                         By {vendorName}
                       </Text>
-                      <Text style={styles.productPrice}>₦{formattedPrice}</Text>
+                      <Text style={styles.productPrice}>{formattedPrice}</Text>
 
                       <View style={styles.cardActions}>
                         <TouchableOpacity
                           style={styles.addBagBtn}
-                          onPress={() => {
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                            onClose();
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            handleProductPress(productId);
                           }}
                           activeOpacity={0.85}
                         >
                           <Ionicons name="bag-handle-outline" size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
-                          <Text style={styles.addBagText}>Add to Bag</Text>
+                          <Text style={styles.addBagText}>View Details</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })
             )}

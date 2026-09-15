@@ -26,6 +26,7 @@ import { AuthPromptModal } from '@/components/common/AuthPromptModal';
 import { ProductDetailSkeleton } from '@/components/common/Skeletons';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { addRecentlyViewed } from '@/store/slices/profileSlice';
+import { useFavorites } from '@/hooks/useFavorites';
 import { formatPrice } from '@/utils/price';
 import { ProductSizeChart, detectCategory } from '@/components/products/ProductSizeChart';
 import { ProductSpecifications } from '@/components/products/ProductSpecifications';
@@ -43,22 +44,17 @@ const COLOR_MAP: Record<string, string> = {
   blue: '#002BFF',
   gold: '#E8BA7A',
   gray: '#808080',
-  grey: '#808080',
-  magenta: '#E6008B',
-  maroon: '#6B0000',
-  brown: '#5C381E',
-  cyan: '#00E5FF',
-  green: '#00873E',
+  green: '#1B5E20',
+  navy: '#0A192F',
+  pink: '#E91E63',
+  red: '#B71C1C',
+  silver: '#C0C0C0',
   white: '#FFFFFF',
-  red: '#D32F2F',
-  yellow: '#FFB300',
-  tan: '#D2B48C',
-  natural: '#EED9C4',
-  orange: '#FFA500',
-  purple: '#800080',
-  indigo: '#4B0082',
-  beige: '#F5F5DC',
-  terracotta: '#CC4E33',
+  yellow: '#FBC02D',
+  indigo: '#3F51B5',
+  bronze: '#CD7F32',
+  terracotta: '#E07A5F',
+  ebony: '#222222',
 };
 
 type DetailTab = 'overview' | 'specs' | 'size_chart' | 'story' | 'shipping' | 'reviews';
@@ -70,13 +66,13 @@ export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const { code: currencyCode, rate: exchangeRate } = useAppSelector((state) => state.currency);
+  const { isFavorited, toggleFavorite } = useFavorites();
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<DetailTab>('overview');
-  const [isWishlisted, setIsWishlisted] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isNotified, setIsNotified] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -251,9 +247,15 @@ export default function ProductDetailScreen() {
     }
   };
 
-  const handleWishlistToggle = () => {
+  const isWishlisted = isFavorited(product?.id || id);
+
+  const handleWishlistToggle = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setIsWishlisted(!isWishlisted);
+    if (!isAuthenticated) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+    await toggleFavorite(product?.id || id, () => setIsAuthModalOpen(true));
   };
 
   const handleQuantityChange = (delta: number) => {

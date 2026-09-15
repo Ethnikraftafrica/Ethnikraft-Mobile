@@ -29,6 +29,8 @@ import { ProductGridSkeleton } from '@/components/common/Skeletons';
 import { ProductFilterModal, FilterState } from '@/components/products/ProductFilterModal';
 import { ProductSortModal, SortOption } from '@/components/products/ProductSortModal';
 import { AuthPromptModal } from '@/components/common/AuthPromptModal';
+import FavoritesModal from '@/components/profile/FavoritesModal';
+import { useFavorites } from '@/hooks/useFavorites';
 import { Colors, FontFamily, Radius, Shadows, Spacing } from '@/constants/theme';
 import { useAppSelector } from '@/store';
 
@@ -134,7 +136,8 @@ export default function ExploreScreen() {
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isSortModalOpen, setIsSortModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [wishlistCount, setWishlistCount] = useState(0);
+  const [showFavoritesModal, setShowFavoritesModal] = useState(false);
+  const { favoritesCount } = useFavorites();
 
   // Pagination & Refresh
   const [page, setPage] = useState(1);
@@ -398,10 +401,6 @@ export default function ExploreScreen() {
     setPage(1);
   };
 
-  const handleWishlistToggle = (_product: Product, isNowWishlisted: boolean) => {
-    setWishlistCount((prev) => (isNowWishlisted ? prev + 1 : Math.max(0, prev - 1)));
-  };
-
   const activeFilterCount =
     (filters.category !== 'ALL' ? 1 : 0) +
     (filters.pricePreset !== 'all' ? 1 : 0) +
@@ -445,13 +444,17 @@ export default function ExploreScreen() {
               style={styles.headerActionBtn}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                if (!isAuthenticated) setIsAuthModalOpen(true);
+                if (!isAuthenticated) {
+                  setIsAuthModalOpen(true);
+                } else {
+                  setShowFavoritesModal(true);
+                }
               }}
             >
               <Ionicons name="heart-outline" size={19} color="#1C0D05" />
-              {wishlistCount > 0 && (
+              {favoritesCount > 0 && (
                 <View style={styles.headerBadge}>
-                  <Text style={styles.headerBadgeText}>{wishlistCount}</Text>
+                  <Text style={styles.headerBadgeText}>{favoritesCount}</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -621,7 +624,6 @@ export default function ExploreScreen() {
         renderItem={({ item }) => (
           <ProductCard
             product={item}
-            onToggleWishlist={handleWishlistToggle}
             onAddToCart={(prod) => {
               if (!isAuthenticated) setIsAuthModalOpen(true);
             }}
@@ -690,6 +692,11 @@ export default function ExploreScreen() {
       <AuthPromptModal
         visible={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
+      />
+
+      <FavoritesModal
+        visible={showFavoritesModal}
+        onClose={() => setShowFavoritesModal(false)}
       />
     </View>
   );

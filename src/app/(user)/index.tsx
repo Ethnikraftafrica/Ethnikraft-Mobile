@@ -24,6 +24,7 @@ import { RoleSwitchBanner } from '@/components/common/RoleSwitchBanner';
 import { ProductRailSkeleton, CategoryRailSkeleton } from '@/components/common/Skeletons';
 import { Colors, FontFamily, Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useAppSelector } from '@/store';
+import { useFavorites } from '@/hooks/useFavorites';
 import { formatPrice } from '@/utils/price';
 import {
   useGetProductsQuery,
@@ -264,12 +265,12 @@ export default function UserHomeScreen() {
   const router = useRouter();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const { code: currencyCode, rate: exchangeRate } = useAppSelector((state) => state.currency);
+  const { isFavorited, toggleFavorite } = useFavorites();
 
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [isCartExpanded, setIsCartExpanded] = useState(false);
-  const [favorites, setFavorites] = useState<Record<string, boolean>>({});
   const cartFabRef = useRef<CartFloatingButtonRef>(null);
 
   // ─── LIVE RTK QUERY HOOKS ──────────────────────────────────
@@ -462,11 +463,6 @@ export default function UserHomeScreen() {
     []
   );
 
-  const toggleFavorite = (id: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setFavorites((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
-
   // ─── REUSABLE SECTION SUBCOMPONENTS ─────────────────────────
 
   /**
@@ -506,7 +502,7 @@ export default function UserHomeScreen() {
             contentContainerStyle={styles.railCardsScroll}
           >
             {items.map((prod) => {
-              const isFav = !!favorites[prod.id];
+              const isFav = isFavorited(prod.id);
               const brandName = prod.vendor?.businessName || prod.createdBy || 'Ethnikraft';
               const ratingScore = prod.rating || 4.8;
               const reviewsCount = prod.reviewCount || 12;
@@ -546,14 +542,14 @@ export default function UserHomeScreen() {
                       style={styles.railFavBtn}
                       onPress={(e) => {
                         e.stopPropagation();
-                        toggleFavorite(prod.id);
+                        toggleFavorite(prod.id, () => setIsAuthModalOpen(true));
                       }}
                       activeOpacity={0.8}
                     >
                       <Ionicons
                         name={isFav ? 'heart' : 'heart-outline'}
                         size={15}
-                        color={isFav ? '#D96225' : '#221208'}
+                        color={isFav ? '#DC2626' : '#221208'}
                       />
                     </TouchableOpacity>
                   </View>

@@ -14,6 +14,7 @@ import * as Haptics from 'expo-haptics';
 import { useAppSelector } from '@/store';
 import { formatPrice } from '@/utils/price';
 import { Product } from '@/store/api/productApi';
+import { useFavorites } from '@/hooks/useFavorites';
 import { Colors, FontFamily, Radius, Shadows, Spacing } from '@/constants/theme';
 import { Shimmer } from '@/components/common/Shimmer';
 
@@ -35,7 +36,8 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
 }) => {
   const router = useRouter();
   const { code: currencyCode, rate: exchangeRate } = useAppSelector((state) => state.currency);
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  const { isFavorited, toggleFavorite } = useFavorites();
+  const favorited = isFavorited(product.id);
   const [imageLoaded, setImageLoaded] = useState(false);
   const heartScale = useRef(new Animated.Value(1)).current;
 
@@ -47,11 +49,9 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
     });
   };
 
-  const handleWishlistToggle = (e: any) => {
+  const handleWishlistToggle = async (e: any) => {
     e.stopPropagation();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const nextState = !isWishlisted;
-    setIsWishlisted(nextState);
 
     Animated.sequence([
       Animated.spring(heartScale, {
@@ -67,7 +67,11 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
       }),
     ]).start();
 
-    onToggleWishlist?.(product, nextState);
+    if (onToggleWishlist) {
+      onToggleWishlist(product, !favorited);
+    } else {
+      await toggleFavorite(product.id);
+    }
   };
 
   const handleActionPress = (e: any) => {
@@ -139,9 +143,9 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
           >
             <Animated.View style={{ transform: [{ scale: heartScale }] }}>
               <Ionicons
-                name={isWishlisted ? 'heart' : 'heart-outline'}
+                name={favorited ? 'heart' : 'heart-outline'}
                 size={17}
-                color={isWishlisted ? '#C46C27' : '#7A6250'}
+                color={favorited ? '#DC2626' : '#7A6250'}
               />
             </Animated.View>
           </TouchableOpacity>
