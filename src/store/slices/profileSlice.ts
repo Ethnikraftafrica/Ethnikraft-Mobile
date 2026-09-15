@@ -57,7 +57,7 @@ export interface UserProfileDetails {
 
 export interface SavedPaymentCard {
   id: string;
-  cardType: 'mastercard' | 'visa' | 'verve';
+  cardType: 'mastercard' | 'visa' | 'verve' | 'amex';
   bankName: string;
   cardNumberMasked: string;
   last4: string;

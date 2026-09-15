@@ -27,6 +27,37 @@ interface Props {
   onClose: () => void;
 }
 
+export type CardScheme = 'verve' | 'visa' | 'mastercard' | 'amex';
+
+export function detectCardScheme(number: string): CardScheme {
+  const clean = number.replace(/\D/g, '');
+  if (!clean) return 'mastercard';
+
+  // Verve prefix: 5060-5079, 6500, 506, 507, 650
+  if (
+    clean.startsWith('506') ||
+    clean.startsWith('507') ||
+    clean.startsWith('650') ||
+    /^50[67]\d/.test(clean) ||
+    /^6500/.test(clean)
+  ) {
+    return 'verve';
+  }
+
+  // Visa: starts with 4
+  if (clean.startsWith('4')) {
+    return 'visa';
+  }
+
+  // Amex: starts with 34 or 37
+  if (/^3[47]/.test(clean)) {
+    return 'amex';
+  }
+
+  // Mastercard: 51-55 or 2221-2720
+  return 'mastercard';
+}
+
 export default function PaymentMethodsModal({ visible, onClose }: Props) {
   const dispatch = useAppDispatch();
   const { savedCards } = useAppSelector((state) => state.profile);
@@ -39,6 +70,8 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
   const [bankName, setBankName] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
+  const activeScheme = detectCardScheme(cardNumber);
+
   const resetForm = () => {
     setCardNumber('');
     setCardholderName('');
@@ -50,9 +83,21 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
   };
 
   const handleCardNumberChange = (text: string) => {
-    // Format with spaces every 4 digits
-    const cleaned = text.replace(/\D/g, '').slice(0, 16);
-    const formatted = cleaned.replace(/(\d{4})(?=\d)/g, '$1 ');
+    const raw = text.replace(/\D/g, '');
+    const scheme = detectCardScheme(raw);
+    const maxLen = scheme === 'verve' ? 19 : scheme === 'amex' ? 15 : 16;
+    const trimmed = raw.slice(0, maxLen);
+
+    let formatted = '';
+    if (scheme === 'amex') {
+      const p1 = trimmed.slice(0, 4);
+      const p2 = trimmed.slice(4, 10);
+      const p3 = trimmed.slice(10, 15);
+      formatted = [p1, p2, p3].filter(Boolean).join(' ');
+    } else {
+      formatted = trimmed.replace(/(\d{4})(?=\d)/g, '$1 ');
+    }
+
     setCardNumber(formatted);
   };
 
@@ -67,10 +112,26 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
 
   const handleSaveCard = () => {
     const rawNumber = cardNumber.replace(/\s/g, '');
-    if (rawNumber.length < 16) {
-      setFormError('Please enter a valid 16-digit card number.');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      return;
+    const scheme = detectCardScheme(rawNumber);
+
+    if (scheme === 'verve') {
+      if (rawNumber.length < 16 || rawNumber.length > 19) {
+        setFormError('Please enter a valid 16 to 19-digit Verve card number.');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        return;
+      }
+    } else if (scheme === 'amex') {
+      if (rawNumber.length < 15) {
+        setFormError('Please enter a valid 15-digit American Express card number.');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        return;
+      }
+    } else {
+      if (rawNumber.length < 16) {
+        setFormError(`Please enter a valid 16-digit ${scheme === 'visa' ? 'Visa' : 'Mastercard'} number.`);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        return;
+      }
     }
 
     if (!cardholderName.trim()) {
@@ -86,8 +147,15 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
       return;
     }
 
-    if (cvv.length < 3) {
-      setFormError('Please enter a valid 3-digit CVV.');
+    const monthNum = parseInt(expMonth, 10);
+    if (monthNum < 1 || monthNum > 12) {
+      setFormError('Expiry month must be between 01 and 12.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      return;
+    }
+
+    if (cvv.length < (scheme === 'amex' ? 4 : 3)) {
+      setFormError(`Please enter a valid ${scheme === 'amex' ? '4-digit' : '3-digit'} CVV.`);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
@@ -95,15 +163,23 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
     setFormError(null);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    const firstDigit = rawNumber.charAt(0);
-    const cardType = firstDigit === '4' ? 'visa' : 'mastercard';
     const last4 = rawNumber.slice(-4);
-    const masked = `${rawNumber.slice(0, 4)} ${rawNumber.slice(4, 6)}•• •••• ${last4}`;
+    const first4 = rawNumber.slice(0, 4);
+    const masked = `${first4} •••• •••• ${last4}`;
+
+    const defaultBank =
+      scheme === 'verve'
+        ? 'First Bank'
+        : scheme === 'visa'
+        ? 'GTBank'
+        : scheme === 'amex'
+        ? 'Amex Direct'
+        : 'Access Bank';
 
     dispatch(
       addPaymentCard({
-        cardType,
-        bankName: bankName.trim() || (cardType === 'visa' ? 'GTBank' : 'Access Bank'),
+        cardType: scheme,
+        bankName: bankName.trim() || defaultBank,
         cardNumberMasked: masked,
         last4,
         expiryMonth: expMonth,
@@ -134,6 +210,20 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
   const handleSetDefault = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     dispatch(setDefaultPaymentCard(id));
+  };
+
+  const getSchemeBadge = (type: CardScheme) => {
+    switch (type) {
+      case 'verve':
+        return { label: 'VERVE', color: '#047857', bg: '#D1FAE5' };
+      case 'visa':
+        return { label: 'VISA', color: '#1E40AF', bg: '#DBEAFE' };
+      case 'amex':
+        return { label: 'AMEX', color: '#0369A1', bg: '#E0F2FE' };
+      case 'mastercard':
+      default:
+        return { label: 'MASTERCARD', color: '#B91C1C', bg: '#FEE2E2' };
+    }
   };
 
   return (
@@ -171,6 +261,25 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+              {/* Accepted Cards Supported Banner */}
+              <View style={styles.acceptedBanner}>
+                <Text style={styles.acceptedText}>ACCEPTED CARDS:</Text>
+                <View style={styles.badgeRow}>
+                  <View style={[styles.schemeMiniBadge, { backgroundColor: '#D1FAE5' }]}>
+                    <Text style={[styles.schemeMiniText, { color: '#047857' }]}>Verve</Text>
+                  </View>
+                  <View style={[styles.schemeMiniBadge, { backgroundColor: '#DBEAFE' }]}>
+                    <Text style={[styles.schemeMiniText, { color: '#1E40AF' }]}>Visa</Text>
+                  </View>
+                  <View style={[styles.schemeMiniBadge, { backgroundColor: '#FEE2E2' }]}>
+                    <Text style={[styles.schemeMiniText, { color: '#B91C1C' }]}>Mastercard</Text>
+                  </View>
+                  <View style={[styles.schemeMiniBadge, { backgroundColor: '#E0F2FE' }]}>
+                    <Text style={[styles.schemeMiniText, { color: '#0369A1' }]}>Amex</Text>
+                  </View>
+                </View>
+              </View>
+
               {!isAddingNew ? (
                 <>
                   {/* Add New Card Button */}
@@ -179,6 +288,7 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
                     onPress={() => {
                       Haptics.selectionAsync();
                       setIsAddingNew(true);
+                      setFormError(null);
                     }}
                     activeOpacity={0.85}
                   >
@@ -186,9 +296,20 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
                     <Text style={styles.addNewBtnText}>Add New Payment Card</Text>
                   </TouchableOpacity>
 
+                  {/* Empty State */}
+                  {savedCards.length === 0 && (
+                    <View style={styles.emptyContainer}>
+                      <Ionicons name="card-outline" size={42} color="#D1C3B2" />
+                      <Text style={styles.emptyTitle}>No Payment Cards Saved</Text>
+                      <Text style={styles.emptySub}>
+                        Save your Verve, Mastercard, or Visa card for instant, secure checkout on bespoke commissions.
+                      </Text>
+                    </View>
+                  )}
+
                   {/* Cards List */}
                   {savedCards.map((card) => {
-                    const isMaster = card.cardType === 'mastercard';
+                    const badge = getSchemeBadge(card.cardType as CardScheme);
                     return (
                       <View
                         key={card.id}
@@ -199,12 +320,9 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
                       >
                         <View style={styles.cardHeader}>
                           <View style={styles.bankRow}>
-                            <Ionicons
-                              name="card"
-                              size={18}
-                              color={isMaster ? '#EB001B' : '#1A1F71'}
-                              style={{ marginRight: 6 }}
-                            />
+                            <View style={[styles.schemeBadge, { backgroundColor: badge.bg }]}>
+                              <Text style={[styles.schemeBadgeText, { color: badge.color }]}>{badge.label}</Text>
+                            </View>
                             <Text style={styles.bankText}>{card.bankName}</Text>
                           </View>
 
@@ -258,7 +376,16 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
               ) : (
                 /* Add New Card Form */
                 <View style={styles.formCard}>
-                  <Text style={styles.formHeading}>New Payment Card</Text>
+                  <View style={styles.formHeadingRow}>
+                    <Text style={styles.formHeading}>New Payment Card</Text>
+                    {cardNumber.trim().length > 0 && (
+                      <View style={[styles.schemeBadge, { backgroundColor: getSchemeBadge(activeScheme).bg }]}>
+                        <Text style={[styles.schemeBadgeText, { color: getSchemeBadge(activeScheme).color }]}>
+                          {getSchemeBadge(activeScheme).label}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
 
                   {formError && (
                     <View style={styles.errorBanner}>
@@ -267,7 +394,9 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
                     </View>
                   )}
 
-                  <Text style={styles.label}>CARD NUMBER *</Text>
+                  <Text style={styles.label}>
+                    CARD NUMBER * {activeScheme === 'verve' ? '(Verve: 16-19 digits)' : ''}
+                  </Text>
                   <View style={styles.inputWrap}>
                     <Ionicons name="card-outline" size={16} color="#662502" style={styles.inputIcon} />
                     <TextInput
@@ -275,9 +404,9 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
                       value={cardNumber}
                       onChangeText={handleCardNumberChange}
                       keyboardType="numeric"
-                      placeholder="5399 8300 0000 4242"
+                      placeholder="5061 8300 0000 4242 123"
                       placeholderTextColor="#A8998A"
-                      maxLength={19}
+                      maxLength={23}
                     />
                   </View>
 
@@ -289,7 +418,7 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
                       value={cardholderName}
                       onChangeText={setCardholderName}
                       autoCapitalize="characters"
-                      placeholder="KWAME MENSAH"
+                      placeholder="CHINWE EZE"
                       placeholderTextColor="#A8998A"
                     />
                   </View>
@@ -308,15 +437,15 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
                       />
                     </View>
                     <View style={{ flex: 1, marginLeft: Spacing.xs }}>
-                      <Text style={styles.label}>CVV / CVC *</Text>
+                      <Text style={styles.label}>CVV / CVC * ({activeScheme === 'amex' ? '4 digits' : '3 digits'})</Text>
                       <TextInput
                         style={styles.inputStandalone}
                         value={cvv}
-                        onChangeText={(t) => setCvv(t.replace(/\D/g, '').slice(0, 4))}
+                        onChangeText={(t) => setCvv(t.replace(/\D/g, '').slice(0, activeScheme === 'amex' ? 4 : 3))}
                         keyboardType="numeric"
-                        placeholder="123"
+                        placeholder={activeScheme === 'amex' ? '1234' : '123'}
                         placeholderTextColor="#A8998A"
-                        maxLength={4}
+                        maxLength={activeScheme === 'amex' ? 4 : 3}
                         secureTextEntry
                       />
                     </View>
@@ -327,7 +456,7 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
                     style={styles.inputStandalone}
                     value={bankName}
                     onChangeText={setBankName}
-                    placeholder="e.g. Access Bank, GTBank, Zenith"
+                    placeholder="e.g. First Bank, Access Bank, GTBank, Zenith"
                     placeholderTextColor="#A8998A"
                   />
 
@@ -335,7 +464,7 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
                   <View style={styles.securityNote}>
                     <Ionicons name="shield-checkmark" size={16} color="#166534" style={{ marginRight: 6 }} />
                     <Text style={styles.securityText}>
-                      Bank-grade 256-bit encryption. Card credentials are never stored in plain text.
+                      Bank-grade 256-bit encryption. Compatible with Nigerian Verve, Visa, Mastercard, and Amex cards.
                     </Text>
                   </View>
 
@@ -388,7 +517,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: '#F0E7D9',
     paddingBottom: Spacing.sm + 4,
@@ -413,8 +542,58 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#EFE7DA',
   },
+  acceptedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FAF7F2',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 8,
+    borderRadius: Radius.md,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: '#EFE7DA',
+  },
+  acceptedText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#662502',
+    letterSpacing: 0.5,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  schemeMiniBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: Radius.full,
+  },
+  schemeMiniText: {
+    fontSize: 9,
+    fontWeight: '800',
+  },
   scrollContent: {
     paddingBottom: Spacing.xl,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.lg,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#341B00',
+    marginTop: Spacing.sm,
+  },
+  emptySub: {
+    fontSize: 12,
+    color: '#662502',
+    textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 18,
   },
   addNewBtn: {
     flexDirection: 'row',
@@ -454,9 +633,20 @@ const styles = StyleSheet.create({
   bankRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+  },
+  schemeBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: Radius.sm,
+  },
+  schemeBadgeText: {
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.5,
   },
   bankText: {
-    fontSize: 12,
+    fontSize: Typography.fontSize.sm,
     fontWeight: '700',
     color: '#341B00',
   },
@@ -464,72 +654,82 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#DCFCE7',
-    paddingHorizontal: 6,
+    paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: Radius.full,
   },
   defaultBadgeText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '800',
     color: '#166534',
   },
   cardNumber: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '800',
     color: '#341B00',
-    letterSpacing: 2,
-    marginBottom: Spacing.md,
+    letterSpacing: 1.5,
+    marginVertical: Spacing.xs,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: Spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: '#EFE7DA',
+    marginTop: Spacing.xs,
   },
   cardMetaLabel: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: '800',
-    color: '#8A7A68',
+    color: '#8A7868',
     letterSpacing: 0.5,
-    marginBottom: 2,
   },
   cardholderText: {
     fontSize: 11,
     fontWeight: '700',
     color: '#341B00',
+    marginTop: 1,
   },
   expiryText: {
     fontSize: 11,
     fontWeight: '700',
     color: '#341B00',
+    marginTop: 1,
   },
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: Spacing.sm,
+    marginTop: Spacing.sm + 2,
     paddingTop: Spacing.xs,
-    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#EAE1D4',
   },
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: Radius.full,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E0D4C3',
   },
   actionBtnText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#662502',
   },
   formCard: {
-    paddingVertical: Spacing.xs,
+    backgroundColor: '#FFFFFF',
+  },
+  formHeadingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
   },
   formHeading: {
     fontSize: 16,
     fontWeight: '800',
     color: '#341B00',
-    marginBottom: Spacing.md,
   },
   errorBanner: {
     flexDirection: 'row',
@@ -537,21 +737,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEE2E2',
     borderWidth: 1,
     borderColor: '#FCA5A5',
-    padding: Spacing.sm,
     borderRadius: Radius.md,
-    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 8,
+    marginBottom: Spacing.sm,
   },
   errorText: {
     fontSize: 11,
-    color: '#B91C1C',
     fontWeight: '600',
+    color: '#991B1B',
+    flex: 1,
   },
   label: {
     fontSize: 10,
     fontWeight: '800',
     color: '#662502',
     letterSpacing: 0.6,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   inputWrap: {
     flexDirection: 'row',
@@ -587,44 +789,45 @@ const styles = StyleSheet.create({
   securityNote: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#DCFCE7',
-    padding: Spacing.sm,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
     borderRadius: Radius.md,
+    padding: Spacing.sm,
     marginTop: Spacing.md,
   },
   securityText: {
-    flex: 1,
     fontSize: 10,
     color: '#166534',
+    flex: 1,
     lineHeight: 14,
-    fontWeight: '600',
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: Radius.md,
     backgroundColor: '#FAF7F2',
     borderWidth: 1,
     borderColor: '#E4DACB',
+    paddingVertical: 14,
+    borderRadius: Radius.md,
     alignItems: 'center',
     marginRight: Spacing.xs,
   },
   cancelBtnText: {
+    color: '#662502',
     fontSize: Typography.fontSize.sm,
     fontWeight: '700',
-    color: '#662502',
   },
   saveCardBtn: {
     flex: 2,
-    paddingVertical: 12,
-    borderRadius: Radius.md,
     backgroundColor: '#C46C27',
+    paddingVertical: 14,
+    borderRadius: Radius.md,
     alignItems: 'center',
     marginLeft: Spacing.xs,
   },
   saveCardBtnText: {
+    color: '#FFFFFF',
     fontSize: Typography.fontSize.sm,
     fontWeight: '700',
-    color: '#FFFFFF',
   },
 });
