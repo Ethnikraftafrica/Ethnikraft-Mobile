@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,6 +10,9 @@ import {
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { clearRecentlyViewed } from '@/store/slices/profileSlice';
 import { Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 
 interface Props {
@@ -17,39 +20,23 @@ interface Props {
   onClose: () => void;
 }
 
-const SAMPLE_RECENT_ITEMS = [
-  {
-    id: 'rec_1',
-    name: 'Benin Bronze King Head Replica',
-    category: 'ANTIQUES',
-    price: 145000,
-    viewedAt: '2 hours ago',
-    image: require('../../../assets/revamp/crafts-card.webp'),
-  },
-  {
-    id: 'rec_2',
-    name: 'Handcrafted Tuareg Silver Bracelet',
-    category: 'ACCESSORIES',
-    price: 28000,
-    viewedAt: 'Yesterday',
-    image: require('../../../assets/revamp/accessories-card.webp'),
-  },
-  {
-    id: 'rec_3',
-    name: 'Aso-Oke Handwoven Ceremonial Agbada',
-    category: 'WEARS',
-    price: 110000,
-    viewedAt: '2 days ago',
-    image: require('../../../assets/revamp/ready-to-wear.webp'),
-  },
-];
-
 export default function RecentlyViewedModal({ visible, onClose }: Props) {
-  const [items, setItems] = useState(SAMPLE_RECENT_ITEMS);
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { recentlyViewed } = useAppSelector((state) => state.profile);
 
   const handleClearHistory = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setItems([]);
+    dispatch(clearRecentlyViewed());
+  };
+
+  const handleNavigateToProduct = (productId: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onClose();
+    router.push({
+      pathname: '/(user)/product/[id]',
+      params: { id: productId },
+    });
   };
 
   return (
@@ -66,14 +53,16 @@ export default function RecentlyViewedModal({ visible, onClose }: Props) {
           <View style={styles.headerRow}>
             <View>
               <Text style={styles.modalTitle}>Recently Viewed</Text>
-              <Text style={styles.modalSub}>Items you explored in the boutique</Text>
+              <Text style={styles.modalSub}>
+                {recentlyViewed.length} item{recentlyViewed.length === 1 ? '' : 's'} in your local browsing history
+              </Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn} activeOpacity={0.7}>
               <Ionicons name="close" size={20} color="#341B00" />
             </TouchableOpacity>
           </View>
 
-          {items.length > 0 && (
+          {recentlyViewed.length > 0 && (
             <View style={styles.topActions}>
               <TouchableOpacity
                 style={styles.clearBtn}
@@ -87,52 +76,62 @@ export default function RecentlyViewedModal({ visible, onClose }: Props) {
           )}
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-            {items.length === 0 ? (
+            {recentlyViewed.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <Ionicons name="time-outline" size={48} color="#A8998A" style={{ marginBottom: 12 }} />
                 <Text style={styles.emptyTitle}>No Browsing History</Text>
                 <Text style={styles.emptySubtitle}>
-                  Items and artisan craft stories you view will appear here for fast re-discovery.
+                  Items and artisan craft stories you explore will automatically appear here for fast re-discovery.
                 </Text>
               </View>
             ) : (
-              items.map((item) => (
-                <View key={item.id} style={[styles.productCard, Shadows.sm]}>
-                  <Image
-                    source={item.image}
-                    style={styles.productImage}
-                    contentFit="cover"
-                    cachePolicy="memory-disk"
-                    transition={150}
-                  />
-                  <View style={styles.productDetails}>
-                    <View style={styles.tagRow}>
-                      <View style={styles.categoryBadge}>
-                        <Text style={styles.categoryText}>{item.category}</Text>
+              recentlyViewed.map((item) => {
+                const formattedPrice = typeof item.price === 'number'
+                  ? item.price.toLocaleString()
+                  : Number(item.price || 0).toLocaleString();
+
+                const imageSource = item.image
+                  ? (typeof item.image === 'string' && item.image.startsWith('http') ? { uri: item.image } : item.image)
+                  : require('../../../assets/revamp/crafts-card.webp');
+
+                return (
+                  <View key={item.id} style={[styles.productCard, Shadows.sm]}>
+                    <Image
+                      source={imageSource}
+                      style={styles.productImage}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                      transition={150}
+                    />
+                    <View style={styles.productDetails}>
+                      <View style={styles.tagRow}>
+                        <View style={styles.categoryBadge}>
+                          <Text style={styles.categoryText}>{item.category || 'CRAFT'}</Text>
+                        </View>
+                        <Text style={styles.timeText}>{item.viewedAt}</Text>
                       </View>
-                      <Text style={styles.timeText}>{item.viewedAt}</Text>
-                    </View>
 
-                    <Text style={styles.productName} numberOfLines={2}>
-                      {item.name}
-                    </Text>
-                    <Text style={styles.productPrice}>₦{item.price.toLocaleString()}</Text>
+                      <Text style={styles.productName} numberOfLines={2}>
+                        {item.name}
+                      </Text>
+                      {item.artisan ? (
+                        <Text style={styles.artisanName}>By {item.artisan}</Text>
+                      ) : null}
+                      <Text style={styles.productPrice}>₦{formattedPrice}</Text>
 
-                    <View style={styles.cardActions}>
-                      <TouchableOpacity
-                        style={styles.viewBtn}
-                        onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                          onClose();
-                        }}
-                        activeOpacity={0.85}
-                      >
-                        <Text style={styles.viewBtnText}>View Item »</Text>
-                      </TouchableOpacity>
+                      <View style={styles.cardActions}>
+                        <TouchableOpacity
+                          style={styles.viewBtn}
+                          onPress={() => handleNavigateToProduct(item.productId)}
+                          activeOpacity={0.85}
+                        >
+                          <Text style={styles.viewBtnText}>View Item »</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   </View>
-                </View>
-              ))
+                );
+              })
             )}
           </ScrollView>
         </View>
@@ -148,19 +147,19 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalCard: {
-    maxHeight: '90%',
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.xl + 10,
+    maxHeight: '92%',
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: '#F0E7D9',
     paddingBottom: Spacing.sm + 4,
@@ -186,8 +185,9 @@ const styles = StyleSheet.create({
     borderColor: '#EFE7DA',
   },
   topActions: {
-    alignItems: 'flex-end',
-    marginBottom: Spacing.xs,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: Spacing.sm,
   },
   clearBtn: {
     flexDirection: 'row',
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   },
   clearBtnText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#C92929',
   },
   scrollContent: {
@@ -205,35 +205,36 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     alignItems: 'center',
-    paddingVertical: Spacing.xl,
+    justifyContent: 'center',
+    paddingVertical: Spacing.xl * 1.5,
+    paddingHorizontal: Spacing.lg,
   },
   emptyTitle: {
     fontSize: 16,
     fontWeight: '800',
     color: '#341B00',
-    marginBottom: 6,
   },
   emptySubtitle: {
     fontSize: 12,
     color: '#662502',
     textAlign: 'center',
+    marginTop: 6,
     lineHeight: 18,
-    paddingHorizontal: Spacing.lg,
   },
   productCard: {
     flexDirection: 'row',
     backgroundColor: '#FAF7F2',
     borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: '#E4DACB',
-    padding: Spacing.sm,
+    padding: Spacing.sm + 2,
     marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: '#E8DCCB',
   },
   productImage: {
-    width: 80,
-    height: 90,
+    width: 85,
+    height: 85,
     borderRadius: Radius.md,
-    backgroundColor: '#E8DCCB',
+    backgroundColor: '#EAE0D2',
   },
   productDetails: {
     flex: 1,
@@ -244,33 +245,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 2,
   },
   categoryBadge: {
-    backgroundColor: '#EFE7DA',
+    backgroundColor: '#EFE5D5',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: Radius.sm,
+    borderRadius: Radius.full,
   },
   categoryText: {
     fontSize: 9,
     fontWeight: '800',
     color: '#662502',
+    letterSpacing: 0.5,
   },
   timeText: {
     fontSize: 10,
-    color: '#8A7A68',
+    color: '#A8998A',
   },
   productName: {
-    fontSize: Typography.fontSize.xs + 1,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '700',
     color: '#341B00',
+    marginTop: 2,
+  },
+  artisanName: {
+    fontSize: 11,
+    color: '#662502',
   },
   productPrice: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: '900',
+    fontSize: 13,
+    fontWeight: '800',
     color: '#C46C27',
-    marginTop: 2,
   },
   cardActions: {
     flexDirection: 'row',
@@ -278,14 +283,16 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   viewBtn: {
-    backgroundColor: '#341B00',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    backgroundColor: '#FAF7F2',
+    borderWidth: 1,
+    borderColor: '#C46C27',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: Radius.full,
   },
   viewBtnText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#C46C27',
   },
 });

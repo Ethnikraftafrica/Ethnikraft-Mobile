@@ -24,7 +24,8 @@ import { MOCK_PRODUCTS } from '@/constants/mockProducts';
 import { Colors, FontFamily, Radius, Shadows } from '@/constants/theme';
 import { AuthPromptModal } from '@/components/common/AuthPromptModal';
 import { ProductDetailSkeleton } from '@/components/common/Skeletons';
-import { useAppSelector } from '@/store';
+import { useAppSelector, useAppDispatch } from '@/store';
+import { addRecentlyViewed } from '@/store/slices/profileSlice';
 import { formatPrice } from '@/utils/price';
 import { ProductSizeChart, detectCategory } from '@/components/products/ProductSizeChart';
 import { ProductSpecifications } from '@/components/products/ProductSpecifications';
@@ -64,6 +65,7 @@ type DetailTab = 'overview' | 'specs' | 'size_chart' | 'story' | 'shipping' | 'r
 
 export default function ProductDetailScreen() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
@@ -100,6 +102,22 @@ export default function ProductDetailScreen() {
   const fallbackProduct = MOCK_PRODUCTS.find((p) => p.id === id) || MOCK_PRODUCTS[0];
   const resolvedProduct = (apiProduct as any)?.product || apiProduct;
   const product: Product = resolvedProduct || fallbackProduct;
+
+  // Track product in local recently viewed history
+  useEffect(() => {
+    if (product && product.id) {
+      dispatch(
+        addRecentlyViewed({
+          productId: product.id,
+          name: product.name,
+          category: product.productCategory || 'CRAFT',
+          price: product.price,
+          image: product.mainImage,
+          artisan: product.vendor?.businessName,
+        })
+      );
+    }
+  }, [product?.id, dispatch]);
 
   // Gather all product images: combine mainImage and imageList, deduplicate preserving order
   const rawImages: string[] = [

@@ -75,6 +75,17 @@ export interface ProfilePreferences {
   theme: AppearanceTheme;
 }
 
+export interface RecentlyViewedItem {
+  id: string;
+  productId: string;
+  name: string;
+  category: string;
+  price: number | string;
+  image?: string;
+  viewedAt: string;
+  artisan?: string;
+}
+
 export interface ProfileState {
   profile: UserProfileDetails;
   savedAddresses: SavedAddress[];
@@ -83,99 +94,29 @@ export interface ProfileState {
   preferences: ProfilePreferences;
   favoritesCount: number;
   ordersCount: number;
+  recentlyViewed: RecentlyViewedItem[];
   recentlyViewedCount: number;
   recentlySearchedCount: number;
   profileCompletionPercentage: number;
 }
 
 const initialProfile: UserProfileDetails = {
-  firstName: 'Kwame',
-  lastName: 'Mensah',
-  profileName: 'KwameArt',
-  email: 'kwame@artisan.com',
-  phoneNumber: '+2348012345678',
-  address: '14 Admiralty Way, Lekki Phase 1',
-  city: 'Lagos',
-  country: 'Nigeria',
-  gender: 'MALE',
-  birthDate: '1992-05-18',
+  firstName: '',
+  lastName: '',
+  profileName: '',
+  email: '',
+  phoneNumber: '',
+  address: '',
+  city: '',
+  country: '',
+  gender: '',
+  birthDate: '',
+  avatarUrl: undefined,
 };
-
-const initialAddresses: SavedAddress[] = [
-  {
-    id: 'addr_1',
-    addressType: 'HOME',
-    street: '14 Admiralty Way, Lekki Phase 1',
-    buildingName: 'Palm Terraces',
-    aptNoOrCompany: 'Suite 4B',
-    floor: '2nd Floor',
-    phoneNumber: '+2348012345678',
-    additionalDirections: 'Opposite Ebeano Supermarket',
-    additionalLabel: 'Primary Residence',
-    isDefault: true,
-    city: 'Lagos',
-    state: 'Lagos State',
-    country: 'Nigeria',
-  },
-  {
-    id: 'addr_2',
-    addressType: 'OFFICE',
-    street: '72 Campbell Street, Victoria Island',
-    buildingName: 'Heritage Arts Pavilion',
-    aptNoOrCompany: 'Studio 12',
-    floor: '3rd Floor',
-    phoneNumber: '+2348098765432',
-    additionalDirections: 'Beside Silverbird Galleria',
-    additionalLabel: 'Creative Workshop',
-    isDefault: false,
-    city: 'Lagos',
-    state: 'Lagos State',
-    country: 'Nigeria',
-  },
-];
 
 const initialMeasurements: CustomMeasurements = {
   unit: 'cm',
-  shoulder: '48',
-  bustOrChest: '102',
-  topLength: '76',
-  sleeveLength: '64',
-  waist: '86',
-  hips: '100',
-  pantLength: '104',
-  ankleFit: '38',
-  shoeSize: '43',
-  sandalsSize: '43',
-  ringSize: '9',
-  braceletSize: '20',
-  personalInitials: 'KM',
-  additionalNotes: 'Prefers relaxed fit on linen tunics with traditional embroidery.',
 };
-
-const initialCards: SavedPaymentCard[] = [
-  {
-    id: 'card_1',
-    cardType: 'mastercard',
-    bankName: 'Access Bank',
-    cardNumberMasked: '5399 83•• •••• 4242',
-    last4: '4242',
-    expiryMonth: '08',
-    expiryYear: '28',
-    cardholderName: 'KWAME MENSAH',
-    isDefault: true,
-  },
-  {
-    id: 'card_2',
-    cardType: 'visa',
-    bankName: 'GTBank',
-    cardNumberMasked: '4242 42•• •••• 1099',
-    last4: '1099',
-    expiryMonth: '11',
-    expiryYear: '27',
-    cardholderName: 'KWAME MENSAH',
-    isDefault: false,
-  },
-];
 
 const calculateCompletion = (profile: UserProfileDetails, measurements: CustomMeasurements, addresses: SavedAddress[]) => {
   let score = 0;
@@ -193,8 +134,8 @@ const calculateCompletion = (profile: UserProfileDetails, measurements: CustomMe
 
 const initialState: ProfileState = {
   profile: initialProfile,
-  savedAddresses: initialAddresses,
-  savedCards: initialCards,
+  savedAddresses: [],
+  savedCards: [],
   measurements: initialMeasurements,
   preferences: {
     pushNotifications: true,
@@ -203,11 +144,12 @@ const initialState: ProfileState = {
     newsletter: true,
     theme: 'system',
   },
-  favoritesCount: 12,
-  ordersCount: 4,
-  recentlyViewedCount: 18,
-  recentlySearchedCount: 6,
-  profileCompletionPercentage: 75,
+  favoritesCount: 0,
+  ordersCount: 0,
+  recentlyViewed: [],
+  recentlyViewedCount: 0,
+  recentlySearchedCount: 0,
+  profileCompletionPercentage: 0,
 };
 
 export const profileSlice = createSlice({
@@ -353,6 +295,33 @@ export const profileSlice = createSlice({
     setTheme: (state, action: PayloadAction<AppearanceTheme>) => {
       state.preferences.theme = action.payload;
     },
+
+    addRecentlyViewed: (
+      state,
+      action: PayloadAction<Omit<RecentlyViewedItem, 'id' | 'viewedAt'>>
+    ) => {
+      const existingIndex = state.recentlyViewed.findIndex(
+        (item) => item.productId === action.payload.productId
+      );
+      if (existingIndex !== -1) {
+        state.recentlyViewed.splice(existingIndex, 1);
+      }
+      const newItem: RecentlyViewedItem = {
+        ...action.payload,
+        id: `rec_${Date.now()}`,
+        viewedAt: 'Just now',
+      };
+      state.recentlyViewed.unshift(newItem);
+      if (state.recentlyViewed.length > 30) {
+        state.recentlyViewed.pop();
+      }
+      state.recentlyViewedCount = state.recentlyViewed.length;
+    },
+
+    clearRecentlyViewed: (state) => {
+      state.recentlyViewed = [];
+      state.recentlyViewedCount = 0;
+    },
   },
 });
 
@@ -373,6 +342,8 @@ export const {
   updateMeasurements,
   updatePreferences,
   setTheme,
+  addRecentlyViewed,
+  clearRecentlyViewed,
 } = profileSlice.actions;
 
 export default profileSlice.reducer;
