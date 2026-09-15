@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppDispatch, useAppSelector } from '@/store';
 import {
   openWizard,
@@ -43,6 +44,7 @@ const FILTERS: Array<{ key: 'ALL' | 'OPEN' | 'CLOSED' | 'COMPLETED' | 'CANCELLED
 
 export default function StudioScreen() {
   const dispatch = useAppDispatch();
+  const insets = useSafeAreaInsets();
   const {
     requests,
     activeFilter,
@@ -315,7 +317,10 @@ export default function StudioScreen() {
         renderItem={renderItem}
         ListHeaderComponent={ListHeader}
         ListEmptyComponent={ListEmpty}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Math.max(insets.bottom + 100, 120) },
+        ]}
         showsVerticalScrollIndicator={false}
         initialNumToRender={5}
         maxToRenderPerBatch={7}
@@ -335,7 +340,10 @@ export default function StudioScreen() {
       <TouchableOpacity
         activeOpacity={0.88}
         onPress={() => handleStartCommission()}
-        style={styles.fab}
+        style={[
+          styles.fab,
+          { bottom: Math.max(insets.bottom + 85, 96) },
+        ]}
       >
         <Ionicons name="add" size={28} color={Colors.textInverse} />
       </TouchableOpacity>
