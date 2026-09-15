@@ -118,6 +118,10 @@ export default function CompleteProfileModal({ visible, onClose }: Props) {
         ankleFit: ankleFit.trim(),
       })
     );
+
+    // TODO: Persist custom cloth dimensions to backend once Measurement model or user.measurements field is added to Prisma schema in Ethnikraft-BE.
+    // Endpoint target: PUT/PATCH /api/v1/profile/measurements
+
     setActiveStep(3);
   };
 
@@ -133,6 +137,9 @@ export default function CompleteProfileModal({ visible, onClose }: Props) {
         additionalNotes: additionalNotes.trim(),
       })
     );
+
+    // TODO: Persist bespoke shoe/accessory measurements and notes to backend once Measurement model is added to Ethnikraft-BE.
+    // Endpoint target: PUT/PATCH /api/v1/profile/measurements
 
     setCompletedSuccess(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

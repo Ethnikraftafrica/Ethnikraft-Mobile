@@ -48,11 +48,13 @@ export default function NotificationSettingsModal({ visible, onClose }: Props) {
   const togglePromotions = (val: boolean) => {
     Haptics.selectionAsync();
     dispatch(updatePreferences({ promotions: val }));
+    // TODO: Connect to backend once granular notification columns (promotionsEnabled, marketingEnabled) are added to Prisma User schema in Ethnikraft-BE.
   };
 
   const toggleNewsletter = (val: boolean) => {
     Haptics.selectionAsync();
     dispatch(updatePreferences({ newsletter: val }));
+    // TODO: Connect to backend once newsletter subscription model or user.newsletterEnabled is added to Ethnikraft-BE.
   };
 
   return (

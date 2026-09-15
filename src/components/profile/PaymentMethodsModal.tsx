@@ -170,6 +170,10 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
     setFormError(null);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
+    // TODO: Integrate payment gateway card tokenization via Paystack / Flutterwave SDK or backend tokenization service.
+    // PCI-DSS Best Practice: Do NOT store raw card details (PAN, CVV) on the server.
+    // Flow: Initialize transaction / card setup -> Tokenize with Paystack/Flutterwave -> Save gateway reusable authorization code / token on backend.
+
     const last4 = rawNumber.slice(-4);
     const first4 = rawNumber.slice(0, 4);
     const masked = `${first4} •••• •••• ${last4}`;

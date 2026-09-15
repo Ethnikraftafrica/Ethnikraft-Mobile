@@ -59,6 +59,11 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
     }
 
     setErrorMessage(null);
+
+    // TODO: Connect to backend PATCH /api/v1/auth/change-password endpoint once implemented in Ethnikraft-BE.
+    // Expected Payload: { currentPassword, newPassword }
+    // On success: trigger local success notification and invalidate auth tokens if required.
+
     setIsSuccess(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
