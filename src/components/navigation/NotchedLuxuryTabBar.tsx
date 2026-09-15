@@ -57,23 +57,29 @@ export const NotchedLuxuryTabBar: React.FC<NotchedLuxuryTabBarProps> = ({
     H ${SCREEN_WIDTH}
   `;
 
-  // Tab mapping:
-  // routes: [index (0), explore (1), studio (2), orders (3), profile (4)]
-  const leftRoutes = state.routes.slice(0, 2);
-  const studioRoute = state.routes.find((r: any) => r.name === 'studio') || state.routes[2];
-  const rightRoutes = state.routes.slice(3, 5);
+  // Robust route lookup by name
+  const homeRoute = state?.routes?.find((r: any) => r.name === 'index');
+  const exploreRoute = state?.routes?.find((r: any) => r.name === 'explore');
+  const studioRoute = state?.routes?.find((r: any) => r.name === 'studio');
+  const ordersRoute = state?.routes?.find((r: any) => r.name === 'orders');
+  const profileRoute = state?.routes?.find((r: any) => r.name === 'profile');
 
-  const studioIndex = state.routes.findIndex((r: any) => r.name === 'studio');
-  const isStudioActive = state.index === studioIndex;
+  const studioIndex = state?.routes?.findIndex((r: any) => r.name === 'studio');
+  const isStudioActive = studioIndex !== -1 && state?.index === studioIndex;
 
-  const renderTabItem = (route: any, routeIndex: number) => {
-    const isFocused = state.index === routeIndex;
+  const renderTabItem = (route: any) => {
+    if (!route || !route.key || !descriptors || !descriptors[route.key]) {
+      return null;
+    }
+
+    const routeIndex = state?.routes?.findIndex((r: any) => r.key === route.key);
+    const isFocused = state?.index === routeIndex;
     const { options } = descriptors[route.key];
 
     const label =
-      options.tabBarLabel !== undefined
+      options?.tabBarLabel !== undefined
         ? options.tabBarLabel
-        : options.title !== undefined
+        : options?.title !== undefined
         ? options.title
         : route.name;
 
@@ -133,14 +139,18 @@ export const NotchedLuxuryTabBar: React.FC<NotchedLuxuryTabBarProps> = ({
 
   const handleStudioPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const event = navigation.emit({
-      type: 'tabPress',
-      target: studioRoute.key,
-      canPreventDefault: true,
-    });
+    if (studioRoute) {
+      const event = navigation.emit({
+        type: 'tabPress',
+        target: studioRoute.key,
+        canPreventDefault: true,
+      });
 
-    if (!isStudioActive && !event.defaultPrevented) {
-      navigation.navigate(studioRoute.name);
+      if (!isStudioActive && !event.defaultPrevented) {
+        navigation.navigate(studioRoute.name);
+      }
+    } else {
+      navigation.navigate('studio');
     }
   };
 
@@ -220,8 +230,8 @@ export const NotchedLuxuryTabBar: React.FC<NotchedLuxuryTabBarProps> = ({
       <View style={[styles.tabsRow, { paddingBottom: bottomInset }]}>
         {/* Left Wings: Home, Explore */}
         <View style={styles.tabWing}>
-          {renderTabItem(leftRoutes[0], 0)}
-          {renderTabItem(leftRoutes[1], 1)}
+          {renderTabItem(homeRoute)}
+          {renderTabItem(exploreRoute)}
         </View>
 
         {/* Center Gap Spacer for the Notch */}
@@ -229,8 +239,8 @@ export const NotchedLuxuryTabBar: React.FC<NotchedLuxuryTabBarProps> = ({
 
         {/* Right Wings: Orders, Profile */}
         <View style={styles.tabWing}>
-          {renderTabItem(rightRoutes[0], 3)}
-          {renderTabItem(rightRoutes[1], 4)}
+          {renderTabItem(ordersRoute)}
+          {renderTabItem(profileRoute)}
         </View>
       </View>
     </View>
