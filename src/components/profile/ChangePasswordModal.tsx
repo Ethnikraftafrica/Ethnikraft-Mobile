@@ -81,8 +81,9 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
     >
       <View style={styles.overlay}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.keyboardView}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
         >
           <View style={[styles.modalCard, Shadows.lg]}>
             <View style={styles.headerRow}>
@@ -95,7 +96,12 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              automaticallyAdjustKeyboardInsets={true}
+            >
               {errorMessage && (
                 <View style={styles.errorBanner}>
                   <Ionicons name="alert-circle" size={16} color="#C92929" style={{ marginRight: 6 }} />
@@ -114,8 +120,13 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
                   placeholder="Enter current password"
                   placeholderTextColor="#A8998A"
                   secureTextEntry={!showCurrent}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="password"
+                  textContentType="password"
                   returnKeyType="next"
                   onSubmitEditing={() => newPassRef.current?.focus()}
+                  blurOnSubmit={false}
                 />
                 <TouchableOpacity onPress={() => setShowCurrent(!showCurrent)} style={styles.eyeBtn}>
                   <Ionicons name={showCurrent ? 'eye-off-outline' : 'eye-outline'} size={18} color="#662502" />
@@ -134,8 +145,13 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
                   placeholder="Enter new secure password"
                   placeholderTextColor="#A8998A"
                   secureTextEntry={!showNew}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="new-password"
+                  textContentType="newPassword"
                   returnKeyType="next"
                   onSubmitEditing={() => confirmPassRef.current?.focus()}
+                  blurOnSubmit={false}
                 />
                 <TouchableOpacity onPress={() => setShowNew(!showNew)} style={styles.eyeBtn}>
                   <Ionicons name={showNew ? 'eye-off-outline' : 'eye-outline'} size={18} color="#662502" />
@@ -154,6 +170,10 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
                   placeholder="Confirm new secure password"
                   placeholderTextColor="#A8998A"
                   secureTextEntry={!showConfirm}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="new-password"
+                  textContentType="newPassword"
                   returnKeyType="done"
                   onSubmitEditing={handleSavePassword}
                 />
@@ -212,7 +232,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   keyboardView: {
-    maxHeight: '90%',
+    width: '100%',
+    maxHeight: Platform.OS === 'ios' ? '92%' : '96%',
+    justifyContent: 'flex-end',
   },
   modalCard: {
     backgroundColor: '#FFFFFF',
@@ -220,7 +242,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.lg,
-    paddingBottom: Spacing.xl + 10,
+    paddingBottom: Platform.OS === 'ios' ? Spacing.xl + 20 : Spacing.xl + 10,
+    maxHeight: '100%',
   },
   headerRow: {
     flexDirection: 'row',
@@ -252,7 +275,7 @@ const styles = StyleSheet.create({
     borderColor: '#EFE7DA',
   },
   scrollContent: {
-    paddingBottom: Spacing.lg,
+    paddingBottom: Spacing.xl + 40,
   },
   errorBanner: {
     flexDirection: 'row',

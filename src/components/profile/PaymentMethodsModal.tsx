@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -69,6 +69,13 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
   const [cvv, setCvv] = useState('');
   const [bankName, setBankName] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Input navigation refs
+  const cardNumberRef = useRef<TextInput>(null);
+  const cardholderRef = useRef<TextInput>(null);
+  const expiryRef = useRef<TextInput>(null);
+  const cvvRef = useRef<TextInput>(null);
+  const bankRef = useRef<TextInput>(null);
 
   const activeScheme = detectCardScheme(cardNumber);
 
@@ -236,8 +243,9 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
     >
       <View style={styles.overlay}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.keyboardView}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
         >
           <View style={[styles.modalCard, Shadows.lg]}>
             {/* Header */}
@@ -260,7 +268,12 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              automaticallyAdjustKeyboardInsets={true}
+            >
               {/* Accepted Cards Supported Banner */}
               <View style={styles.acceptedBanner}>
                 <Text style={styles.acceptedText}>ACCEPTED CARDS:</Text>
@@ -400,6 +413,7 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
                   <View style={styles.inputWrap}>
                     <Ionicons name="card-outline" size={16} color="#662502" style={styles.inputIcon} />
                     <TextInput
+                      ref={cardNumberRef}
                       style={styles.input}
                       value={cardNumber}
                       onChangeText={handleCardNumberChange}
@@ -407,6 +421,11 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
                       placeholder="5061 8300 0000 4242 123"
                       placeholderTextColor="#A8998A"
                       maxLength={23}
+                      autoComplete="cc-number"
+                      textContentType="creditCardNumber"
+                      returnKeyType="next"
+                      onSubmitEditing={() => cardholderRef.current?.focus()}
+                      blurOnSubmit={false}
                     />
                   </View>
 
@@ -414,12 +433,18 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
                   <View style={styles.inputWrap}>
                     <Ionicons name="person-outline" size={16} color="#662502" style={styles.inputIcon} />
                     <TextInput
+                      ref={cardholderRef}
                       style={styles.input}
                       value={cardholderName}
                       onChangeText={setCardholderName}
                       autoCapitalize="characters"
+                      autoComplete="cc-name"
+                      textContentType="name"
                       placeholder="CHINWE EZE"
                       placeholderTextColor="#A8998A"
+                      returnKeyType="next"
+                      onSubmitEditing={() => expiryRef.current?.focus()}
+                      blurOnSubmit={false}
                     />
                   </View>
 
@@ -427,6 +452,7 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
                     <View style={{ flex: 1, marginRight: Spacing.xs }}>
                       <Text style={styles.label}>EXPIRY (MM/YY) *</Text>
                       <TextInput
+                        ref={expiryRef}
                         style={styles.inputStandalone}
                         value={expiry}
                         onChangeText={handleExpiryChange}
@@ -434,11 +460,16 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
                         placeholder="08/28"
                         placeholderTextColor="#A8998A"
                         maxLength={5}
+                        autoComplete="cc-exp"
+                        returnKeyType="next"
+                        onSubmitEditing={() => cvvRef.current?.focus()}
+                        blurOnSubmit={false}
                       />
                     </View>
                     <View style={{ flex: 1, marginLeft: Spacing.xs }}>
                       <Text style={styles.label}>CVV / CVC * ({activeScheme === 'amex' ? '4 digits' : '3 digits'})</Text>
                       <TextInput
+                        ref={cvvRef}
                         style={styles.inputStandalone}
                         value={cvv}
                         onChangeText={(t) => setCvv(t.replace(/\D/g, '').slice(0, activeScheme === 'amex' ? 4 : 3))}
@@ -447,17 +478,26 @@ export default function PaymentMethodsModal({ visible, onClose }: Props) {
                         placeholderTextColor="#A8998A"
                         maxLength={activeScheme === 'amex' ? 4 : 3}
                         secureTextEntry
+                        autoComplete="cc-csc"
+                        textContentType="creditCardSecurityCode"
+                        returnKeyType="next"
+                        onSubmitEditing={() => bankRef.current?.focus()}
+                        blurOnSubmit={false}
                       />
                     </View>
                   </View>
 
                   <Text style={[styles.label, { marginTop: Spacing.md }]}>ISSUING BANK (OPTIONAL)</Text>
                   <TextInput
+                    ref={bankRef}
                     style={styles.inputStandalone}
                     value={bankName}
                     onChangeText={setBankName}
                     placeholder="e.g. First Bank, Access Bank, GTBank, Zenith"
                     placeholderTextColor="#A8998A"
+                    autoCapitalize="words"
+                    returnKeyType="done"
+                    onSubmitEditing={handleSaveCard}
                   />
 
                   {/* Security Note */}
@@ -503,7 +543,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   keyboardView: {
-    maxHeight: '92%',
+    width: '100%',
+    maxHeight: Platform.OS === 'ios' ? '92%' : '96%',
+    justifyContent: 'flex-end',
   },
   modalCard: {
     backgroundColor: '#FFFFFF',
@@ -511,7 +553,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.lg,
-    paddingBottom: Spacing.xl + 10,
+    paddingBottom: Platform.OS === 'ios' ? Spacing.xl + 20 : Spacing.xl + 10,
+    maxHeight: '100%',
   },
   headerRow: {
     flexDirection: 'row',
@@ -574,7 +617,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   scrollContent: {
-    paddingBottom: Spacing.xl,
+    paddingBottom: Spacing.xl + 40,
   },
   emptyContainer: {
     alignItems: 'center',

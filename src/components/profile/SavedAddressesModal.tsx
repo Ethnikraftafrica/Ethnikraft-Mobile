@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -78,6 +78,16 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
   const [country, setCountry] = useState('Nigeria');
   const [isDefault, setIsDefault] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Form input refs
+  const labelRef = useRef<TextInput>(null);
+  const streetRef = useRef<TextInput>(null);
+  const cityRef = useRef<TextInput>(null);
+  const stateRef = useRef<TextInput>(null);
+  const buildingRef = useRef<TextInput>(null);
+  const aptRef = useRef<TextInput>(null);
+  const phoneRef = useRef<TextInput>(null);
+  const directionsRef = useRef<TextInput>(null);
 
   const resetForm = () => {
     setAddressType('HOME');
@@ -204,8 +214,9 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
     >
       <View style={styles.overlay}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.keyboardView}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
         >
           <View style={[styles.modalCard, Shadows.lg]}>
             {/* Header */}
@@ -229,7 +240,12 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              automaticallyAdjustKeyboardInsets={true}
+            >
               {isFetching && !remoteAddresses && (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="small" color="#C46C27" />
@@ -378,16 +394,22 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
                   {/* Custom Label */}
                   <Text style={[styles.label, { marginTop: Spacing.sm }]}>LABEL (OPTIONAL)</Text>
                   <TextInput
+                    ref={labelRef}
                     style={styles.input}
                     value={additionalLabel}
                     onChangeText={setAdditionalLabel}
                     placeholder="e.g. Grandma's House, Ikoyi Studio"
                     placeholderTextColor="#A8998A"
+                    autoCapitalize="words"
+                    returnKeyType="next"
+                    onSubmitEditing={() => streetRef.current?.focus()}
+                    blurOnSubmit={false}
                   />
 
                   {/* Street Address */}
                   <Text style={[styles.label, { marginTop: Spacing.sm }]}>STREET ADDRESS *</Text>
                   <TextInput
+                    ref={streetRef}
                     style={[styles.input, styles.multilineInput]}
                     value={street}
                     onChangeText={setStreet}
@@ -395,6 +417,12 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
                     placeholderTextColor="#A8998A"
                     multiline
                     numberOfLines={2}
+                    autoCapitalize="sentences"
+                    autoComplete="street-address"
+                    textContentType="fullStreetAddress"
+                    returnKeyType="next"
+                    onSubmitEditing={() => cityRef.current?.focus()}
+                    blurOnSubmit={false}
                   />
 
                   {/* City & State */}
@@ -402,21 +430,35 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
                     <View style={{ flex: 1, marginRight: Spacing.xs }}>
                       <Text style={styles.label}>CITY *</Text>
                       <TextInput
+                        ref={cityRef}
                         style={styles.input}
                         value={city}
                         onChangeText={setCity}
                         placeholder="Lagos"
                         placeholderTextColor="#A8998A"
+                        autoCapitalize="words"
+                        autoComplete="address-line2"
+                        textContentType="addressCity"
+                        returnKeyType="next"
+                        onSubmitEditing={() => stateRef.current?.focus()}
+                        blurOnSubmit={false}
                       />
                     </View>
                     <View style={{ flex: 1, marginLeft: Spacing.xs }}>
                       <Text style={styles.label}>STATE *</Text>
                       <TextInput
+                        ref={stateRef}
                         style={styles.input}
                         value={stateName}
                         onChangeText={setStateName}
                         placeholder="Lagos"
                         placeholderTextColor="#A8998A"
+                        autoCapitalize="words"
+                        autoComplete="address-line1"
+                        textContentType="addressState"
+                        returnKeyType="next"
+                        onSubmitEditing={() => buildingRef.current?.focus()}
+                        blurOnSubmit={false}
                       />
                     </View>
                   </View>
@@ -426,21 +468,31 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
                     <View style={{ flex: 1, marginRight: Spacing.xs }}>
                       <Text style={styles.label}>BUILDING NAME</Text>
                       <TextInput
+                        ref={buildingRef}
                         style={styles.input}
                         value={buildingName}
                         onChangeText={setBuildingName}
                         placeholder="Skyline Plaza"
                         placeholderTextColor="#A8998A"
+                        autoCapitalize="words"
+                        returnKeyType="next"
+                        onSubmitEditing={() => aptRef.current?.focus()}
+                        blurOnSubmit={false}
                       />
                     </View>
                     <View style={{ flex: 1, marginLeft: Spacing.xs }}>
                       <Text style={styles.label}>APT / SUITE / CO.</Text>
                       <TextInput
+                        ref={aptRef}
                         style={styles.input}
                         value={aptNoOrCompany}
                         onChangeText={setAptNoOrCompany}
                         placeholder="Suite 4B"
                         placeholderTextColor="#A8998A"
+                        autoCapitalize="words"
+                        returnKeyType="next"
+                        onSubmitEditing={() => phoneRef.current?.focus()}
+                        blurOnSubmit={false}
                       />
                     </View>
                   </View>
@@ -448,23 +500,33 @@ export default function SavedAddressesModal({ visible, onClose }: Props) {
                   {/* Phone */}
                   <Text style={[styles.label, { marginTop: Spacing.sm }]}>RECIPIENT PHONE NUMBER *</Text>
                   <TextInput
+                    ref={phoneRef}
                     style={styles.input}
                     value={phoneNumber}
                     onChangeText={setPhoneNumber}
                     keyboardType="phone-pad"
                     placeholder="+2348012345678"
                     placeholderTextColor="#A8998A"
+                    autoComplete="tel"
+                    textContentType="telephoneNumber"
+                    returnKeyType="next"
+                    onSubmitEditing={() => directionsRef.current?.focus()}
+                    blurOnSubmit={false}
                   />
 
                   {/* Landmark / Delivery Directions */}
                   <Text style={[styles.label, { marginTop: Spacing.sm }]}>LANDMARK / DIRECTIONS</Text>
                   <TextInput
+                    ref={directionsRef}
                     style={[styles.input, styles.multilineInput]}
                     value={additionalDirections}
                     onChangeText={setAdditionalDirections}
                     placeholder="Opposite GTBank, black gate with bronze bell"
                     placeholderTextColor="#A8998A"
                     multiline
+                    autoCapitalize="sentences"
+                    returnKeyType="done"
+                    onSubmitEditing={handleSaveAddress}
                   />
 
                   {/* Default switch toggle */}
@@ -528,7 +590,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   keyboardView: {
-    maxHeight: '92%',
+    width: '100%',
+    maxHeight: Platform.OS === 'ios' ? '92%' : '96%',
+    justifyContent: 'flex-end',
   },
   modalCard: {
     backgroundColor: '#FFFFFF',
@@ -536,7 +600,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.lg,
-    paddingBottom: Spacing.xl + 10,
+    paddingBottom: Platform.OS === 'ios' ? Spacing.xl + 20 : Spacing.xl + 10,
+    maxHeight: '100%',
   },
   headerRow: {
     flexDirection: 'row',
@@ -568,7 +633,7 @@ const styles = StyleSheet.create({
     borderColor: '#EFE7DA',
   },
   scrollContent: {
-    paddingBottom: Spacing.lg,
+    paddingBottom: Spacing.xl + 40,
   },
   loadingContainer: {
     flexDirection: 'row',

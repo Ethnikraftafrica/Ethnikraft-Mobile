@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -40,6 +40,14 @@ export default function CompleteProfileModal({ visible, onClose }: Props) {
   const [city, setCity] = useState(profile.city);
   const [country, setCountry] = useState(profile.country);
 
+  // Step 1 Refs
+  const profileNameRef = useRef<TextInput>(null);
+  const phoneRef = useRef<TextInput>(null);
+  const birthDateRef = useRef<TextInput>(null);
+  const addressRef = useRef<TextInput>(null);
+  const cityRef = useRef<TextInput>(null);
+  const countryRef = useRef<TextInput>(null);
+
   // Step 2: Measurements
   const [unit, setUnit] = useState<'cm' | 'inches'>(measurements.unit);
   const [shoulder, setShoulder] = useState(measurements.shoulder || '');
@@ -51,6 +59,16 @@ export default function CompleteProfileModal({ visible, onClose }: Props) {
   const [pantLength, setPantLength] = useState(measurements.pantLength || '');
   const [ankleFit, setAnkleFit] = useState(measurements.ankleFit || '');
 
+  // Step 2 Refs
+  const shoulderRef = useRef<TextInput>(null);
+  const bustOrChestRef = useRef<TextInput>(null);
+  const topLengthRef = useRef<TextInput>(null);
+  const sleeveLengthRef = useRef<TextInput>(null);
+  const waistRef = useRef<TextInput>(null);
+  const hipsRef = useRef<TextInput>(null);
+  const pantLengthRef = useRef<TextInput>(null);
+  const ankleFitRef = useRef<TextInput>(null);
+
   // Step 3: Footwear & Bespoke Details
   const [shoeSize, setShoeSize] = useState(measurements.shoeSize || '42');
   const [sandalsSize, setSandalsSize] = useState(measurements.sandalsSize || '42');
@@ -58,6 +76,14 @@ export default function CompleteProfileModal({ visible, onClose }: Props) {
   const [braceletSize, setBraceletSize] = useState(measurements.braceletSize || '19');
   const [personalInitials, setPersonalInitials] = useState(measurements.personalInitials || '');
   const [additionalNotes, setAdditionalNotes] = useState(measurements.additionalNotes || '');
+
+  // Step 3 Refs
+  const shoeSizeRef = useRef<TextInput>(null);
+  const sandalsSizeRef = useRef<TextInput>(null);
+  const ringSizeRef = useRef<TextInput>(null);
+  const braceletSizeRef = useRef<TextInput>(null);
+  const initialsRef = useRef<TextInput>(null);
+  const notesRef = useRef<TextInput>(null);
 
   const [completedSuccess, setCompletedSuccess] = useState(false);
 
@@ -127,8 +153,9 @@ export default function CompleteProfileModal({ visible, onClose }: Props) {
     >
       <View style={styles.overlay}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.keyboardView}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
         >
           <View style={[styles.modalCard, Shadows.lg]}>
             {/* Modal Header */}
@@ -167,7 +194,12 @@ export default function CompleteProfileModal({ visible, onClose }: Props) {
               <Text style={styles.stepLabelText}>Step {activeStep} of 3</Text>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              automaticallyAdjustKeyboardInsets={true}
+            >
               {activeStep === 1 && (
                 /* Step 1: Contact Information */
                 <View>
@@ -178,21 +210,35 @@ export default function CompleteProfileModal({ visible, onClose }: Props) {
 
                   <Text style={styles.label}>PROFILE HANDLE</Text>
                   <TextInput
+                    ref={profileNameRef}
                     style={styles.input}
                     value={profileName}
                     onChangeText={setProfileName}
                     placeholder="e.g. KwameArt"
                     placeholderTextColor="#A8998A"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="username"
+                    textContentType="username"
+                    returnKeyType="next"
+                    onSubmitEditing={() => phoneRef.current?.focus()}
+                    blurOnSubmit={false}
                   />
 
                   <Text style={[styles.label, { marginTop: Spacing.md }]}>PHONE NUMBER *</Text>
                   <TextInput
+                    ref={phoneRef}
                     style={styles.input}
                     value={phoneNumber}
                     onChangeText={setPhoneNumber}
                     keyboardType="phone-pad"
                     placeholder="+2348012345678"
                     placeholderTextColor="#A8998A"
+                    autoComplete="tel"
+                    textContentType="telephoneNumber"
+                    returnKeyType="next"
+                    onSubmitEditing={() => birthDateRef.current?.focus()}
+                    blurOnSubmit={false}
                   />
 
                   <Text style={[styles.label, { marginTop: Spacing.md }]}>GENDER</Text>
@@ -213,44 +259,69 @@ export default function CompleteProfileModal({ visible, onClose }: Props) {
                     ))}
                   </View>
 
-                  <Text style={[styles.label, { marginTop: Spacing.md }]}>BIRTHDATE</Text>
+                  <Text style={[styles.label, { marginTop: Spacing.md }]}>BIRTHDATE (YYYY-MM-DD)</Text>
                   <TextInput
+                    ref={birthDateRef}
                     style={styles.input}
                     value={birthDate}
                     onChangeText={setBirthDate}
                     placeholder="1992-05-18"
                     placeholderTextColor="#A8998A"
+                    autoCapitalize="none"
+                    returnKeyType="next"
+                    onSubmitEditing={() => addressRef.current?.focus()}
+                    blurOnSubmit={false}
                   />
 
                   <Text style={[styles.label, { marginTop: Spacing.md }]}>DELIVERY ADDRESS</Text>
                   <TextInput
+                    ref={addressRef}
                     style={[styles.input, { minHeight: 50 }]}
                     value={address}
                     onChangeText={setAddress}
                     placeholder="14 Admiralty Way, Lekki Phase 1"
                     placeholderTextColor="#A8998A"
                     multiline
+                    autoCapitalize="sentences"
+                    autoComplete="street-address"
+                    textContentType="fullStreetAddress"
+                    returnKeyType="next"
+                    onSubmitEditing={() => cityRef.current?.focus()}
+                    blurOnSubmit={false}
                   />
 
                   <View style={[styles.row, { marginTop: Spacing.md }]}>
                     <View style={{ flex: 1, marginRight: Spacing.xs }}>
                       <Text style={styles.label}>CITY</Text>
                       <TextInput
+                        ref={cityRef}
                         style={styles.input}
                         value={city}
                         onChangeText={setCity}
                         placeholder="Lagos"
                         placeholderTextColor="#A8998A"
+                        autoCapitalize="words"
+                        autoComplete="address-line2"
+                        textContentType="addressCity"
+                        returnKeyType="next"
+                        onSubmitEditing={() => countryRef.current?.focus()}
+                        blurOnSubmit={false}
                       />
                     </View>
                     <View style={{ flex: 1, marginLeft: Spacing.xs }}>
                       <Text style={styles.label}>COUNTRY</Text>
                       <TextInput
+                        ref={countryRef}
                         style={styles.input}
                         value={country}
                         onChangeText={setCountry}
                         placeholder="Nigeria"
                         placeholderTextColor="#A8998A"
+                        autoCapitalize="words"
+                        autoComplete="country"
+                        textContentType="countryName"
+                        returnKeyType="done"
+                        onSubmitEditing={handleStep1Next}
                       />
                     </View>
                   </View>
@@ -298,23 +369,31 @@ export default function CompleteProfileModal({ visible, onClose }: Props) {
                     <View style={{ flex: 1, marginRight: Spacing.xs }}>
                       <Text style={styles.label}>SHOULDER ({unit})</Text>
                       <TextInput
+                        ref={shoulderRef}
                         style={styles.input}
                         value={shoulder}
                         onChangeText={setShoulder}
                         keyboardType="numeric"
                         placeholder="48"
                         placeholderTextColor="#A8998A"
+                        returnKeyType="next"
+                        onSubmitEditing={() => bustOrChestRef.current?.focus()}
+                        blurOnSubmit={false}
                       />
                     </View>
                     <View style={{ flex: 1, marginLeft: Spacing.xs }}>
                       <Text style={styles.label}>CHEST / BUST ({unit})</Text>
                       <TextInput
+                        ref={bustOrChestRef}
                         style={styles.input}
                         value={bustOrChest}
                         onChangeText={setBustOrChest}
                         keyboardType="numeric"
                         placeholder="102"
                         placeholderTextColor="#A8998A"
+                        returnKeyType="next"
+                        onSubmitEditing={() => topLengthRef.current?.focus()}
+                        blurOnSubmit={false}
                       />
                     </View>
                   </View>
@@ -323,23 +402,31 @@ export default function CompleteProfileModal({ visible, onClose }: Props) {
                     <View style={{ flex: 1, marginRight: Spacing.xs }}>
                       <Text style={styles.label}>TOP LENGTH ({unit})</Text>
                       <TextInput
+                        ref={topLengthRef}
                         style={styles.input}
                         value={topLength}
                         onChangeText={setTopLength}
                         keyboardType="numeric"
                         placeholder="76"
                         placeholderTextColor="#A8998A"
+                        returnKeyType="next"
+                        onSubmitEditing={() => sleeveLengthRef.current?.focus()}
+                        blurOnSubmit={false}
                       />
                     </View>
                     <View style={{ flex: 1, marginLeft: Spacing.xs }}>
                       <Text style={styles.label}>SLEEVE LENGTH ({unit})</Text>
                       <TextInput
+                        ref={sleeveLengthRef}
                         style={styles.input}
                         value={sleeveLength}
                         onChangeText={setSleeveLength}
                         keyboardType="numeric"
                         placeholder="64"
                         placeholderTextColor="#A8998A"
+                        returnKeyType="next"
+                        onSubmitEditing={() => waistRef.current?.focus()}
+                        blurOnSubmit={false}
                       />
                     </View>
                   </View>
@@ -350,23 +437,31 @@ export default function CompleteProfileModal({ visible, onClose }: Props) {
                     <View style={{ flex: 1, marginRight: Spacing.xs }}>
                       <Text style={styles.label}>WAIST ({unit})</Text>
                       <TextInput
+                        ref={waistRef}
                         style={styles.input}
                         value={waist}
                         onChangeText={setWaist}
                         keyboardType="numeric"
                         placeholder="86"
                         placeholderTextColor="#A8998A"
+                        returnKeyType="next"
+                        onSubmitEditing={() => hipsRef.current?.focus()}
+                        blurOnSubmit={false}
                       />
                     </View>
                     <View style={{ flex: 1, marginLeft: Spacing.xs }}>
                       <Text style={styles.label}>HIPS ({unit})</Text>
                       <TextInput
+                        ref={hipsRef}
                         style={styles.input}
                         value={hips}
                         onChangeText={setHips}
                         keyboardType="numeric"
                         placeholder="100"
                         placeholderTextColor="#A8998A"
+                        returnKeyType="next"
+                        onSubmitEditing={() => pantLengthRef.current?.focus()}
+                        blurOnSubmit={false}
                       />
                     </View>
                   </View>
@@ -375,23 +470,30 @@ export default function CompleteProfileModal({ visible, onClose }: Props) {
                     <View style={{ flex: 1, marginRight: Spacing.xs }}>
                       <Text style={styles.label}>PANT LENGTH ({unit})</Text>
                       <TextInput
+                        ref={pantLengthRef}
                         style={styles.input}
                         value={pantLength}
                         onChangeText={setPantLength}
                         keyboardType="numeric"
                         placeholder="104"
                         placeholderTextColor="#A8998A"
+                        returnKeyType="next"
+                        onSubmitEditing={() => ankleFitRef.current?.focus()}
+                        blurOnSubmit={false}
                       />
                     </View>
                     <View style={{ flex: 1, marginLeft: Spacing.xs }}>
                       <Text style={styles.label}>ANKLE FIT ({unit})</Text>
                       <TextInput
+                        ref={ankleFitRef}
                         style={styles.input}
                         value={ankleFit}
                         onChangeText={setAnkleFit}
                         keyboardType="numeric"
                         placeholder="38"
                         placeholderTextColor="#A8998A"
+                        returnKeyType="done"
+                        onSubmitEditing={handleStep2Next}
                       />
                     </View>
                   </View>
@@ -427,23 +529,31 @@ export default function CompleteProfileModal({ visible, onClose }: Props) {
                     <View style={{ flex: 1, marginRight: Spacing.xs }}>
                       <Text style={styles.label}>SHOE SIZE (EU)</Text>
                       <TextInput
+                        ref={shoeSizeRef}
                         style={styles.input}
                         value={shoeSize}
                         onChangeText={setShoeSize}
                         keyboardType="numeric"
                         placeholder="43"
                         placeholderTextColor="#A8998A"
+                        returnKeyType="next"
+                        onSubmitEditing={() => sandalsSizeRef.current?.focus()}
+                        blurOnSubmit={false}
                       />
                     </View>
                     <View style={{ flex: 1, marginLeft: Spacing.xs }}>
                       <Text style={styles.label}>SANDALS / PAM SIZE</Text>
                       <TextInput
+                        ref={sandalsSizeRef}
                         style={styles.input}
                         value={sandalsSize}
                         onChangeText={setSandalsSize}
                         keyboardType="numeric"
                         placeholder="43"
                         placeholderTextColor="#A8998A"
+                        returnKeyType="next"
+                        onSubmitEditing={() => ringSizeRef.current?.focus()}
+                        blurOnSubmit={false}
                       />
                     </View>
                   </View>
@@ -452,29 +562,38 @@ export default function CompleteProfileModal({ visible, onClose }: Props) {
                     <View style={{ flex: 1, marginRight: Spacing.xs }}>
                       <Text style={styles.label}>RING SIZE</Text>
                       <TextInput
+                        ref={ringSizeRef}
                         style={styles.input}
                         value={ringSize}
                         onChangeText={setRingSize}
                         keyboardType="numeric"
                         placeholder="9"
                         placeholderTextColor="#A8998A"
+                        returnKeyType="next"
+                        onSubmitEditing={() => braceletSizeRef.current?.focus()}
+                        blurOnSubmit={false}
                       />
                     </View>
                     <View style={{ flex: 1, marginLeft: Spacing.xs }}>
                       <Text style={styles.label}>BRACELET / WRIST (CM)</Text>
                       <TextInput
+                        ref={braceletSizeRef}
                         style={styles.input}
                         value={braceletSize}
                         onChangeText={setBraceletSize}
                         keyboardType="numeric"
                         placeholder="20"
                         placeholderTextColor="#A8998A"
+                        returnKeyType="next"
+                        onSubmitEditing={() => initialsRef.current?.focus()}
+                        blurOnSubmit={false}
                       />
                     </View>
                   </View>
 
                   <Text style={[styles.label, { marginTop: Spacing.md }]}>MONOGRAM / ENGRAVING INITIALS</Text>
                   <TextInput
+                    ref={initialsRef}
                     style={styles.input}
                     value={personalInitials}
                     onChangeText={setPersonalInitials}
@@ -482,16 +601,23 @@ export default function CompleteProfileModal({ visible, onClose }: Props) {
                     maxLength={4}
                     placeholder="e.g. KM"
                     placeholderTextColor="#A8998A"
+                    returnKeyType="next"
+                    onSubmitEditing={() => notesRef.current?.focus()}
+                    blurOnSubmit={false}
                   />
 
                   <Text style={[styles.label, { marginTop: Spacing.md }]}>SPECIAL BESPOKE PREFERENCES</Text>
                   <TextInput
+                    ref={notesRef}
                     style={[styles.input, { minHeight: 60 }]}
                     value={additionalNotes}
                     onChangeText={setAdditionalNotes}
                     placeholder="e.g. Prefer relaxed fits, gold embroidery on cuff borders..."
                     placeholderTextColor="#A8998A"
                     multiline
+                    autoCapitalize="sentences"
+                    returnKeyType="done"
+                    onSubmitEditing={handleStep3Finish}
                   />
 
                   <View style={[styles.row, { marginTop: Spacing.lg }]}>
@@ -535,7 +661,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   keyboardView: {
-    maxHeight: '94%',
+    width: '100%',
+    maxHeight: Platform.OS === 'ios' ? '92%' : '96%',
+    justifyContent: 'flex-end',
   },
   modalCard: {
     backgroundColor: '#FFFFFF',
@@ -543,7 +671,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.lg,
-    paddingBottom: Spacing.xl + 10,
+    paddingBottom: Platform.OS === 'ios' ? Spacing.xl + 20 : Spacing.xl + 10,
+    maxHeight: '100%',
   },
   headerRow: {
     flexDirection: 'row',
@@ -600,7 +729,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   scrollContent: {
-    paddingBottom: Spacing.xl,
+    paddingBottom: Spacing.xl + 40,
   },
   sectionTitle: {
     fontSize: 16,

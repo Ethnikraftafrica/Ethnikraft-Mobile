@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -39,6 +39,16 @@ export default function EditPersonalDetailsModal({ visible, onClose }: Props) {
   const [country, setCountry] = useState(profile.country);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  // Input navigation refs
+  const firstNameRef = useRef<TextInput>(null);
+  const lastNameRef = useRef<TextInput>(null);
+  const profileNameRef = useRef<TextInput>(null);
+  const phoneRef = useRef<TextInput>(null);
+  const birthDateRef = useRef<TextInput>(null);
+  const addressRef = useRef<TextInput>(null);
+  const cityRef = useRef<TextInput>(null);
+  const countryRef = useRef<TextInput>(null);
 
   // Sync form values whenever modal opens or profile changes
   useEffect(() => {
@@ -131,8 +141,9 @@ export default function EditPersonalDetailsModal({ visible, onClose }: Props) {
     >
       <View style={styles.overlay}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.keyboardView}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
         >
           <View style={[styles.modalCard, Shadows.lg]}>
             {/* Header */}
@@ -159,28 +170,47 @@ export default function EditPersonalDetailsModal({ visible, onClose }: Props) {
               </View>
             ) : null}
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.formScroll}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.formScroll}
+              keyboardShouldPersistTaps="handled"
+              automaticallyAdjustKeyboardInsets={true}
+            >
               {/* Names */}
               <View style={styles.row}>
                 <View style={{ flex: 1, marginRight: Spacing.xs }}>
                   <Text style={styles.label}>FIRST NAME *</Text>
                   <TextInput
+                    ref={firstNameRef}
                     style={styles.input}
                     value={firstName}
                     onChangeText={setFirstName}
                     placeholder="First Name"
                     placeholderTextColor="#A8998A"
+                    autoCapitalize="words"
+                    autoComplete="name-given"
+                    textContentType="givenName"
+                    returnKeyType="next"
+                    onSubmitEditing={() => lastNameRef.current?.focus()}
+                    blurOnSubmit={false}
                     editable={!isLoading}
                   />
                 </View>
                 <View style={{ flex: 1, marginLeft: Spacing.xs }}>
                   <Text style={styles.label}>LAST NAME *</Text>
                   <TextInput
+                    ref={lastNameRef}
                     style={styles.input}
                     value={lastName}
                     onChangeText={setLastName}
                     placeholder="Last Name"
                     placeholderTextColor="#A8998A"
+                    autoCapitalize="words"
+                    autoComplete="name-family"
+                    textContentType="familyName"
+                    returnKeyType="next"
+                    onSubmitEditing={() => profileNameRef.current?.focus()}
+                    blurOnSubmit={false}
                     editable={!isLoading}
                   />
                 </View>
@@ -191,12 +221,19 @@ export default function EditPersonalDetailsModal({ visible, onClose }: Props) {
               <View style={styles.inputWithIcon}>
                 <Ionicons name="at-outline" size={16} color="#662502" style={styles.inputIcon} />
                 <TextInput
+                  ref={profileNameRef}
                   style={styles.inputInner}
                   value={profileName}
                   onChangeText={setProfileName}
                   placeholder="e.g. KwameCrafts"
                   placeholderTextColor="#A8998A"
                   autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="username"
+                  textContentType="username"
+                  returnKeyType="next"
+                  onSubmitEditing={() => phoneRef.current?.focus()}
+                  blurOnSubmit={false}
                   editable={!isLoading}
                 />
               </View>
@@ -206,12 +243,18 @@ export default function EditPersonalDetailsModal({ visible, onClose }: Props) {
               <View style={styles.inputWithIcon}>
                 <Ionicons name="call-outline" size={16} color="#662502" style={styles.inputIcon} />
                 <TextInput
+                  ref={phoneRef}
                   style={styles.inputInner}
                   value={phoneNumber}
                   onChangeText={setPhoneNumber}
                   keyboardType="phone-pad"
                   placeholder="+2348012345678"
                   placeholderTextColor="#A8998A"
+                  autoComplete="tel"
+                  textContentType="telephoneNumber"
+                  returnKeyType="next"
+                  onSubmitEditing={() => birthDateRef.current?.focus()}
+                  blurOnSubmit={false}
                   editable={!isLoading}
                 />
               </View>
@@ -242,11 +285,16 @@ export default function EditPersonalDetailsModal({ visible, onClose }: Props) {
               <View style={styles.inputWithIcon}>
                 <Ionicons name="calendar-outline" size={16} color="#662502" style={styles.inputIcon} />
                 <TextInput
+                  ref={birthDateRef}
                   style={styles.inputInner}
                   value={birthDate}
                   onChangeText={setBirthDate}
                   placeholder="1995-08-24"
                   placeholderTextColor="#A8998A"
+                  autoCapitalize="none"
+                  returnKeyType="next"
+                  onSubmitEditing={() => addressRef.current?.focus()}
+                  blurOnSubmit={false}
                   editable={!isLoading}
                 />
               </View>
@@ -254,6 +302,7 @@ export default function EditPersonalDetailsModal({ visible, onClose }: Props) {
               {/* Primary Address */}
               <Text style={[styles.label, { marginTop: Spacing.md }]}>RESIDENTIAL ADDRESS</Text>
               <TextInput
+                ref={addressRef}
                 style={[styles.input, styles.multilineInput]}
                 value={address}
                 onChangeText={setAddress}
@@ -261,6 +310,12 @@ export default function EditPersonalDetailsModal({ visible, onClose }: Props) {
                 placeholderTextColor="#A8998A"
                 multiline
                 numberOfLines={2}
+                autoCapitalize="sentences"
+                autoComplete="street-address"
+                textContentType="fullStreetAddress"
+                returnKeyType="next"
+                onSubmitEditing={() => cityRef.current?.focus()}
+                blurOnSubmit={false}
                 editable={!isLoading}
               />
 
@@ -269,22 +324,35 @@ export default function EditPersonalDetailsModal({ visible, onClose }: Props) {
                 <View style={{ flex: 1, marginRight: Spacing.xs }}>
                   <Text style={styles.label}>CITY</Text>
                   <TextInput
+                    ref={cityRef}
                     style={styles.input}
                     value={city}
                     onChangeText={setCity}
                     placeholder="Lagos"
                     placeholderTextColor="#A8998A"
+                    autoCapitalize="words"
+                    autoComplete="address-line2"
+                    textContentType="addressCity"
+                    returnKeyType="next"
+                    onSubmitEditing={() => countryRef.current?.focus()}
+                    blurOnSubmit={false}
                     editable={!isLoading}
                   />
                 </View>
                 <View style={{ flex: 1, marginLeft: Spacing.xs }}>
                   <Text style={styles.label}>COUNTRY</Text>
                   <TextInput
+                    ref={countryRef}
                     style={styles.input}
                     value={country}
                     onChangeText={setCountry}
                     placeholder="Nigeria"
                     placeholderTextColor="#A8998A"
+                    autoCapitalize="words"
+                    autoComplete="country"
+                    textContentType="countryName"
+                    returnKeyType="done"
+                    onSubmitEditing={handleSave}
                     editable={!isLoading}
                   />
                 </View>
@@ -332,7 +400,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   keyboardView: {
-    maxHeight: '92%',
+    width: '100%',
+    maxHeight: Platform.OS === 'ios' ? '92%' : '96%',
+    justifyContent: 'flex-end',
   },
   modalCard: {
     backgroundColor: '#FFFFFF',
@@ -340,7 +410,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.lg,
-    paddingBottom: Spacing.xl + 10,
+    paddingBottom: Platform.OS === 'ios' ? Spacing.xl + 20 : Spacing.xl + 10,
+    maxHeight: '100%',
   },
   headerRow: {
     flexDirection: 'row',
@@ -389,7 +460,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   formScroll: {
-    paddingBottom: Spacing.lg,
+    paddingBottom: Spacing.xl + 40,
   },
   row: {
     flexDirection: 'row',
