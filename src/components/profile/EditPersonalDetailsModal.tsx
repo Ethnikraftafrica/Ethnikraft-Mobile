@@ -81,8 +81,6 @@ export default function EditPersonalDetailsModal({ visible, onClose }: Props) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       
       const payload = {
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
         profileName: profileName.trim() || undefined,
         phoneNumber: phoneNumber.trim() || undefined,
         gender: gender ? (gender as GenderType) : undefined,
@@ -95,7 +93,13 @@ export default function EditPersonalDetailsModal({ visible, onClose }: Props) {
       const result = await updateContactInfoApi(payload).unwrap();
 
       // Sync updated profile to Redux
-      dispatch(updatePersonalDetails(payload));
+      dispatch(
+        updatePersonalDetails({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          ...payload,
+        })
+      );
       if (result) {
         dispatch(syncFromFullProfile(result));
       }

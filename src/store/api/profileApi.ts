@@ -75,8 +75,6 @@ export interface UpdateContactInfoPayload {
   country?: string;
   gender?: 'MALE' | 'FEMALE' | 'OTHER';
   birthDate?: string;
-  firstName?: string;
-  lastName?: string;
 }
 
 export interface UpdateNotificationsPayload {
