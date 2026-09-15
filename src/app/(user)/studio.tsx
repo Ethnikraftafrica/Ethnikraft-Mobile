@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { useAppDispatch, useAppSelector } from '@/store';
 import {
@@ -122,8 +123,13 @@ export default function StudioScreen() {
       <View>
         {/* Luxury Hero Banner */}
         <View style={styles.heroBanner}>
-          <View style={styles.heroIconCircle}>
-            <Ionicons name="sparkles" size={28} color={Colors.accentGold} />
+          <View style={styles.heroLogoWrapper}>
+            <Image
+              source={require('../../../assets/revamp/logo.jpg')}
+              style={styles.heroLogoImage}
+              contentFit="cover"
+              transition={200}
+            />
           </View>
           <Text style={styles.heroTitle}>Ethnikraft Custom Studio</Text>
           <Text style={styles.heroSubtitle}>
@@ -373,16 +379,32 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  heroIconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  heroLogoWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    overflow: 'hidden',
     backgroundColor: Colors.surfaceSubtle,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    borderWidth: 1.5,
+    borderColor: 'rgba(196, 108, 39, 0.35)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#361300',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.12,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  heroLogoImage: {
+    width: '100%',
+    height: '100%',
   },
   heroTitle: {
     fontSize: Typography.fontSize.xl,

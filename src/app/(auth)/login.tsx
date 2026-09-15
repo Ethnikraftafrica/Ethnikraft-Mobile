@@ -11,6 +11,7 @@ import {
   Platform,
   Linking,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -102,7 +103,12 @@ export default function LoginScreen() {
           {/* Brand Header */}
           <View style={styles.header}>
             <View style={styles.logoBadge}>
-              <Ionicons name="sparkles" size={26} color="#F5EBD5" />
+              <Image
+                source={require('../../../assets/revamp/logo.jpg')}
+                style={styles.logoImage}
+                contentFit="cover"
+                transition={200}
+              />
             </View>
             <Text style={styles.brandTitle}>ETHNIKRAFT</Text>
             <Text style={styles.brandSubtitle}>African Luxury Heritage & Artisan Commerce</Text>
@@ -333,13 +339,21 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   logoBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    overflow: 'hidden',
     backgroundColor: '#341B00',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.xs + 2,
+    borderWidth: 2,
+    borderColor: '#C46C27',
+  },
+  logoImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
   },
   brandTitle: {
     fontSize: 22,

@@ -7,6 +7,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
@@ -50,7 +51,12 @@ export const StudioStepSuccess: React.FC<StudioStepSuccessProps> = ({
         {/* Celebration Badge & Title */}
         <View style={styles.heroSection}>
           <View style={styles.iconCircle}>
-            <Ionicons name="sparkles" size={36} color={Colors.accentGold} />
+            <Image
+              source={require('../../../../assets/revamp/logo.jpg')}
+              style={styles.logoImage}
+              contentFit="cover"
+              transition={200}
+            />
           </View>
           <Text style={styles.title}>Commission Live in Studio!</Text>
           <Text style={styles.subtitle}>
@@ -193,12 +199,13 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
+    overflow: 'hidden',
     backgroundColor: Colors.surfaceSubtle,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.md,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: 'rgba(196, 108, 39, 0.4)',
     ...Platform.select({
       ios: {
         shadowColor: Colors.accentGold,
@@ -210,6 +217,10 @@ const styles = StyleSheet.create({
         elevation: 4,
       },
     }),
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
   title: {
     fontSize: Typography.fontSize.xxl,

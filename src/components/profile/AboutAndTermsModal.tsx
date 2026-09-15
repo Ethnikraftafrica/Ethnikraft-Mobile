@@ -7,6 +7,7 @@ import {
   ScrollView,
   Modal,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 
@@ -39,7 +40,12 @@ export default function AboutAndTermsModal({ visible, onClose }: Props) {
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
             <View style={styles.brandBox}>
               <View style={styles.logoBadge}>
-                <Ionicons name="sparkles" size={24} color="#F5EBD5" />
+                <Image
+                  source={require('../../../assets/revamp/logo.jpg')}
+                  style={styles.logoImage}
+                  contentFit="cover"
+                  transition={200}
+                />
               </View>
               <Text style={styles.brandTitle}>ETHNIKRAFT</Text>
               <Text style={styles.brandSub}>Version 1.0.0 (Production Build)</Text>
@@ -136,13 +142,21 @@ const styles = StyleSheet.create({
     borderColor: '#E4DACB',
   },
   logoBadge: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    overflow: 'hidden',
     backgroundColor: '#341B00',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.xs,
+    borderWidth: 1.5,
+    borderColor: '#C46C27',
+  },
+  logoImage: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
   },
   brandTitle: {
     fontSize: 18,

@@ -9,6 +9,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -254,8 +255,13 @@ export default function ProfileScreen() {
           </View>
         ) : (
           <View style={[styles.guestCard, Shadows.sm]}>
-            <View style={styles.guestIcon}>
-              <Ionicons name="person-outline" size={28} color={Colors.primary} />
+            <View style={styles.guestLogoBadge}>
+              <Image
+                source={require('../../../assets/revamp/logo.jpg')}
+                style={styles.guestLogoImage}
+                contentFit="cover"
+                transition={200}
+              />
             </View>
             <Text style={styles.guestTitle}>Welcome to Ethnikraft</Text>
             <Text style={styles.guestSubtitle}>
@@ -544,6 +550,21 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Brand Hallmark Footer */}
+        <View style={styles.brandFooter}>
+          <View style={styles.footerLogoContainer}>
+            <Image
+              source={require('../../../assets/revamp/logo.jpg')}
+              style={styles.footerLogo}
+              contentFit="cover"
+              transition={200}
+            />
+          </View>
+          <Text style={styles.footerBrandName}>ETHNIKRAFT</Text>
+          <Text style={styles.footerTagline}>HERITAGE • CRAFT • LUXURY</Text>
+          <Text style={styles.footerVersion}>Version 1.0.0 (Production Build)</Text>
+        </View>
       </ScrollView>
 
       {/* Sub-modals (conditionally mounted to minimize RAM consumption and eliminate memory overhead when hidden) */}
@@ -784,14 +805,22 @@ const styles = StyleSheet.create({
     borderColor: '#EFE7DA',
     marginBottom: Spacing.md,
   },
-  guestIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#F8EFE4',
+  guestLogoBadge: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    overflow: 'hidden',
+    backgroundColor: '#341B00',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.sm,
+    borderWidth: 2,
+    borderColor: '#C46C27',
+  },
+  guestLogoImage: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
   },
   guestTitle: {
     fontSize: Typography.fontSize.base,
@@ -932,5 +961,48 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.sm,
     fontWeight: '700',
     color: '#DC2626',
+  },
+  brandFooter: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: Spacing.xl,
+    marginBottom: Spacing.xl + 20,
+    paddingVertical: Spacing.lg,
+  },
+  footerLogoContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    backgroundColor: '#341B00',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    borderWidth: 1.5,
+    borderColor: '#C46C27',
+  },
+  footerLogo: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
+  footerBrandName: {
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 2,
+    color: '#341B00',
+    marginBottom: 2,
+  },
+  footerTagline: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    color: '#C46C27',
+    marginBottom: 6,
+  },
+  footerVersion: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#A8998A',
   },
 });
