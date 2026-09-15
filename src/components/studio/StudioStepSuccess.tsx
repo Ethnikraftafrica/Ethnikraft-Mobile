@@ -52,7 +52,7 @@ export const StudioStepSuccess: React.FC<StudioStepSuccessProps> = ({
         <View style={styles.heroSection}>
           <View style={styles.iconCircle}>
             <Image
-              source={require('../../../../assets/revamp/logo.jpg')}
+              source={require('../../../assets/revamp/logo.jpg')}
               style={styles.logoImage}
               contentFit="cover"
               transition={200}
