@@ -115,7 +115,7 @@ export const StudioStepVendors: React.FC<StudioStepVendorsProps> = ({
           >
             <Ionicons
               name="globe-outline"
-              size={18}
+              size={16}
               color={
                 vendorSelectionMode === 'BROADCAST'
                   ? Colors.primaryDark
@@ -123,6 +123,7 @@ export const StudioStepVendors: React.FC<StudioStepVendorsProps> = ({
               }
             />
             <Text
+              numberOfLines={1}
               style={[
                 styles.modeTabText,
                 vendorSelectionMode === 'BROADCAST' && styles.modeTabTextSelected,
@@ -130,11 +131,6 @@ export const StudioStepVendors: React.FC<StudioStepVendorsProps> = ({
             >
               Public Broadcast
             </Text>
-            {vendorSelectionMode === 'BROADCAST' && (
-              <View style={styles.recPill}>
-                <Text style={styles.recPillText}>RECOMMENDED</Text>
-              </View>
-            )}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -147,7 +143,7 @@ export const StudioStepVendors: React.FC<StudioStepVendorsProps> = ({
           >
             <Ionicons
               name="person-circle-outline"
-              size={18}
+              size={16}
               color={
                 vendorSelectionMode === 'DIRECT'
                   ? Colors.primaryDark
@@ -155,6 +151,7 @@ export const StudioStepVendors: React.FC<StudioStepVendorsProps> = ({
               }
             />
             <Text
+              numberOfLines={1}
               style={[
                 styles.modeTabText,
                 vendorSelectionMode === 'DIRECT' && styles.modeTabTextSelected,
@@ -170,10 +167,15 @@ export const StudioStepVendors: React.FC<StudioStepVendorsProps> = ({
           <View style={styles.broadcastCard}>
             <View style={styles.broadcastIconRow}>
               <View style={styles.broadcastIconBox}>
-                <Ionicons name="radio" size={28} color={Colors.primary} />
+                <Ionicons name="radio" size={26} color={Colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.broadcastTitle}>Open Artisan Marketplace</Text>
+                <View style={styles.titleBadgeRow}>
+                  <Text style={styles.broadcastTitle}>Open Artisan Marketplace</Text>
+                  <View style={styles.recBadge}>
+                    <Text style={styles.recBadgeText}>RECOMMENDED</Text>
+                  </View>
+                </View>
                 <Text style={styles.broadcastDesc}>
                   Your custom request will be broadcast to all verified {selectedCategory.toLowerCase()} guild masters across Lagos, Abuja, Kano, and Benin.
                 </Text>
@@ -339,7 +341,7 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   header: {
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.lg,
     alignItems: 'center',
   },
   badge: {
@@ -373,7 +375,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
-    maxWidth: 320,
+    paddingHorizontal: Spacing.xs,
   },
   modeTabs: {
     flexDirection: 'row',
@@ -391,6 +393,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingVertical: Spacing.sm + 2,
+    paddingHorizontal: Spacing.xs,
     borderRadius: Radius.md,
   },
   modeTabSelected: {
@@ -407,16 +410,24 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fontFamily.poppinsBold,
     color: Colors.primaryDark,
   },
-  recPill: {
+  titleBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 4,
+  },
+  recBadge: {
     backgroundColor: Colors.primary,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: 4,
   },
-  recPillText: {
-    fontSize: 8,
+  recBadgeText: {
+    fontSize: 9,
     fontFamily: Typography.fontFamily.poppinsBold,
     color: Colors.textInverse,
+    letterSpacing: 0.5,
   },
   broadcastCard: {
     backgroundColor: Colors.surface,
