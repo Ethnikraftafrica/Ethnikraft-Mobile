@@ -271,6 +271,74 @@ export const studioApi = baseApi.injectEndpoints({
         { type: 'CustomRequests', id: 'LIST' },
       ],
     }),
+
+    // 11. Get matching registered vendors by category from live catalog
+    getMatchingVendors: builder.query<
+      Array<{
+        id: string;
+        name: string;
+        businessName: string;
+        category: string;
+        rating: number;
+        reviewCount: number;
+        location: string;
+        specialty: string;
+        avatar: string;
+        isAvailable: boolean;
+        startingPrice?: number;
+        deliverySpeed?: string;
+      }>,
+      { category?: string } | void
+    >({
+      query: (params) => ({
+        url: '/products',
+        params: {
+          limit: 100,
+          ...(params?.category && params.category !== 'ALL' ? { category: params.category } : {}),
+        },
+      }),
+      transformResponse: (response: any) => {
+        const products = Array.isArray(response?.data?.products)
+          ? response.data.products
+          : Array.isArray(response?.products)
+          ? response.products
+          : Array.isArray(response?.data)
+          ? response.data
+          : Array.isArray(response)
+          ? response
+          : [];
+
+        const vendorMap = new Map<string, any>();
+
+        products.forEach((p: any) => {
+          const v = p.vendor;
+          if (v && (v.id || v._id) && !vendorMap.has(v.id || v._id)) {
+            const vendorId = (v.id || v._id).toString();
+            const bName = v.businessName || v.name || 'Master Artisan';
+            vendorMap.set(vendorId, {
+              id: vendorId,
+              name: bName,
+              businessName: bName,
+              category: p.productCategory || 'WEARS',
+              rating: v.rating || 4.9,
+              reviewCount: p.reviewCount || 16,
+              location: v.cityOfOperation ? `${v.cityOfOperation}, Nigeria` : 'Lagos, Nigeria',
+              specialty: `Master Specialist • ${p.name || p.productCategory || 'Bespoke Regalia'}`,
+              avatar:
+                v.businessLogo ||
+                v.profileImage ||
+                p.mainImage ||
+                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+              isAvailable: true,
+              startingPrice: typeof p.price === 'number' ? p.price : parseInt(p.price || '25000', 10) || 25000,
+              deliverySpeed: `${p.estimatedProductionDays || 7} - ${(p.estimatedProductionDays || 7) + 7} Days`,
+            });
+          }
+        });
+
+        return Array.from(vendorMap.values());
+      },
+    }),
   }),
   overrideExisting: true,
 });
@@ -286,4 +354,5 @@ export const {
   useAcceptCustomBidMutation,
   useUpdateCustomBidMutation,
   useRejectCustomBidMutation,
+  useGetMatchingVendorsQuery,
 } = studioApi;

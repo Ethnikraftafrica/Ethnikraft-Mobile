@@ -7,11 +7,13 @@ import {
   ScrollView,
   TextInput,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { useGetMatchingVendorsQuery } from '@/store/api/studioApi';
 import { MOCK_ARTISANS } from './studioData';
 
 interface StudioStepVendorsProps {
@@ -39,21 +41,33 @@ export const StudioStepVendors: React.FC<StudioStepVendorsProps> = ({
 }) => {
   const [search, setSearch] = useState('');
 
+  const { data: liveVendors, isLoading: isLoadingVendors } = useGetMatchingVendorsQuery({
+    category: selectedCategory,
+  });
+
+  const baseArtisansList = useMemo(() => {
+    if (liveVendors && liveVendors.length > 0) {
+      return liveVendors;
+    }
+    return MOCK_ARTISANS;
+  }, [liveVendors]);
+
   const relevantArtisans = useMemo(() => {
-    return MOCK_ARTISANS.filter((a) => {
+    return baseArtisansList.filter((a) => {
       const matchesCategory =
+        !a.category ||
         a.category.toUpperCase() === selectedCategory.toUpperCase() ||
         selectedCategory === 'ALL' ||
-        MOCK_ARTISANS.length <= 3;
+        baseArtisansList.length <= 3;
       const q = search.trim().toLowerCase();
       const matchesSearch =
         !q ||
         a.name.toLowerCase().includes(q) ||
-        a.specialty.toLowerCase().includes(q) ||
-        a.location.toLowerCase().includes(q);
+        (a.specialty && a.specialty.toLowerCase().includes(q)) ||
+        (a.location && a.location.toLowerCase().includes(q));
       return matchesCategory && matchesSearch;
     });
-  }, [selectedCategory, search]);
+  }, [baseArtisansList, selectedCategory, search]);
 
   const handleModeChange = useCallback(
     (mode: 'BROADCAST' | 'DIRECT') => {
@@ -228,7 +242,7 @@ export const StudioStepVendors: React.FC<StudioStepVendorsProps> = ({
             {/* Select All Row */}
             <View style={styles.listHeaderRow}>
               <Text style={styles.listHeaderText}>
-                {relevantArtisans.length} Verified Artisan{relevantArtisans.length !== 1 ? 's' : ''}
+                {isLoadingVendors ? 'Finding Artisans...' : `${relevantArtisans.length} Verified Artisan${relevantArtisans.length !== 1 ? 's' : ''}`}
               </Text>
               {relevantArtisans.length > 0 && (
                 <TouchableOpacity onPress={handleSelectAllToggle}>
@@ -242,9 +256,17 @@ export const StudioStepVendors: React.FC<StudioStepVendorsProps> = ({
             </View>
 
             {/* Artisan Cards */}
-            <View style={styles.artisansList}>
-              {relevantArtisans.map((artisan) => {
-                const isSelected = selectedVendorIds.includes(artisan.id);
+            {isLoadingVendors && baseArtisansList.length === 0 ? (
+              <View style={{ paddingVertical: Spacing.xl, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+                <Text style={{ marginTop: Spacing.sm, fontSize: Typography.fontSize.xs, color: Colors.textMuted }}>
+                  Finding top master artisans for your commission...
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.artisansList}>
+                {relevantArtisans.map((artisan) => {
+                  const isSelected = selectedVendorIds.includes(artisan.id);
                 return (
                   <TouchableOpacity
                     key={artisan.id}
@@ -300,9 +322,10 @@ export const StudioStepVendors: React.FC<StudioStepVendorsProps> = ({
                 );
               })}
             </View>
-          </View>
-        )}
-      </ScrollView>
+          )}
+        </View>
+      )}
+    </ScrollView>
 
       {/* Fixed bottom action */}
       <View style={styles.bottomBar}>
