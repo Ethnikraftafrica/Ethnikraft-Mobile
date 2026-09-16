@@ -52,16 +52,23 @@ export const StudioStepInspiration: React.FC<StudioStepInspirationProps> = ({
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: false,
-        quality: 0.8,
+        quality: 0.7,
+        base64: true,
         allowsMultipleSelection: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         result.assets.forEach((asset) => {
+          const mime = asset.mimeType || (asset.uri?.endsWith('.png') ? 'image/png' : asset.uri?.endsWith('.webp') ? 'image/webp' : 'image/jpeg');
+          const base64Data = asset.base64
+            ? (asset.base64.startsWith('data:') ? asset.base64 : `data:${mime};base64,${asset.base64}`)
+            : undefined;
+
           onAddImage({
             id: `img-${Date.now()}-${Math.random()}`,
             uri: asset.uri,
+            base64: base64Data,
             name: asset.fileName || 'Inspiration Photo',
             size: asset.fileSize,
           });
@@ -84,14 +91,22 @@ export const StudioStepInspiration: React.FC<StudioStepInspirationProps> = ({
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        quality: 0.8,
+        quality: 0.7,
+        base64: true,
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+        const mime = asset.mimeType || 'image/jpeg';
+        const base64Data = asset.base64
+          ? (asset.base64.startsWith('data:') ? asset.base64 : `data:${mime};base64,${asset.base64}`)
+          : undefined;
+
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         onAddImage({
           id: `img-${Date.now()}`,
-          uri: result.assets[0].uri,
+          uri: asset.uri,
+          base64: base64Data,
           name: 'Camera Capture',
         });
       }

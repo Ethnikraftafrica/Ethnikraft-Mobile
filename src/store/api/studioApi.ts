@@ -293,8 +293,10 @@ export const studioApi = baseApi.injectEndpoints({
       query: (params) => ({
         url: '/products',
         params: {
-          limit: 100,
-          ...(params?.category && params.category !== 'ALL' ? { category: params.category } : {}),
+          take: 50,
+          ...(params?.category && params.category !== 'ALL'
+            ? { productCategory: params.category.toUpperCase() }
+            : {}),
         },
       }),
       transformResponse: (response: any) => {

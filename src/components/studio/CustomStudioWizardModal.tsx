@@ -130,7 +130,20 @@ export const CustomStudioWizardModal: React.FC = () => {
         ? new Date(details.deliveryDate).toISOString()
         : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
 
-      const inspirationImages = images.map((img) => img.base64 || img.uri);
+      const inspirationImages = images
+        .map((img) => {
+          if (img.base64 && (img.base64.startsWith('data:') || img.base64.startsWith('http'))) {
+            return img.base64;
+          }
+          if (img.uri && (img.uri.startsWith('http://') || img.uri.startsWith('https://') || img.uri.startsWith('data:'))) {
+            return img.uri;
+          }
+          if (img.base64) {
+            return `data:image/jpeg;base64,${img.base64}`;
+          }
+          return img.uri;
+        })
+        .filter(Boolean);
 
       const payload: CreateCustomRequestPayload = {
         title: details.title.trim() || `Custom ${selectedCategory} Commission`,
