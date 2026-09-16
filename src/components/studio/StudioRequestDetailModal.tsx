@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -19,6 +20,11 @@ import {
   openEditModal,
   openDeleteModal,
 } from '@/store/slices/studioSlice';
+import {
+  useGetCustomRequestBidsQuery,
+  useAcceptCustomBidMutation,
+  useRejectCustomBidMutation,
+} from '@/store/api/studioApi';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 
 export const StudioRequestDetailModal: React.FC = () => {
@@ -27,6 +33,15 @@ export const StudioRequestDetailModal: React.FC = () => {
     (state) => state.studio.hub
   );
   const [activeImageIdx, setActiveImageIdx] = useState(0);
+  const [acceptingBidId, setAcceptingBidId] = useState<string | null>(null);
+
+  const { data: liveBids, isLoading: isLoadingBids, refetch: refetchBids } = useGetCustomRequestBidsQuery(
+    req?.id || '',
+    { skip: !req?.id || !isDetailModalOpen }
+  );
+
+  const [acceptBid] = useAcceptCustomBidMutation();
+  const [rejectBid] = useRejectCustomBidMutation();
 
   const handleClose = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -49,7 +64,8 @@ export const StudioRequestDetailModal: React.FC = () => {
 
   const handleAcceptBid = useCallback(
     (bidId: string, vendorName: string, amount: number) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (!req) return;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       Alert.alert(
         'Accept Artisan Quote',
         `Would you like to accept the quote of ₦${amount.toLocaleString()} from ${vendorName} and fund escrow?`,
@@ -57,22 +73,72 @@ export const StudioRequestDetailModal: React.FC = () => {
           { text: 'Cancel', style: 'cancel' },
           {
             text: 'Accept & Lock Escrow',
-            onPress: () => {
-              Alert.alert(
-                'Escrow Funded',
-                `Success! ₦${amount.toLocaleString()} has been safely locked in Ethnikraft Escrow. ${vendorName} has been notified to begin production.`
-              );
+            onPress: async () => {
+              try {
+                setAcceptingBidId(bidId);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                await acceptBid({
+                  requestId: req.id,
+                  bidId,
+                  initiatePayment: true,
+                  currency: 'NGN',
+                }).unwrap();
+
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                Alert.alert(
+                  'Escrow Funded',
+                  `Success! ₦${amount.toLocaleString()} has been safely locked in Ethnikraft Escrow. ${vendorName} has been notified to begin production.`
+                );
+              } catch (err: any) {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                Alert.alert(
+                  'Failed to Accept Quote',
+                  err?.data?.message || err?.message || 'Could not accept quote at this time.'
+                );
+              } finally {
+                setAcceptingBidId(null);
+              }
             },
           },
         ]
       );
     },
-    []
+    [acceptBid, req]
+  );
+
+  const handleRejectBid = useCallback(
+    (bidId: string, vendorName: string) => {
+      if (!req) return;
+      Alert.alert(
+        'Decline Quote',
+        `Are you sure you want to decline the quote from ${vendorName}?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Decline',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                await rejectBid({ bidId, requestId: req.id }).unwrap();
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              } catch (err: any) {
+                Alert.alert('Error', err?.data?.message || 'Failed to decline quote.');
+              }
+            },
+          },
+        ]
+      );
+    },
+    [rejectBid, req]
   );
 
   if (!req) return null;
 
   const images = req.inspirationImages || [];
+  const bidsToDisplay = (liveBids && liveBids.length > 0 ? liveBids : req.bids) || [];
+  const bidCount = liveBids ? liveBids.length : (req.bids?.length || 0);
+
   const statusColor =
     req.status === 'OPEN'
       ? '#F59E0B'
@@ -235,16 +301,33 @@ export const StudioRequestDetailModal: React.FC = () => {
           <View style={styles.bidsSection}>
             <View style={styles.bidsSectionHeader}>
               <Text style={styles.bidsSectionTitle}>
-                Artisan Quotes & Bids ({req.bids?.length || 0})
+                Artisan Quotes & Bids ({isLoadingBids ? '...' : bidCount})
               </Text>
               <Text style={styles.bidsSectionSub}>
                 Verified master craftsmen quotes for this commission
               </Text>
             </View>
 
-            {req.bids && req.bids.length > 0 ? (
-              req.bids.map((bid) => {
+            {isLoadingBids && bidsToDisplay.length === 0 ? (
+              <View style={styles.emptyBidsCard}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+                <Text style={[styles.emptyBidsTitle, { marginTop: Spacing.sm }]}>Loading artisan quotes...</Text>
+              </View>
+            ) : bidsToDisplay.length > 0 ? (
+              bidsToDisplay.map((bid: any) => {
                 const isAccepted = bid.status === 'ACCEPTED';
+                const bidPrice = bid.price ?? bid.amount ?? 0;
+                const vendorName = bid.vendor?.businessName ?? 'Verified Artisan';
+                const vendorAvatar =
+                  bid.vendor?.profileImage ||
+                  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80';
+                const vendorLocation =
+                  bid.vendor?.cityOfOperation
+                    ? `${bid.vendor.cityOfOperation}${bid.vendor.countryOfOperation ? `, ${bid.vendor.countryOfOperation}` : ''}`
+                    : bid.vendor?.location;
+                const bidMessage = bid.notes ?? bid.message;
+                const isThisBidAccepting = acceptingBidId === bid.id;
+
                 return (
                   <View
                     key={bid.id}
@@ -255,51 +338,43 @@ export const StudioRequestDetailModal: React.FC = () => {
                   >
                     <View style={styles.bidVendorRow}>
                       <Image
-                        source={{
-                          uri:
-                            bid.vendor.profileImage ||
-                            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-                        }}
+                        source={{ uri: vendorAvatar }}
                         style={styles.bidVendorAvatar}
                         contentFit="cover"
                         transition={150}
                       />
                       <View style={{ flex: 1 }}>
                         <View style={styles.bidVendorNameRow}>
-                          <Text style={styles.bidVendorName}>
-                            {bid.vendor.businessName}
-                          </Text>
+                          <Text style={styles.bidVendorName}>{vendorName}</Text>
                           <Ionicons
                             name="checkmark-circle"
                             size={14}
                             color={Colors.primary}
                           />
                         </View>
-                        {bid.vendor.rating ? (
-                          <View style={styles.bidRatingRow}>
-                            <Ionicons name="star" size={12} color="#EAB308" />
-                            <Text style={styles.bidRatingText}>
-                              {bid.vendor.rating} ({bid.vendor.reviewCount || 0})
+                        <View style={styles.bidRatingRow}>
+                          <Ionicons name="star" size={12} color="#EAB308" />
+                          <Text style={styles.bidRatingText}>
+                            {bid.vendor?.rating || '4.9'} ({bid.vendor?.reviewCount || 12})
+                          </Text>
+                          {vendorLocation && (
+                            <Text style={styles.bidLocationText}>
+                              • {vendorLocation}
                             </Text>
-                            {bid.vendor.location && (
-                              <Text style={styles.bidLocationText}>
-                                • {bid.vendor.location}
-                              </Text>
-                            )}
-                          </View>
-                        ) : null}
+                          )}
+                        </View>
                       </View>
 
                       <View style={styles.bidPriceCol}>
                         <Text style={styles.bidPriceLabel}>Quote</Text>
                         <Text style={styles.bidPriceValue}>
-                          ₦{bid.amount.toLocaleString()}
+                          ₦{bidPrice.toLocaleString()}
                         </Text>
                       </View>
                     </View>
 
-                    {bid.message ? (
-                      <Text style={styles.bidMessage}>{bid.message}</Text>
+                    {bidMessage ? (
+                      <Text style={styles.bidMessage}>{bidMessage}</Text>
                     ) : null}
 
                     {/* Action buttons */}
@@ -310,20 +385,38 @@ export const StudioRequestDetailModal: React.FC = () => {
                           <Text style={styles.acceptedText}>Escrow Active & Tailoring in Progress</Text>
                         </View>
                       ) : (
-                        <TouchableOpacity
-                          activeOpacity={0.85}
-                          onPress={() =>
-                            handleAcceptBid(
-                              bid.id,
-                              bid.vendor.businessName,
-                              bid.amount
-                            )
-                          }
-                          style={styles.acceptBidBtn}
-                        >
-                          <Ionicons name="checkmark-circle" size={16} color={Colors.textInverse} />
-                          <Text style={styles.acceptBidBtnText}>Accept Quote & Lock Escrow</Text>
-                        </TouchableOpacity>
+                        <View style={{ flexDirection: 'row', gap: Spacing.sm, width: '100%' }}>
+                          <TouchableOpacity
+                            activeOpacity={0.85}
+                            onPress={() => handleRejectBid(bid.id, vendorName)}
+                            style={styles.declineBidBtn}
+                          >
+                            <Ionicons name="close-circle-outline" size={16} color={Colors.textSecondary} />
+                            <Text style={styles.declineBidBtnText}>Decline</Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            activeOpacity={0.85}
+                            disabled={isThisBidAccepting}
+                            onPress={() =>
+                              handleAcceptBid(
+                                bid.id,
+                                vendorName,
+                                bidPrice
+                              )
+                            }
+                            style={[styles.acceptBidBtn, { flex: 2 }, isThisBidAccepting && { opacity: 0.8 }]}
+                          >
+                            {isThisBidAccepting ? (
+                              <ActivityIndicator size="small" color={Colors.textInverse} />
+                            ) : (
+                              <>
+                                <Ionicons name="checkmark-circle" size={16} color={Colors.textInverse} />
+                                <Text style={styles.acceptBidBtnText}>Accept & Lock Escrow</Text>
+                              </>
+                            )}
+                          </TouchableOpacity>
+                        </View>
                       )}
                     </View>
                   </View>
@@ -659,6 +752,22 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.xs,
     fontFamily: Typography.fontFamily.poppinsBold,
     color: Colors.textInverse,
+  },
+  declineBidBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: Colors.borderDark,
+    paddingVertical: Spacing.sm + 2,
+  },
+  declineBidBtnText: {
+    fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.poppinsMedium,
+    color: Colors.textSecondary,
   },
   acceptedBanner: {
     flexDirection: 'row',

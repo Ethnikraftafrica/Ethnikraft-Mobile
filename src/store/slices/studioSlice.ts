@@ -398,6 +398,12 @@ export const studioSlice = createSlice({
       state.hub.isDeleteModalOpen = false;
       state.hub.selectedRequestForDelete = null;
     },
+    syncRequestsFromApi: (state, action: PayloadAction<StudioCustomRequest[]>) => {
+      state.hub.requests = action.payload;
+    },
+    setWizardSubmitting: (state, action: PayloadAction<boolean>) => {
+      state.wizard.isSubmitting = action.payload;
+    },
   },
 });
 
@@ -416,6 +422,8 @@ export const {
   selectAllWizardVendors,
   clearWizardVendors,
   submitWizardRequest,
+  setWizardSubmitting,
+  syncRequestsFromApi,
   setActiveFilter,
   setSearchQuery,
   openDetailModal,

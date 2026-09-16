@@ -5,11 +5,14 @@ import {
   Text,
   Modal,
   TouchableOpacity,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { closeDeleteModal, confirmDeleteRequest } from '@/store/slices/studioSlice';
+import { closeDeleteModal } from '@/store/slices/studioSlice';
+import { useDeleteCustomRequestMutation } from '@/store/api/studioApi';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 
 export const StudioRequestDeleteModal: React.FC = () => {
@@ -18,16 +21,30 @@ export const StudioRequestDeleteModal: React.FC = () => {
     (state) => state.studio.hub
   );
 
+  const [deleteRequest, { isLoading: isDeleting }] = useDeleteCustomRequestMutation();
+
   if (!req) return null;
 
   const handleClose = () => {
+    if (isDeleting) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     dispatch(closeDeleteModal());
   };
 
-  const handleConfirm = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    dispatch(confirmDeleteRequest(req.id));
+  const handleConfirm = async () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await deleteRequest(req.id).unwrap();
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      dispatch(closeDeleteModal());
+    } catch (err: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        'Delete Failed',
+        err?.data?.message || err?.message || 'Failed to delete custom studio request. Please try again.'
+      );
+    }
   };
 
   return (
@@ -51,12 +68,24 @@ export const StudioRequestDeleteModal: React.FC = () => {
           </Text>
 
           <View style={styles.actionsRow}>
-            <TouchableOpacity onPress={handleClose} style={styles.cancelBtn}>
+            <TouchableOpacity
+              onPress={handleClose}
+              disabled={isDeleting}
+              style={[styles.cancelBtn, isDeleting && { opacity: 0.5 }]}
+            >
               <Text style={styles.cancelBtnText}>Keep Request</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handleConfirm} style={styles.deleteBtn}>
-              <Text style={styles.deleteBtnText}>Yes, Delete</Text>
+            <TouchableOpacity
+              onPress={handleConfirm}
+              disabled={isDeleting}
+              style={[styles.deleteBtn, isDeleting && { opacity: 0.8 }]}
+            >
+              {isDeleting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.deleteBtnText}>Yes, Delete</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>

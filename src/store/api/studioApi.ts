@@ -1,0 +1,289 @@
+import { baseApi } from './baseApi';
+
+export interface BackendCustomBid {
+  id: string;
+  customRequestId: string;
+  vendorId: string;
+  price: number;
+  proposedTimeline: string;
+  notes?: string;
+  sampleImage?: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'COUNTERED';
+  submittedAt: string;
+  createdAt: string;
+  updatedAt: string;
+  vendor?: {
+    id: string;
+    businessName: string;
+    businessEmail?: string;
+    businessTagline?: string;
+    profileImage?: string;
+    rating?: number;
+    reviewCount?: number;
+    cityOfOperation?: string;
+    countryOfOperation?: string;
+    user?: {
+      id: string;
+      firstName: string;
+      lastName: string;
+    };
+  };
+}
+
+export interface BackendCustomRequest {
+  id: string;
+  userId: string;
+  title: string;
+  description: string;
+  budget: number;
+  timeline: string;
+  materialType?: string;
+  materialQuality?: string;
+  colors?: string[];
+  quantity?: number;
+  measurements?: string;
+  inspirationImages: string[];
+  categoryType: string;
+  status: 'OPEN' | 'CLOSED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  selectedBidId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  _count?: {
+    bids: number;
+  };
+  bids?: BackendCustomBid[];
+  user?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+}
+
+export interface CreateCustomRequestPayload {
+  title: string;
+  description: string;
+  budget: number;
+  timeline: string;
+  categoryType: string;
+  materialType?: string;
+  materialQuality?: string;
+  colors?: string[];
+  quantity?: number;
+  measurements?: string;
+  inspirationImages: string[];
+}
+
+export interface UpdateCustomRequestPayload {
+  id: string;
+  budget?: number;
+  timeline?: string;
+  description?: string;
+  colors?: string[];
+  materialType?: string;
+  materialQuality?: string;
+}
+
+export interface SearchVendorsPayload {
+  requestId: string;
+  category?: string;
+  location?: string;
+  vendorIds?: string[];
+}
+
+export interface AcceptCustomBidPayload {
+  requestId: string;
+  bidId: string;
+  initiatePayment?: boolean;
+  currency?: string;
+}
+
+export interface UpdateCustomBidPayload {
+  bidId: string;
+  requestId?: string;
+  price?: number;
+  proposedTimeline?: string;
+  notes?: string;
+}
+
+export const studioApi = baseApi.injectEndpoints({
+  endpoints: (builder) => ({
+    // 1. Get all custom requests for authenticated user
+    getUserCustomRequests: builder.query<BackendCustomRequest[], void>({
+      query: () => '/custom-requests',
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map(({ id }) => ({ type: 'CustomRequests' as const, id })),
+              { type: 'CustomRequests', id: 'LIST' },
+            ]
+          : [{ type: 'CustomRequests', id: 'LIST' }],
+      transformResponse: (response: any): BackendCustomRequest[] => {
+        if (Array.isArray(response)) return response;
+        if (Array.isArray(response?.customRequests)) return response.customRequests;
+        if (Array.isArray(response?.data)) return response.data;
+        if (Array.isArray(response?.requests)) return response.requests;
+        return [];
+      },
+    }),
+
+    // 2. Get single custom request details by ID
+    getCustomRequestById: builder.query<BackendCustomRequest, string>({
+      query: (id) => `/custom-requests/${id}`,
+      providesTags: (_result, _error, id) => [{ type: 'CustomRequests', id }],
+      transformResponse: (response: any): BackendCustomRequest => {
+        return (
+          response?.customRequest ||
+          response?.data?.customRequest ||
+          response?.data ||
+          response
+        );
+      },
+    }),
+
+    // 3. Get all artisan bids for a specific request
+    getCustomRequestBids: builder.query<BackendCustomBid[], string>({
+      query: (requestId) => `/custom-requests/${requestId}/bids`,
+      providesTags: (_result, _error, requestId) => [
+        { type: 'VendorBids', id: requestId },
+      ],
+      transformResponse: (response: any): BackendCustomBid[] => {
+        if (Array.isArray(response)) return response;
+        if (Array.isArray(response?.bids)) return response.bids;
+        if (Array.isArray(response?.data?.bids)) return response.data.bids;
+        if (Array.isArray(response?.data)) return response.data;
+        return [];
+      },
+    }),
+
+    // 4. Create a new custom request
+    createCustomRequest: builder.mutation<BackendCustomRequest, CreateCustomRequestPayload>({
+      query: (body) => ({
+        url: '/custom-requests',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'CustomRequests', id: 'LIST' }],
+      transformResponse: (response: any): BackendCustomRequest => {
+        return (
+          response?.customRequest ||
+          response?.data?.customRequest ||
+          response?.data ||
+          response
+        );
+      },
+    }),
+
+    // 5. Update an existing custom request
+    updateCustomRequest: builder.mutation<BackendCustomRequest, UpdateCustomRequestPayload>({
+      query: ({ id, ...body }) => ({
+        url: `/custom-requests/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'CustomRequests', id },
+        { type: 'CustomRequests', id: 'LIST' },
+      ],
+      transformResponse: (response: any): BackendCustomRequest => {
+        return (
+          response?.customRequest ||
+          response?.data?.customRequest ||
+          response?.data ||
+          response
+        );
+      },
+    }),
+
+    // 6. Delete a custom request
+    deleteCustomRequest: builder.mutation<void, string>({
+      query: (id) => ({
+        url: `/custom-requests/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (_result, _error, id) => [
+        { type: 'CustomRequests', id },
+        { type: 'CustomRequests', id: 'LIST' },
+      ],
+    }),
+
+    // 7. Trigger vendor search / notifications
+    searchVendorsForRequest: builder.mutation<any, SearchVendorsPayload>({
+      query: ({ requestId, ...body }) => ({
+        url: `/custom-requests/${requestId}/search-vendors`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_result, _error, { requestId }) => [
+        { type: 'CustomRequests', id: requestId },
+      ],
+    }),
+
+    // 8. Accept an artisan's bid
+    acceptCustomBid: builder.mutation<any, AcceptCustomBidPayload>({
+      query: ({ requestId, bidId, initiatePayment, currency }) => ({
+        url: `/custom-bids/${requestId}/${bidId}/accept`,
+        method: 'PUT',
+        body: {
+          initiatePayment: !!initiatePayment,
+          currency: currency || 'NGN',
+        },
+      }),
+      invalidatesTags: (_result, _error, { requestId }) => [
+        { type: 'CustomRequests', id: requestId },
+        { type: 'CustomRequests', id: 'LIST' },
+        { type: 'VendorBids', id: requestId },
+        { type: 'Orders', id: 'LIST' },
+      ],
+    }),
+
+    // 9. Update a custom bid or send a counter-offer
+    updateCustomBid: builder.mutation<BackendCustomBid, UpdateCustomBidPayload>({
+      query: ({ bidId, requestId, ...body }) => ({
+        url: requestId
+          ? `/custom-bids/${requestId}/${bidId}`
+          : `/custom-bids/${bidId}`,
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: (_result, _error, { requestId }) => [
+        ...(requestId ? [{ type: 'VendorBids' as const, id: requestId }] : []),
+        { type: 'CustomRequests', id: 'LIST' },
+      ],
+      transformResponse: (response: any): BackendCustomBid => {
+        return (
+          response?.customBid ||
+          response?.data?.customBid ||
+          response?.data ||
+          response
+        );
+      },
+    }),
+
+    // 10. Reject a custom bid
+    rejectCustomBid: builder.mutation<void, { bidId: string; requestId?: string }>({
+      query: ({ bidId }) => ({
+        url: `/custom-bids/${bidId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (_result, _error, { requestId }) => [
+        ...(requestId ? [{ type: 'VendorBids' as const, id: requestId }] : []),
+        { type: 'CustomRequests', id: 'LIST' },
+      ],
+    }),
+  }),
+  overrideExisting: true,
+});
+
+export const {
+  useGetUserCustomRequestsQuery,
+  useGetCustomRequestByIdQuery,
+  useGetCustomRequestBidsQuery,
+  useCreateCustomRequestMutation,
+  useUpdateCustomRequestMutation,
+  useDeleteCustomRequestMutation,
+  useSearchVendorsForRequestMutation,
+  useAcceptCustomBidMutation,
+  useUpdateCustomBidMutation,
+  useRejectCustomBidMutation,
+} = studioApi;

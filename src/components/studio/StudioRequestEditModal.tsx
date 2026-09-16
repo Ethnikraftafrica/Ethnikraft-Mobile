@@ -8,11 +8,14 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { closeEditModal, saveEditRequest } from '@/store/slices/studioSlice';
+import { closeEditModal } from '@/store/slices/studioSlice';
+import { useUpdateCustomRequestMutation } from '@/store/api/studioApi';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 
 export const StudioRequestEditModal: React.FC = () => {
@@ -20,6 +23,8 @@ export const StudioRequestEditModal: React.FC = () => {
   const { isEditModalOpen, selectedRequestForEdit: req } = useAppSelector(
     (state) => state.studio.hub
   );
+
+  const [updateRequest, { isLoading: isUpdating }] = useUpdateCustomRequestMutation();
 
   const [budget, setBudget] = useState('');
   const [deliveryWeeks, setDeliveryWeeks] = useState('2');
@@ -33,24 +38,34 @@ export const StudioRequestEditModal: React.FC = () => {
   if (!req) return null;
 
   const handleClose = () => {
+    if (isUpdating) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     dispatch(closeEditModal());
   };
 
-  const handleSave = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const budgetNum = parseInt(budget.replace(/[^0-9]/g, '')) || req.budget;
-    const weeksNum = parseInt(deliveryWeeks) || 2;
+  const handleSave = async () => {
+    const budgetNum = parseInt(budget.replace(/[^0-9]/g, ''), 10) || req.budget;
+    const weeksNum = parseInt(deliveryWeeks, 10) || 2;
     const targetDate = new Date();
     targetDate.setDate(targetDate.getDate() + weeksNum * 7);
 
-    dispatch(
-      saveEditRequest({
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await updateRequest({
         id: req.id,
         budget: budgetNum,
         timeline: targetDate.toISOString(),
-      })
-    );
+      }).unwrap();
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      dispatch(closeEditModal());
+    } catch (err: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        'Update Failed',
+        err?.data?.message || err?.message || 'Failed to update custom studio request. Please try again.'
+      );
+    }
   };
 
   return (
@@ -124,12 +139,24 @@ export const StudioRequestEditModal: React.FC = () => {
 
           {/* Actions */}
           <View style={styles.actionsRow}>
-            <TouchableOpacity onPress={handleClose} style={styles.cancelBtn}>
+            <TouchableOpacity
+              onPress={handleClose}
+              disabled={isUpdating}
+              style={[styles.cancelBtn, isUpdating && { opacity: 0.5 }]}
+            >
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handleSave} style={styles.saveBtn}>
-              <Text style={styles.saveBtnText}>Save Changes</Text>
+            <TouchableOpacity
+              onPress={handleSave}
+              disabled={isUpdating}
+              style={[styles.saveBtn, isUpdating && { opacity: 0.8 }]}
+            >
+              {isUpdating ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.saveBtnText}>Save Changes</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>

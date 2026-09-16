@@ -24,6 +24,8 @@ import {
   setSearchQuery,
   StudioCustomRequest,
 } from '@/store/slices/studioSlice';
+import { useGetUserCustomRequestsQuery } from '@/store/api/studioApi';
+import { AuthPromptModal } from '@/components/common/AuthPromptModal';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 import {
   CRAFT_CATEGORIES,
@@ -45,26 +47,87 @@ const FILTERS: Array<{ key: 'ALL' | 'OPEN' | 'CLOSED' | 'COMPLETED' | 'CANCELLED
 export default function StudioScreen() {
   const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
   const {
-    requests,
+    requests: localRequests,
     activeFilter,
     searchQuery,
   } = useAppSelector((state) => state.studio.hub);
 
+  const [showAuthModal, setShowAuthModal] = React.useState(false);
+
+  // Fetch live backend custom requests
+  const {
+    data: remoteRequests,
+    isLoading,
+    refetch,
+  } = useGetUserCustomRequestsQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+
   const [refreshing, setRefreshing] = React.useState(false);
 
-  const onRefresh = useCallback(() => {
+  const onRefresh = useCallback(async () => {
+    if (!isAuthenticated) return;
     setRefreshing(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setTimeout(() => {
+    try {
+      await refetch();
+    } finally {
       setRefreshing(false);
-    }, 600);
-  }, []);
+    }
+  }, [isAuthenticated, refetch]);
 
-  const handleStartCommission = useCallback((category?: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    dispatch(openWizard(category));
-  }, [dispatch]);
+  const liveRequests: StudioCustomRequest[] = useMemo(() => {
+    if (!isAuthenticated) return localRequests;
+    if (!remoteRequests) return [];
+    return remoteRequests.map((r) => ({
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      categoryType: r.categoryType,
+      materialType: r.materialType || 'Artisan Choice',
+      colors: Array.isArray(r.colors) && r.colors.length > 0 ? r.colors : ['#C46C27'],
+      quantity: r.quantity || 1,
+      quality: r.materialQuality || 'Standard',
+      budget: r.budget,
+      timeline: r.timeline,
+      status: (r.status === 'IN_PROGRESS' ? 'CLOSED' : r.status) as any,
+      inspirationImages: r.inspirationImages || [],
+      measurements: r.measurements,
+      notes: r.description,
+      createdAt: r.createdAt,
+      bids: Array.isArray(r.bids)
+        ? r.bids.map((b) => ({
+            id: b.id,
+            amount: b.price,
+            status: b.status,
+            message: b.notes,
+            createdAt: b.submittedAt || b.createdAt,
+            vendor: {
+              id: b.vendor?.id || b.vendorId,
+              businessName: b.vendor?.businessName || 'Artisan Workshop',
+              profileImage: b.vendor?.profileImage,
+              rating: b.vendor?.rating || 4.9,
+              reviewCount: b.vendor?.reviewCount || 10,
+              location: b.vendor?.cityOfOperation || 'West Africa',
+            },
+          }))
+        : [],
+    }));
+  }, [isAuthenticated, remoteRequests, localRequests]);
+
+  const handleStartCommission = useCallback(
+    (category?: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      if (!isAuthenticated) {
+        setShowAuthModal(true);
+        return;
+      }
+      dispatch(openWizard(category));
+    },
+    [dispatch, isAuthenticated]
+  );
 
   const handleOpenDetail = useCallback((req: StudioCustomRequest) => {
     dispatch(openDetailModal(req));
@@ -79,7 +142,7 @@ export default function StudioScreen() {
   }, [dispatch]);
 
   const filteredRequests = useMemo(() => {
-    return requests.filter((r) => {
+    return liveRequests.filter((r) => {
       const matchesFilter =
         activeFilter === 'ALL' || r.status === activeFilter;
       const q = searchQuery.toLowerCase().trim();
@@ -91,20 +154,20 @@ export default function StudioScreen() {
         r.materialType?.toLowerCase().includes(q);
       return matchesFilter && matchesSearch;
     });
-  }, [requests, activeFilter, searchQuery]);
+  }, [liveRequests, activeFilter, searchQuery]);
 
   // Live stats calculation
   const { openCount, inProgressCount, completedCount } = useMemo(() => {
     let open = 0;
     let inProgress = 0;
     let completed = 0;
-    requests.forEach((r) => {
+    liveRequests.forEach((r) => {
       if (r.status === 'OPEN') open++;
       else if (r.status === 'CLOSED') inProgress++;
       else if (r.status === 'COMPLETED') completed++;
     });
     return { openCount: open, inProgressCount: inProgress, completedCount: completed };
-  }, [requests]);
+  }, [liveRequests]);
 
   const renderItem = useCallback(
     ({ item }: { item: StudioCustomRequest }) => (
@@ -138,16 +201,17 @@ export default function StudioScreen() {
             Commission bespoke African apparel, footwear, jewelry, and fine heritage artwork tailored to your exact measurements, fabrics, and occasion.
           </Text>
 
+          {/* Primary CTA */}
           <TouchableOpacity
             activeOpacity={0.88}
             onPress={() => handleStartCommission()}
             style={styles.heroActionBtn}
           >
-            <Ionicons name="add-circle" size={20} color={Colors.textInverse} />
+            <Ionicons name="add-circle" size={18} color={Colors.textInverse} />
             <Text style={styles.heroActionBtnText}>Start New Commission</Text>
           </TouchableOpacity>
 
-          {/* Quick Category Launchers */}
+          {/* Quick Category Chips */}
           <View style={styles.quickCatsContainer}>
             <Text style={styles.quickCatsLabel}>Popular Bespoke Crafts:</Text>
             <ScrollView
@@ -223,8 +287,8 @@ export default function StudioScreen() {
               const isSelected = activeFilter === f.key;
               const count =
                 f.key === 'ALL'
-                  ? requests.length
-                  : requests.filter((r) => r.status === f.key).length;
+                  ? liveRequests.length
+                  : liveRequests.filter((r) => r.status === f.key).length;
 
               return (
                 <TouchableOpacity
@@ -279,7 +343,7 @@ export default function StudioScreen() {
       searchQuery,
       dispatch,
       activeFilter,
-      requests,
+      liveRequests,
     ]
   );
 
@@ -353,6 +417,12 @@ export default function StudioScreen() {
       <StudioRequestDetailModal />
       <StudioRequestEditModal />
       <StudioRequestDeleteModal />
+      <AuthPromptModal
+        visible={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        title="Sign In to Custom Studio"
+        message="Sign in to commission bespoke pieces, view live artisan bids, and message master craftsmen."
+      />
     </View>
   );
 }

@@ -25,9 +25,15 @@ import {
   selectAllWizardVendors,
   clearWizardVendors,
   submitWizardRequest,
+  setWizardSubmitting,
   StudioImage,
   StudioDetails,
 } from '@/store/slices/studioSlice';
+import {
+  useCreateCustomRequestMutation,
+  useSearchVendorsForRequestMutation,
+  CreateCustomRequestPayload,
+} from '@/store/api/studioApi';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 import { StudioStepCategory } from './StudioStepCategory';
 import { StudioStepInspiration } from './StudioStepInspiration';
@@ -110,10 +116,64 @@ export const CustomStudioWizardModal: React.FC = () => {
     () => dispatch(clearWizardVendors()),
     [dispatch]
   );
-  const handleSubmitRequest = useCallback(
-    () => dispatch(submitWizardRequest()),
-    [dispatch]
-  );
+  const [createCustomRequest, { isLoading: isCreating }] = useCreateCustomRequestMutation();
+  const [searchVendors] = useSearchVendorsForRequestMutation();
+
+  const handleSubmitRequest = useCallback(async () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      dispatch(setWizardSubmitting(true));
+
+      const budgetNum = parseInt(details.budget.replace(/[^0-9]/g, '')) || 20000;
+      const quantityNum = parseInt(details.quantity) || 1;
+      const timelineDate = details.deliveryDate
+        ? new Date(details.deliveryDate).toISOString()
+        : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+
+      const inspirationImages = images.map((img) => img.base64 || img.uri);
+
+      const payload: CreateCustomRequestPayload = {
+        title: details.title.trim() || `Custom ${selectedCategory} Commission`,
+        description: details.notes.trim() || `Custom artisan project in ${selectedCategory.toLowerCase()} category.`,
+        budget: budgetNum,
+        timeline: timelineDate,
+        categoryType: selectedCategory.toUpperCase(),
+        materialType: details.material || 'Artisan Choice',
+        materialQuality: details.quality || 'Standard',
+        colors: details.color ? [details.color] : ['#C46C27'],
+        quantity: quantityNum,
+        measurements: details.measurements || (details.useProfileMeasurements ? 'Using Profile Measurements' : undefined),
+        inspirationImages,
+      };
+
+      const res = await createCustomRequest(payload).unwrap();
+      const requestId = res?.id;
+
+      if (requestId && vendorSelectionMode === 'DIRECT' && selectedVendorIds.length > 0) {
+        searchVendors({
+          requestId,
+          category: selectedCategory,
+          vendorIds: selectedVendorIds,
+        }).catch(() => {});
+      }
+
+      dispatch(submitWizardRequest());
+    } catch (err: any) {
+      const msg = err?.data?.message || err?.message || 'Failed to submit custom studio request.';
+      Alert.alert('Submission Error', Array.isArray(msg) ? msg.join('\n') : String(msg));
+    } finally {
+      dispatch(setWizardSubmitting(false));
+    }
+  }, [
+    details,
+    selectedCategory,
+    images,
+    vendorSelectionMode,
+    selectedVendorIds,
+    createCustomRequest,
+    searchVendors,
+    dispatch,
+  ]);
 
   return (
     <Modal
