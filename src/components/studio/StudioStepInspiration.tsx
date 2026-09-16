@@ -267,6 +267,7 @@ export const StudioStepInspiration: React.FC<StudioStepInspirationProps> = ({
           transparent={false}
           animationType="fade"
           onRequestClose={() => setLightboxIndex(null)}
+          statusBarTranslucent
         >
           <SafeAreaView style={styles.lightboxContainer} edges={['top', 'bottom', 'left', 'right']}>
             {/* Header */}

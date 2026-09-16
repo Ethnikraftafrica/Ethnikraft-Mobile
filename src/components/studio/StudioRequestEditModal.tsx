@@ -59,6 +59,7 @@ export const StudioRequestEditModal: React.FC = () => {
       transparent
       animationType="fade"
       onRequestClose={handleClose}
+      statusBarTranslucent
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

@@ -88,6 +88,7 @@ export const StudioRequestDetailModal: React.FC = () => {
       animationType="slide"
       presentationStyle="pageSheet"
       onRequestClose={handleClose}
+      statusBarTranslucent
     >
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
         {/* Header Bar */}

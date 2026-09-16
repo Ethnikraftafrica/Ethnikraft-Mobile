@@ -36,6 +36,7 @@ export const StudioRequestDeleteModal: React.FC = () => {
       transparent
       animationType="fade"
       onRequestClose={handleClose}
+      statusBarTranslucent
     >
       <View style={styles.backdrop}>
         <View style={styles.card}>

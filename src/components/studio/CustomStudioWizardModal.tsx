@@ -121,6 +121,7 @@ export const CustomStudioWizardModal: React.FC = () => {
       animationType="slide"
       presentationStyle="fullScreen"
       onRequestClose={handleClose}
+      statusBarTranslucent
     >
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
         {/* Top Header Bar */}

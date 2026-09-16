@@ -101,6 +101,7 @@ export const CurrencyPickerModal: React.FC<CurrencyPickerModalProps> = ({
       visible={modalVisible}
       animationType="none"
       onRequestClose={() => handleDismiss()}
+      statusBarTranslucent
     >
       <View style={styles.overlayContainer}>
         {/* Semi-transparent backdrop */}
