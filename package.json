@@ -36,7 +36,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "test": "node scripts/test-studio-e2e.js",
-    "test:studio": "node scripts/test-studio-e2e.js"
+    "test:studio": "node scripts/test-studio-e2e.js",
+    "test:orders": "node scripts/test-orders-e2e.js"
   },
   "private": true
 }
