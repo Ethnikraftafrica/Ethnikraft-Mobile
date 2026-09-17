@@ -192,10 +192,10 @@ export default function OrdersScreen() {
       <View style={styles.headerContainer}>
         {/* Title & Subtitle */}
         <View style={styles.titleSection}>
-          <Text style={styles.screenPretitle}>PURCHASES & LOGISTICS</Text>
-          <Text style={styles.screenTitle}>Orders & Tracking</Text>
+          <Text style={styles.screenPretitle}>PURCHASES & COMMISSIONS</Text>
+          <Text style={styles.screenTitle}>Orders & Requests</Text>
           <Text style={styles.screenSubtitle}>
-            Monitor your handcrafted marketplace purchases and custom artisan commissions in real-time.
+            Monitor your handcrafted marketplace purchases and custom studio requests in real-time.
           </Text>
         </View>
 
@@ -221,7 +221,7 @@ export default function OrdersScreen() {
                 topTab === 'ORDERS' && styles.segmentedTabTextActive,
               ]}
             >
-              Marketplace
+              Orders
             </Text>
             {(remoteOrders?.length || 0) > 0 && (
               <View
@@ -262,7 +262,7 @@ export default function OrdersScreen() {
                 topTab === 'REQUESTS' && styles.segmentedTabTextActive,
               ]}
             >
-              Commissions
+              Requests
             </Text>
             {commissionOrders.length > 0 && (
               <View
@@ -368,15 +368,15 @@ export default function OrdersScreen() {
         </View>
         <Text style={styles.emptyTitle}>
           {activeFilter !== 'ALL'
-            ? `No ${activeFilter.toLowerCase()} orders found`
+            ? `No ${activeFilter.toLowerCase()} ${topTab === 'ORDERS' ? 'orders' : 'requests'} found`
             : topTab === 'ORDERS'
-            ? 'No Marketplace Orders Yet'
-            : 'No Custom Studio Commissions Yet'}
+            ? 'No Orders Yet'
+            : 'No Custom Requests Yet'}
         </Text>
         <Text style={styles.emptySubtitle}>
           {topTab === 'ORDERS'
             ? 'Discover authentic African textiles, hand-carved artifacts, and artisan jewelry ready to ship.'
-            : 'Commission bespoke apparel, jewelry, or artwork tailored to your exact measurements and fabrics.'}
+            : 'Submit custom apparel, jewelry, or artwork tailored to your exact measurements and fabrics in the studio.'}
         </Text>
         <TouchableOpacity
           activeOpacity={0.85}
@@ -391,7 +391,7 @@ export default function OrdersScreen() {
           style={styles.emptyActionBtn}
         >
           <Text style={styles.emptyActionBtnText}>
-            {topTab === 'ORDERS' ? 'Explore Marketplace' : 'Start Custom Commission'}
+            {topTab === 'ORDERS' ? 'Explore Marketplace' : 'Create Custom Request'}
           </Text>
         </TouchableOpacity>
       </View>
