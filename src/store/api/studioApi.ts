@@ -119,9 +119,11 @@ export const studioApi = baseApi.injectEndpoints({
           : [{ type: 'CustomRequests', id: 'LIST' }],
       transformResponse: (response: any): BackendCustomRequest[] => {
         if (Array.isArray(response)) return response;
+        if (Array.isArray(response?.data?.customRequests)) return response.data.customRequests;
         if (Array.isArray(response?.customRequests)) return response.customRequests;
-        if (Array.isArray(response?.data)) return response.data;
+        if (Array.isArray(response?.data?.requests)) return response.data.requests;
         if (Array.isArray(response?.requests)) return response.requests;
+        if (Array.isArray(response?.data)) return response.data;
         return [];
       },
     }),
@@ -132,8 +134,8 @@ export const studioApi = baseApi.injectEndpoints({
       providesTags: (_result, _error, id) => [{ type: 'CustomRequests', id }],
       transformResponse: (response: any): BackendCustomRequest => {
         return (
-          response?.customRequest ||
           response?.data?.customRequest ||
+          response?.customRequest ||
           response?.data ||
           response
         );
@@ -148,8 +150,8 @@ export const studioApi = baseApi.injectEndpoints({
       ],
       transformResponse: (response: any): BackendCustomBid[] => {
         if (Array.isArray(response)) return response;
-        if (Array.isArray(response?.bids)) return response.bids;
         if (Array.isArray(response?.data?.bids)) return response.data.bids;
+        if (Array.isArray(response?.bids)) return response.bids;
         if (Array.isArray(response?.data)) return response.data;
         return [];
       },

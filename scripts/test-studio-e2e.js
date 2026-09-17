@@ -251,26 +251,31 @@ function runRtkQueryContractTests() {
   const rawArrayResp = [{ id: '1', title: 'Test 1' }, { id: '2', title: 'Test 2' }];
   const wrappedCustomRequestsResp = { success: true, customRequests: rawArrayResp };
   const wrappedDataResp = { success: true, data: rawArrayResp };
+  const wrappedNestInterceptorResp = { success: true, message: 'Custom requests retrieved successfully', data: { customRequests: rawArrayResp } };
 
   function transformUserCustomRequests(response) {
     if (Array.isArray(response)) return response;
+    if (Array.isArray(response?.data?.customRequests)) return response.data.customRequests;
     if (Array.isArray(response?.customRequests)) return response.customRequests;
-    if (Array.isArray(response?.data)) return response.data;
+    if (Array.isArray(response?.data?.requests)) return response.data.requests;
     if (Array.isArray(response?.requests)) return response.requests;
+    if (Array.isArray(response?.data)) return response.data;
     return [];
   }
 
   assert(transformUserCustomRequests(rawArrayResp).length === 2, 'Transformer handles raw arrays');
   assert(transformUserCustomRequests(wrappedCustomRequestsResp).length === 2, 'Transformer unwraps { customRequests: [...] }');
   assert(transformUserCustomRequests(wrappedDataResp).length === 2, 'Transformer unwraps { data: [...] }');
+  assert(transformUserCustomRequests(wrappedNestInterceptorResp).length === 2, 'Transformer unwraps NestJS Interceptor { data: { customRequests: [...] } }');
   assert(transformUserCustomRequests(null).length === 0, 'Transformer safely falls back on null/undefined');
 
   // 2. Single request transformer
   const singleReq = { id: 'req-1', title: 'Agbada' };
   function transformSingleRequest(response) {
-    return response?.customRequest || response?.data?.customRequest || response?.data || response;
+    return response?.data?.customRequest || response?.customRequest || response?.data || response;
   }
   assert(transformSingleRequest({ success: true, customRequest: singleReq }).title === 'Agbada', 'Unwraps { customRequest: {...} }');
+  assert(transformSingleRequest({ success: true, data: { customRequest: singleReq } }).title === 'Agbada', 'Unwraps NestJS Interceptor { data: { customRequest: {...} } }');
   assert(transformSingleRequest({ success: true, data: singleReq }).title === 'Agbada', 'Unwraps { data: {...} }');
   assert(transformSingleRequest(singleReq).title === 'Agbada', 'Handles direct object response');
 
@@ -278,12 +283,13 @@ function runRtkQueryContractTests() {
   const bidsArray = [{ id: 'bid-1', price: 45000 }, { id: 'bid-2', price: 50000 }];
   function transformBids(response) {
     if (Array.isArray(response)) return response;
-    if (Array.isArray(response?.bids)) return response.bids;
     if (Array.isArray(response?.data?.bids)) return response.data.bids;
+    if (Array.isArray(response?.bids)) return response.bids;
     if (Array.isArray(response?.data)) return response.data;
     return [];
   }
   assert(transformBids({ success: true, bids: bidsArray }).length === 2, 'Unwraps { bids: [...] }');
+  assert(transformBids({ success: true, data: { bids: bidsArray } }).length === 2, 'Unwraps NestJS Interceptor { data: { bids: [...] } }');
   assert(transformBids(bidsArray).length === 2, 'Handles direct bids array');
 }
 
