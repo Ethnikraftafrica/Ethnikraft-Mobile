@@ -20,6 +20,7 @@ interface StudioStepVendorsProps {
   selectedCategory: string;
   vendorSelectionMode: 'BROADCAST' | 'DIRECT';
   selectedVendorIds: string[];
+  isSubmitting?: boolean;
   onSetMode: (mode: 'BROADCAST' | 'DIRECT') => void;
   onToggleVendor: (id: string) => void;
   onSelectAll: (ids: string[]) => void;
@@ -32,6 +33,7 @@ export const StudioStepVendors: React.FC<StudioStepVendorsProps> = ({
   selectedCategory,
   vendorSelectionMode,
   selectedVendorIds,
+  isSubmitting = false,
   onSetMode,
   onToggleVendor,
   onSelectAll,
@@ -46,11 +48,14 @@ export const StudioStepVendors: React.FC<StudioStepVendorsProps> = ({
   });
 
   const baseArtisansList = useMemo(() => {
+    if (isLoadingVendors) {
+      return [];
+    }
     if (liveVendors && liveVendors.length > 0) {
       return liveVendors;
     }
     return MOCK_ARTISANS;
-  }, [liveVendors]);
+  }, [liveVendors, isLoadingVendors]);
 
   const relevantArtisans = useMemo(() => {
     return baseArtisansList.filter((a) => {
@@ -242,9 +247,11 @@ export const StudioStepVendors: React.FC<StudioStepVendorsProps> = ({
             {/* Select All Row */}
             <View style={styles.listHeaderRow}>
               <Text style={styles.listHeaderText}>
-                {isLoadingVendors ? 'Finding Artisans...' : `${relevantArtisans.length} Verified Artisan${relevantArtisans.length !== 1 ? 's' : ''}`}
+                {isLoadingVendors
+                  ? 'Finding Artisans...'
+                  : `${relevantArtisans.length} Verified Artisan${relevantArtisans.length !== 1 ? 's' : ''}`}
               </Text>
-              {relevantArtisans.length > 0 && (
+              {!isLoadingVendors && relevantArtisans.length > 0 && (
                 <TouchableOpacity onPress={handleSelectAllToggle}>
                   <Text style={styles.selectAllText}>
                     {selectedVendorIds.length === relevantArtisans.length
@@ -255,82 +262,91 @@ export const StudioStepVendors: React.FC<StudioStepVendorsProps> = ({
               )}
             </View>
 
-            {/* Artisan Cards */}
-            {isLoadingVendors && baseArtisansList.length === 0 ? (
-              <View style={{ paddingVertical: Spacing.xl, alignItems: 'center' }}>
+            {/* Artisan Cards or Loading / Empty States */}
+            {isLoadingVendors ? (
+              <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color={Colors.primary} />
-                <Text style={{ marginTop: Spacing.sm, fontSize: Typography.fontSize.xs, color: Colors.textMuted }}>
-                  Finding top master artisans for your commission...
+                <Text style={styles.loadingText}>
+                  Discovering verified {selectedCategory.toLowerCase()} master artisans for your commission...
+                </Text>
+              </View>
+            ) : relevantArtisans.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="search-outline" size={28} color={Colors.textMuted} />
+                <Text style={styles.emptyTitle}>No matching artisans found</Text>
+                <Text style={styles.emptySubtitle}>
+                  Try adjusting your search query or switch to Public Broadcast to reach all verified artisans.
                 </Text>
               </View>
             ) : (
               <View style={styles.artisansList}>
                 {relevantArtisans.map((artisan) => {
                   const isSelected = selectedVendorIds.includes(artisan.id);
-                return (
-                  <TouchableOpacity
-                    key={artisan.id}
-                    activeOpacity={0.85}
-                    onPress={() => handleVendorPress(artisan.id)}
-                    style={[
-                      styles.artisanCard,
-                      isSelected && styles.artisanCardSelected,
-                    ]}
-                  >
-                    <Image
-                      source={{ uri: artisan.avatar }}
-                      style={styles.artisanAvatar}
-                      contentFit="cover"
-                      transition={150}
-                    />
-
-                    <View style={styles.artisanInfo}>
-                      <View style={styles.artisanNameRow}>
-                        <Text style={styles.artisanName} numberOfLines={1}>
-                          {artisan.name}
-                        </Text>
-                        <Ionicons name="checkmark-circle" size={14} color={Colors.primary} />
-                      </View>
-
-                      <Text style={styles.artisanSpecialty} numberOfLines={1}>
-                        {artisan.specialty}
-                      </Text>
-
-                      <View style={styles.artisanMetaRow}>
-                        <View style={styles.ratingBadge}>
-                          <Ionicons name="star" size={12} color="#EAB308" />
-                          <Text style={styles.ratingText}>
-                            {artisan.rating} ({artisan.reviewCount})
-                          </Text>
-                        </View>
-                        <Text style={styles.metaDot}>•</Text>
-                        <Text style={styles.locationText}>{artisan.location}</Text>
-                      </View>
-                    </View>
-
-                    <View
+                  return (
+                    <TouchableOpacity
+                      key={artisan.id}
+                      activeOpacity={0.85}
+                      onPress={() => handleVendorPress(artisan.id)}
                       style={[
-                        styles.checkboxCircle,
-                        isSelected && styles.checkboxCircleSelected,
+                        styles.artisanCard,
+                        isSelected && styles.artisanCardSelected,
                       ]}
                     >
-                      {isSelected && (
-                        <Ionicons name="checkmark" size={14} color="#FFFFFF" />
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          )}
-        </View>
-      )}
-    </ScrollView>
+                      <Image
+                        source={{ uri: artisan.avatar }}
+                        style={styles.artisanAvatar}
+                        contentFit="cover"
+                        transition={150}
+                      />
+
+                      <View style={styles.artisanInfo}>
+                        <View style={styles.artisanNameRow}>
+                          <Text style={styles.artisanName} numberOfLines={1}>
+                            {artisan.name}
+                          </Text>
+                          <Ionicons name="checkmark-circle" size={14} color={Colors.primary} />
+                        </View>
+
+                        <Text style={styles.artisanSpecialty} numberOfLines={1}>
+                          {artisan.specialty}
+                        </Text>
+
+                        <View style={styles.artisanMetaRow}>
+                          <View style={styles.ratingBadge}>
+                            <Ionicons name="star" size={12} color="#EAB308" />
+                            <Text style={styles.ratingText}>
+                              {artisan.rating} ({artisan.reviewCount})
+                            </Text>
+                          </View>
+                          <Text style={styles.metaDot}>•</Text>
+                          <Text style={styles.locationText}>{artisan.location}</Text>
+                        </View>
+                      </View>
+
+                      <View
+                        style={[
+                          styles.checkboxCircle,
+                          isSelected && styles.checkboxCircleSelected,
+                        ]}
+                      >
+                        {isSelected && (
+                          <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        )}
+      </ScrollView>
 
       {/* Fixed bottom action */}
       <View style={styles.bottomBar}>
         <TouchableOpacity
           activeOpacity={0.8}
+          disabled={isSubmitting}
           onPress={onBack}
           style={styles.backButton}
         >
@@ -340,13 +356,20 @@ export const StudioStepVendors: React.FC<StudioStepVendorsProps> = ({
 
         <TouchableOpacity
           activeOpacity={0.85}
+          disabled={isSubmitting}
           onPress={handleSubmit}
-          style={styles.submitButton}
+          style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
         >
-          <Ionicons name="sparkles" size={18} color={Colors.textInverse} />
-          <Text style={styles.submitButtonText}>
-            Launch Studio Request
-          </Text>
+          {isSubmitting ? (
+            <ActivityIndicator size="small" color={Colors.textInverse} />
+          ) : (
+            <>
+              <Ionicons name="sparkles" size={18} color={Colors.textInverse} />
+              <Text style={styles.submitButtonText}>
+                Launch Studio Request
+              </Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -686,9 +709,52 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
     paddingVertical: Spacing.md,
   },
+  submitButtonDisabled: {
+    opacity: 0.7,
+  },
   submitButtonText: {
     fontSize: Typography.fontSize.sm,
     fontFamily: Typography.fontFamily.poppinsBold,
     color: Colors.textInverse,
+  },
+  loadingContainer: {
+    paddingVertical: Spacing.xxl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surfaceSubtle,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginTop: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  loadingText: {
+    fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.poppinsMedium,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    paddingHorizontal: Spacing.md,
+  },
+  emptyContainer: {
+    paddingVertical: Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surfaceSubtle,
+    borderRadius: Radius.lg,
+    marginTop: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    gap: Spacing.xs,
+  },
+  emptyTitle: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.poppinsSemiBold,
+    color: Colors.textPrimary,
+    marginTop: Spacing.xs,
+  },
+  emptySubtitle: {
+    fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.bodyRegular,
+    color: Colors.textMuted,
+    textAlign: 'center',
   },
 });

@@ -51,6 +51,7 @@ export const CustomStudioWizardModal: React.FC = () => {
     details,
     vendorSelectionMode,
     selectedVendorIds,
+    isSubmitting,
   } = useAppSelector((state) => state.studio.wizard);
 
   const handleClose = useCallback(() => {
@@ -269,6 +270,7 @@ export const CustomStudioWizardModal: React.FC = () => {
               selectedCategory={selectedCategory}
               vendorSelectionMode={vendorSelectionMode}
               selectedVendorIds={selectedVendorIds}
+              isSubmitting={isSubmitting}
               onSetMode={handleSetVendorMode}
               onToggleVendor={handleToggleVendor}
               onSelectAll={handleSelectAllVendors}
