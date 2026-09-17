@@ -73,6 +73,7 @@ export const API_ENDPOINTS = {
     customerOrders: '/orders',
     vendorOrders: '/orders/vendor',
     details: (id: string) => `/orders/${id}`,
+    tracking: (id: string) => `/orders/${id}/tracking`,
     updateStatus: (id: string) => `/orders/${id}/status`,
   },
 
