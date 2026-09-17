@@ -196,7 +196,7 @@ export default function OrdersScreen() {
         {/* Dual Mode Switcher */}
         <View style={styles.segmentedTabs}>
           <TouchableOpacity
-            activeOpacity={0.8}
+            activeOpacity={0.85}
             onPress={() => handleTopTabChange('ORDERS')}
             style={[
               styles.segmentedTab,
@@ -205,16 +205,17 @@ export default function OrdersScreen() {
           >
             <Ionicons
               name="bag-check-outline"
-              size={15}
+              size={14}
               color={topTab === 'ORDERS' ? Colors.primary : Colors.textSecondary}
             />
             <Text
+              numberOfLines={1}
               style={[
                 styles.segmentedTabText,
                 topTab === 'ORDERS' && styles.segmentedTabTextActive,
               ]}
             >
-              Marketplace Orders
+              Marketplace
             </Text>
             {(remoteOrders?.length || 0) > 0 && (
               <View
@@ -236,7 +237,7 @@ export default function OrdersScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            activeOpacity={0.8}
+            activeOpacity={0.85}
             onPress={() => handleTopTabChange('REQUESTS')}
             style={[
               styles.segmentedTab,
@@ -245,16 +246,17 @@ export default function OrdersScreen() {
           >
             <Ionicons
               name="sparkles-outline"
-              size={15}
+              size={14}
               color={topTab === 'REQUESTS' ? Colors.primary : Colors.textSecondary}
             />
             <Text
+              numberOfLines={1}
               style={[
                 styles.segmentedTabText,
                 topTab === 'REQUESTS' && styles.segmentedTabTextActive,
               ]}
             >
-              Custom Commissions
+              Commissions
             </Text>
             {commissionOrders.length > 0 && (
               <View
@@ -400,7 +402,7 @@ export default function OrdersScreen() {
         ListEmptyComponent={ListEmpty}
         contentContainerStyle={[
           styles.contentContainer,
-          { paddingBottom: Math.max(insets.bottom + 90, 110) },
+          { paddingBottom: Math.max(insets.bottom + 120, 140) },
         ]}
         showsVerticalScrollIndicator={false}
         initialNumToRender={6}
@@ -483,7 +485,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: Colors.surface,
     borderRadius: Radius.full,
-    padding: 4,
+    padding: 3,
     borderWidth: 1,
     borderColor: Colors.border,
     marginBottom: Spacing.md,
@@ -495,7 +497,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        elevation: 2,
+        elevation: 1,
       },
     }),
   },
@@ -505,18 +507,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
     borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   segmentedTabActive: {
     backgroundColor: Colors.surfaceSubtle,
-    borderWidth: 1,
     borderColor: 'rgba(196, 108, 39, 0.25)',
   },
   segmentedTabText: {
     fontSize: Typography.fontSize.xs,
     fontFamily: Typography.fontFamily.poppinsMedium,
     color: Colors.textSecondary,
+    textAlign: 'center',
   },
   segmentedTabTextActive: {
     fontFamily: Typography.fontFamily.poppinsBold,
@@ -524,36 +529,60 @@ const styles = StyleSheet.create({
   },
   tabBadge: {
     backgroundColor: Colors.surfaceSubtle,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(196, 108, 39, 0.2)',
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    marginLeft: 2,
   },
   tabBadgeActive: {
     backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   tabBadgeText: {
     fontSize: 10,
     fontFamily: Typography.fontFamily.poppinsBold,
-    color: Colors.textSecondary,
+    color: Colors.primary,
+    lineHeight: 12,
   },
   tabBadgeTextActive: {
     color: '#FFFFFF',
   },
   filtersScroll: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.xs + 2,
-    paddingVertical: 2,
+    paddingVertical: 4,
+    paddingRight: Spacing.md,
   },
   filterChip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderRadius: Radius.full,
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   filterChipSelected: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
+    ...Platform.select({
+      ios: {
+        shadowColor: Colors.primary,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.18,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 1.5,
+      },
+    }),
   },
   filterChipText: {
     fontSize: 11,
