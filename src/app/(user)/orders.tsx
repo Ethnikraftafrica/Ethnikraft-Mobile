@@ -262,7 +262,7 @@ export default function OrdersScreen() {
                 topTab === 'REQUESTS' && styles.segmentedTabTextActive,
               ]}
             >
-              Requests
+              On Requests
             </Text>
             {commissionOrders.length > 0 && (
               <View
