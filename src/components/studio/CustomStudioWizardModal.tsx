@@ -163,11 +163,10 @@ export const CustomStudioWizardModal: React.FC = () => {
       const res = await createCustomRequest(payload).unwrap();
       const requestId = res?.id;
 
-      if (requestId && vendorSelectionMode === 'DIRECT' && selectedVendorIds.length > 0) {
+      if (requestId) {
         searchVendors({
           requestId,
-          category: selectedCategory,
-          vendorIds: selectedVendorIds,
+          categoryId: selectedCategory.toUpperCase(),
         }).catch(() => {});
       }
 

@@ -86,9 +86,8 @@ export interface UpdateCustomRequestPayload {
 
 export interface SearchVendorsPayload {
   requestId: string;
-  category?: string;
-  location?: string;
-  vendorIds?: string[];
+  categoryId?: string;
+  search?: string;
 }
 
 export interface AcceptCustomBidPayload {
@@ -209,10 +208,13 @@ export const studioApi = baseApi.injectEndpoints({
 
     // 7. Trigger vendor search / notifications
     searchVendorsForRequest: builder.mutation<any, SearchVendorsPayload>({
-      query: ({ requestId, ...body }) => ({
+      query: ({ requestId, categoryId, search }) => ({
         url: `/custom-requests/${requestId}/search-vendors`,
         method: 'POST',
-        body,
+        body: {
+          ...(categoryId ? { categoryId } : {}),
+          ...(search ? { search } : {}),
+        },
       }),
       invalidatesTags: (_result, _error, { requestId }) => [
         { type: 'CustomRequests', id: requestId },
