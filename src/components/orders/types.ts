@@ -36,6 +36,30 @@ export const ORDER_STATUS_CONFIG: Record<string, OrderStatusStyle> = {
     icon: 'time-outline',
     dot: '#F59E0B',
   },
+  OPEN: {
+    label: 'Open for Bids',
+    bg: '#FEF3C7',
+    text: '#92400E',
+    border: '#FDE68A',
+    icon: 'hourglass-outline',
+    dot: '#F59E0B',
+  },
+  BIDDING: {
+    label: 'Bids Received',
+    bg: '#EDE9FE',
+    text: '#5B21B6',
+    border: '#DDD6FE',
+    icon: 'people-outline',
+    dot: '#8B5CF6',
+  },
+  SELECTED: {
+    label: 'Artisan Selected',
+    bg: '#EFF6FF',
+    text: '#1E40AF',
+    border: '#BFDBFE',
+    icon: 'checkmark-circle-outline',
+    dot: '#3B82F6',
+  },
   CONFIRMED: {
     label: 'Order Confirmed',
     bg: '#EFF6FF',
@@ -99,6 +123,22 @@ export const ORDER_STATUS_CONFIG: Record<string, OrderStatusStyle> = {
     border: '#FECACA',
     icon: 'close-circle-outline',
     dot: '#EF4444',
+  },
+  REFUNDED: {
+    label: 'Refunded',
+    bg: '#F1F5F9',
+    text: '#475569',
+    border: '#CBD5E1',
+    icon: 'refresh-circle-outline',
+    dot: '#64748B',
+  },
+  DISPUTED: {
+    label: 'Under Review',
+    bg: '#FFF7ED',
+    text: '#C2410C',
+    border: '#FFEDD5',
+    icon: 'alert-circle-outline',
+    dot: '#EA580C',
   },
 };
 

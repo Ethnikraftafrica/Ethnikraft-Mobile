@@ -81,7 +81,7 @@ export default function OrdersScreen() {
     return remoteCommissions.map((req) => ({
       id: req.id,
       userId: req.userId || '',
-      status: req.status === 'CLOSED' ? 'IN_PROGRESS' : req.status,
+      status: req.status || 'OPEN',
       total: req.budget,
       agreedPrice: req.budget,
       customRequestId: req.id,
@@ -122,12 +122,18 @@ export default function OrdersScreen() {
     return activeList.filter((o) => {
       if (activeFilter === 'ALL') return true;
       if (activeFilter === 'PENDING') {
-        return o.status === 'PENDING' || o.status === 'PAYMENT_PENDING';
+        return (
+          o.status === 'PENDING' ||
+          o.status === 'PAYMENT_PENDING' ||
+          o.status === 'OPEN' ||
+          o.status === 'BIDDING'
+        );
       }
       if (activeFilter === 'IN_PROGRESS') {
         return (
           o.status === 'IN_PROGRESS' ||
           o.status === 'CONFIRMED' ||
+          o.status === 'SELECTED' ||
           o.status === 'PRODUCTION_PENDING'
         );
       }
@@ -138,7 +144,7 @@ export default function OrdersScreen() {
         return o.status === 'DELIVERED' || o.status === 'COMPLETED';
       }
       if (activeFilter === 'CANCELLED') {
-        return o.status === 'CANCELLED';
+        return o.status === 'CANCELLED' || o.status === 'REFUNDED';
       }
       return o.status === activeFilter;
     });

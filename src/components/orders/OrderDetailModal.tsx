@@ -36,41 +36,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   const [showTracking, setShowTracking] = useState(false);
   const [updateStatus, { isLoading: isUpdating }] = useUpdateOrderStatusMutation();
 
-  if (!order) return null;
-
-  const statusCfg =
-    ORDER_STATUS_CONFIG[order.status] || ORDER_STATUS_CONFIG.CONFIRMED;
-
-  const isPending =
-    order.status === 'PENDING' || order.status === 'PAYMENT_PENDING';
-
-  const isCustomCommission = Boolean(
-    order.customRequest || order.customRequestId
-  );
-
-  const title =
-    order.customRequest?.title ||
-    order.orderItems?.[0]?.product?.name ||
-    'Bespoke Commission';
-
-  const vendorName =
-    order.vendor?.businessName ||
-    order.orderItems?.[0]?.product?.vendor?.businessName ||
-    'Ethnikraft Master Artisan';
-
-  const orderNumber = `EK-${order.id.slice(-8).toUpperCase()}`;
-
-  const formattedDate = new Date(order.createdAt).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-
-  const totalAmount = order.total || order.agreedPrice || 0;
-  const shippingFee = 3500;
-  const subtotal = Math.max(totalAmount - shippingFee, 0);
-
   const handleCancel = useCallback(() => {
+    if (!order) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     Alert.alert(
       'Cancel Order',
@@ -101,8 +68,43 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
         },
       ]
     );
-  }, [order.id, updateStatus, onClose]);
+  }, [order?.id, updateStatus, onClose]);
 
+  if (!order || !visible) return null;
+
+  const statusCfg =
+    ORDER_STATUS_CONFIG[order.status] || ORDER_STATUS_CONFIG.CONFIRMED;
+
+  const isPending =
+    order.status === 'PENDING' ||
+    order.status === 'PAYMENT_PENDING' ||
+    order.status === 'OPEN';
+
+  const isCustomCommission = Boolean(
+    order.customRequest || order.customRequestId
+  );
+
+  const title =
+    order.customRequest?.title ||
+    order.orderItems?.[0]?.product?.name ||
+    'Bespoke Commission';
+
+  const vendorName =
+    order.vendor?.businessName ||
+    order.orderItems?.[0]?.product?.vendor?.businessName ||
+    'Ethnikraft Master Artisan';
+
+  const orderNumber = `EK-${order.id.slice(-8).toUpperCase()}`;
+
+  const formattedDate = new Date(order.createdAt).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const totalAmount = order.total || order.agreedPrice || 0;
+  const shippingFee = 3500;
+  const subtotal = Math.max(totalAmount - shippingFee, 0);
   const items = order.orderItems || [];
 
   return (
