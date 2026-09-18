@@ -68,6 +68,18 @@ const OrderCardComponent: React.FC<OrderCardProps> = ({
     onTrackPress(order);
   }, [onTrackPress, order]);
 
+  const isRequestPhase =
+    isCustomCommission &&
+    (order.status === 'OPEN' || order.status === 'BIDDING');
+
+  const handleAction = useCallback(() => {
+    if (isRequestPhase) {
+      handleCardPress();
+    } else {
+      handleTrack();
+    }
+  }, [isRequestPhase, handleCardPress, handleTrack]);
+
   return (
     <TouchableOpacity
       activeOpacity={0.88}
@@ -134,11 +146,17 @@ const OrderCardComponent: React.FC<OrderCardProps> = ({
 
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={handleTrack}
+              onPress={handleAction}
               style={styles.trackBtn}
             >
-              <Ionicons name="navigate-outline" size={13} color={Colors.primary} />
-              <Text style={styles.trackBtnText}>Track</Text>
+              <Ionicons
+                name={isRequestPhase ? 'eye-outline' : 'navigate-outline'}
+                size={13}
+                color={Colors.primary}
+              />
+              <Text style={styles.trackBtnText}>
+                {isRequestPhase ? 'Details' : 'Track'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

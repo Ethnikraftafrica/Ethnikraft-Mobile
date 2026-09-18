@@ -38,9 +38,11 @@ export const OrderTrackingTimeline: React.FC<OrderTrackingTimelineProps> = ({
   visible,
   onClose,
 }) => {
+  const isCustomCommission = Boolean(order.customRequest || order.customRequestId);
+
   const { data: trackingData, isLoading, refetch } = useGetOrderTrackingQuery(
     order.id,
-    { skip: !visible || !order.id }
+    { skip: !visible || !order.id || isCustomCommission }
   );
 
   const [copied, setCopied] = React.useState(false);
@@ -96,13 +98,71 @@ export const OrderTrackingTimeline: React.FC<OrderTrackingTimelineProps> = ({
 
   // Compute 5 milestone journey steps
   const milestones: TrackingMilestone[] = useMemo(() => {
-    const statusOrder = [
-      'CONFIRMED',
-      'IN_PROGRESS',
-      'SHIPPED',
-      'OUT_FOR_DELIVERY',
-      'DELIVERED',
-    ];
+    const isCancelled = currentStatus === 'CANCELLED';
+
+    if (isCustomCommission) {
+      let activeIdx = 0;
+      if (currentStatus === 'OPEN' || currentStatus === 'PENDING') {
+        activeIdx = 0;
+      } else if (currentStatus === 'BIDDING') {
+        activeIdx = 1;
+      } else if (currentStatus === 'SELECTED' || currentStatus === 'CONFIRMED') {
+        activeIdx = 2;
+      } else if (
+        currentStatus === 'IN_PROGRESS' ||
+        currentStatus === 'PRODUCTION_PENDING'
+      ) {
+        activeIdx = 3;
+      } else if (
+        currentStatus === 'COMPLETED' ||
+        currentStatus === 'DELIVERED'
+      ) {
+        activeIdx = 4;
+      }
+
+      return [
+        {
+          key: 'REQUEST_CREATED',
+          title: 'Custom Request Created',
+          subtitle: 'Specifications & inspiration uploaded',
+          icon: 'sparkles',
+          isCompleted: !isCancelled && activeIdx >= 0,
+          isCurrent: !isCancelled && activeIdx === 0,
+        },
+        {
+          key: 'BIDDING_ACTIVE',
+          title: 'Artisan Matching & Bidding',
+          subtitle: 'Verified artisans reviewing & submitting bids',
+          icon: 'people',
+          isCompleted: !isCancelled && activeIdx >= 1,
+          isCurrent: !isCancelled && activeIdx === 1,
+        },
+        {
+          key: 'BID_ACCEPTED',
+          title: 'Artisan Selected & Escrow Secured',
+          subtitle: 'Bid approved & funds safely held in escrow',
+          icon: 'shield-checkmark',
+          isCompleted: !isCancelled && activeIdx >= 2,
+          isCurrent: !isCancelled && activeIdx === 2,
+        },
+        {
+          key: 'IN_TAILORING',
+          title: 'Handcrafted Production',
+          subtitle: 'Artisan tailoring piece to your measurements',
+          icon: 'hammer',
+          isCompleted: !isCancelled && activeIdx >= 3,
+          isCurrent: !isCancelled && activeIdx === 3,
+        },
+        {
+          key: 'COMPLETED',
+          title: 'Craft Completed & Dispatched',
+          subtitle: 'Quality inspected & ready for handover',
+          icon: 'checkmark-done-circle',
+          isCompleted: !isCancelled && activeIdx >= 4,
+          isCurrent: !isCancelled && activeIdx === 4,
+        },
+      ];
+    }
 
     let activeIdx = 0;
     if (currentStatus === 'PENDING' || currentStatus === 'PAYMENT_PENDING') {
@@ -122,12 +182,10 @@ export const OrderTrackingTimeline: React.FC<OrderTrackingTimelineProps> = ({
       activeIdx = 4;
     }
 
-    const isCancelled = currentStatus === 'CANCELLED';
-
     return [
       {
         key: 'ORDER_PLACED',
-        title: 'Commission Confirmed',
+        title: 'Order Confirmed',
         subtitle: 'Payment verified & escrow secured',
         icon: 'shield-checkmark',
         isCompleted: !isCancelled && activeIdx >= 0,
@@ -166,7 +224,7 @@ export const OrderTrackingTimeline: React.FC<OrderTrackingTimelineProps> = ({
         isCurrent: !isCancelled && activeIdx === 4,
       },
     ];
-  }, [currentStatus, shippingProvider]);
+  }, [currentStatus, shippingProvider, isCustomCommission]);
 
   const handleCopyTracking = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
