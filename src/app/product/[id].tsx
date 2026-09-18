@@ -34,6 +34,8 @@ import { ProductArtisanStory } from '@/components/products/ProductArtisanStory';
 import { ProductShippingSpecs } from '@/components/products/ProductShippingSpecs';
 import { ProductReviewsSection } from '@/components/products/ProductReviewsSection';
 import { ProductAlsoViewed } from '@/components/products/ProductAlsoViewed';
+import { useCart } from '@/hooks/useCart';
+import { CartBadgeButton } from '@/components/cart';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CAROUSEL_CARD_WIDTH = SCREEN_WIDTH - 32;
@@ -67,6 +69,7 @@ export default function ProductDetailScreen() {
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const { code: currencyCode, rate: exchangeRate } = useAppSelector((state) => state.currency);
   const { isFavorited, toggleFavorite } = useFavorites();
+  const { itemCount, openCart, openCheckout, addProductToCart } = useCart();
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
@@ -274,11 +277,23 @@ export default function ProductDetailScreen() {
     }
 
     setIsAddingToCart(true);
+
+    const variant =
+      selectedColor || selectedSize
+        ? {
+            id: `var-${product.id}-${selectedColor || 'default'}-${selectedSize || 'standard'}`,
+            name: `${selectedColor || ''} ${selectedSize || ''}`.trim(),
+            color: selectedColor || undefined,
+            size: selectedSize || undefined,
+          }
+        : undefined;
+
+    addProductToCart(product, quantity, variant);
+
     setTimeout(() => {
       setIsAddingToCart(false);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.push('/(user)/orders');
-    }, 600);
+      openCart();
+    }, 350);
   };
 
   const handleBuyNow = () => {
@@ -287,7 +302,19 @@ export default function ProductDetailScreen() {
       setIsAuthModalOpen(true);
       return;
     }
-    router.push('/(user)/orders');
+
+    const variant =
+      selectedColor || selectedSize
+        ? {
+            id: `var-${product.id}-${selectedColor || 'default'}-${selectedSize || 'standard'}`,
+            name: `${selectedColor || ''} ${selectedSize || ''}`.trim(),
+            color: selectedColor || undefined,
+            size: selectedSize || undefined,
+          }
+        : undefined;
+
+    addProductToCart(product, quantity, variant);
+    openCheckout();
   };
 
   const handleCustomizeRequest = () => {
@@ -388,13 +415,16 @@ export default function ProductDetailScreen() {
             </Animated.Text>
           </View>
 
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={handleShare}
-            style={styles.topBarCircleBtn}
-          >
-            <Ionicons name="share-social-outline" size={18} color="#1C0D05" />
-          </TouchableOpacity>
+          <View style={styles.topBarRightActions}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={handleShare}
+              style={styles.topBarCircleBtn}
+            >
+              <Ionicons name="share-social-outline" size={18} color="#1C0D05" />
+            </TouchableOpacity>
+            <CartBadgeButton itemCount={itemCount} onPress={openCart} />
+          </View>
         </View>
       </Animated.View>
 
@@ -1010,6 +1040,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...Shadows.sm,
+  },
+  topBarRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   scrollContent: {
     paddingBottom: 130,

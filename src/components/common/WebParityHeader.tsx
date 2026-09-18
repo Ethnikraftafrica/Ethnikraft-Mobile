@@ -9,12 +9,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AuthPromptModal } from './AuthPromptModal';
 import { CurrencyPickerModal } from './CurrencyPickerModal';
 import { FontFamily, Radius, Shadows, Spacing } from '@/constants/theme';
+import { useCart } from '@/hooks/useCart';
 
 export const WebParityHeader = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
   const activeCurrency = useAppSelector((state) => state.currency);
+  const { itemCount, openCart } = useCart();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
 
@@ -121,12 +123,22 @@ export const WebParityHeader = () => {
             </TouchableOpacity>
             <View style={styles.pillDivider} />
             <TouchableOpacity
-              onPress={() => handleProtectedAction('/(user)/orders')}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                openCart();
+              }}
               style={styles.subIconBtn}
               activeOpacity={0.75}
-              accessibilityLabel="Cart and Orders"
+              accessibilityLabel="Cart"
             >
               <Ionicons name="cart-outline" size={15} color="#FFF5DE" />
+              {itemCount > 0 && (
+                <View style={styles.cartBadge}>
+                  <Text style={styles.cartBadgeText}>
+                    {itemCount > 99 ? '99+' : itemCount}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -251,5 +263,25 @@ const styles = StyleSheet.create({
     width: 1,
     height: 12,
     backgroundColor: 'rgba(255,255,255,0.22)',
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#C46C27',
+    minWidth: 14,
+    height: 14,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+    borderWidth: 1,
+    borderColor: '#1C0D05',
+  },
+  cartBadgeText: {
+    fontSize: 7.5,
+    fontFamily: FontFamily.poppinsBold,
+    color: '#FFFFFF',
+    lineHeight: 9,
   },
 });

@@ -20,6 +20,7 @@ import { DraggableFAB } from './DraggableFAB';
 import { Colors, FontFamily, Radius, Shadows, Spacing } from '@/constants/theme';
 import { useAppSelector } from '@/store';
 import { formatPrice } from '@/utils/price';
+import { useCart } from '@/hooks/useCart';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -47,8 +48,8 @@ export const CartFloatingButton = forwardRef<
   const [isExpanded, setIsExpanded] = useState(false);
   const [isRightSide, setIsRightSide] = useState(false);
 
-  const itemCount: number = 0;
-  const totalPrice = formatPrice(0, currencyCode, exchangeRate);
+  const { itemCount, subtotal, openCart, openCheckout } = useCart();
+  const totalPrice = formatPrice(subtotal, currencyCode, exchangeRate);
 
   // Animation values
   const expandAnim = useRef(new Animated.Value(0)).current; // 0 = collapsed, 1 = expanded
@@ -112,32 +113,16 @@ export const CartFloatingButton = forwardRef<
       collapseBag();
       return;
     }
-    // Quick tap direct action
+    // Quick tap direct action to open slide-over cart drawer
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (!isAuthenticated) {
-      if (onRequireAuth) {
-        onRequireAuth();
-      } else {
-        router.push('/(auth)/login');
-      }
-      return;
-    }
-    router.push('/(user)/orders');
+    openCart();
   };
 
   const handleCheckoutPress = (e: any) => {
     e.stopPropagation();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     clearCollapseTimer();
-    if (!isAuthenticated) {
-      if (onRequireAuth) {
-        onRequireAuth();
-      } else {
-        router.push('/(auth)/login');
-      }
-      return;
-    }
-    router.push('/(user)/orders');
+    openCheckout();
   };
 
   // Interpolated animated width

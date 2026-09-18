@@ -10,6 +10,7 @@ import { hydrateSession } from '@/store/slices/authSlice';
 import { hydrateCurrency } from '@/store/slices/currencySlice';
 import { StorageService } from '@/services/storage.service';
 import { Colors } from '@/constants/theme';
+import { GlobalCartCheckoutModals } from '@/components/cart';
 import {
   useFonts,
   CormorantGaramond_600SemiBold,
@@ -114,6 +115,7 @@ function RootNavigation() {
           }}
         />
       </Stack>
+      <GlobalCartCheckoutModals />
     </>
   );
 }
