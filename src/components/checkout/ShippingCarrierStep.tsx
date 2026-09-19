@@ -117,21 +117,23 @@ export const ShippingCarrierStep: React.FC<ShippingCarrierStepProps> = ({
 
               {/* Middle Details */}
               <View style={styles.carrierInfoCol}>
-                <View style={styles.carrierTitleRow}>
-                  <Text style={styles.serviceName}>{q.serviceName}</Text>
-                  {q.isRecommended && (
-                    <View style={styles.recommendedBadge}>
-                      <Text style={styles.recommendedText}>RECOMMENDED</Text>
-                    </View>
-                  )}
-                </View>
+                <Text style={styles.serviceName} numberOfLines={1} ellipsizeMode="tail">
+                  {q.serviceName}
+                </Text>
 
                 <View style={styles.etaRow}>
                   <Ionicons name="time-outline" size={12} color={Colors.textMuted} />
-                  <Text style={styles.etaText}>
+                  <Text style={styles.etaText} numberOfLines={1} ellipsizeMode="tail">
                     {q.estimatedDays} {q.estimatedDays === 1 ? 'Business Day' : 'Business Days'} (Est. {q.estimatedDate})
                   </Text>
                 </View>
+
+                {q.isRecommended && (
+                  <View style={styles.recommendedBadge}>
+                    <Ionicons name="sparkles" size={9} color="#166534" />
+                    <Text style={styles.recommendedText}>RECOMMENDED</Text>
+                  </View>
+                )}
               </View>
 
               {/* Price */}
@@ -278,51 +280,64 @@ const styles = StyleSheet.create({
   },
   carrierInfoCol: {
     flex: 1,
-  },
-  carrierTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
+    marginRight: 8,
   },
   serviceName: {
     fontSize: Typography.fontSize.xs + 1,
     fontFamily: Typography.fontFamily.poppinsBold,
     color: Colors.textPrimary,
-  },
-  recommendedBadge: {
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
-  recommendedText: {
-    fontSize: 8,
-    fontFamily: Typography.fontFamily.poppinsBold,
-    color: '#166534',
+    lineHeight: 18,
   },
   etaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 3,
+    marginTop: 2.5,
   },
   etaText: {
     fontSize: 11,
     fontFamily: Typography.fontFamily.bodyRegular,
     color: Colors.textSecondary,
+    lineHeight: 15,
+  },
+  recommendedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3.5,
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: Radius.full,
+    alignSelf: 'flex-start',
+    marginTop: 5,
+    borderWidth: 0.5,
+    borderColor: '#86EFAC',
+  },
+  recommendedText: {
+    fontSize: 8.5,
+    fontFamily: Typography.fontFamily.poppinsBold,
+    color: '#166534',
+    letterSpacing: 0.4,
   },
   priceBox: {
     alignItems: 'flex-end',
+    justifyContent: 'center',
+    flexShrink: 0,
+    minWidth: 70,
   },
   feeText: {
     fontSize: Typography.fontSize.sm + 1,
     fontFamily: Typography.fontFamily.poppinsBold,
     color: Colors.primary,
+    textAlign: 'right',
   },
   taxSubText: {
-    fontSize: 9,
+    fontSize: 9.5,
     fontFamily: Typography.fontFamily.bodyRegular,
     color: Colors.textMuted,
+    textAlign: 'right',
+    marginTop: 1,
   },
   insuranceNoticeCard: {
     flexDirection: 'row',
