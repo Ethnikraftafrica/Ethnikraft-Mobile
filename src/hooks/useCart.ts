@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useAppDispatch, useAppSelector } from '@/store';
@@ -6,6 +6,7 @@ import {
   addToCart,
   updateCartItemQuantity,
   removeFromCart,
+  setCartItems,
   clearCart,
   setCartOpen,
   setCheckoutOpen,
@@ -13,13 +14,45 @@ import {
 } from '@/store/slices/cartSlice';
 import { CartItem, CartItemVariant, CartItemCustomization } from '@/components/cart/types';
 import { Product } from '@/store/api/productApi';
+import {
+  useGetCartQuery,
+  useAddItemToCartMutation,
+  useUpdateCartItemMutation,
+  useRemoveCartItemMutation,
+  mapServerCartItemToUi,
+} from '@/store/api/cartApi';
 
 export function useCart() {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
   const { items, isCartOpen, isCheckoutOpen, lastCompletedOrderNumber } =
     useAppSelector((state) => state.cart);
   const savedAddresses = useAppSelector((state) => state.profile.savedAddresses);
+
+  // Live Cloud Cart Query (Skipped if not authenticated)
+  const {
+    data: serverCart,
+    isLoading: isCartLoading,
+    isFetching: isCartFetching,
+    refetch: refetchCart,
+  } = useGetCartQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+
+  const [addItemApi] = useAddItemToCartMutation();
+  const [updateItemApi] = useUpdateCartItemMutation();
+  const [removeItemApi] = useRemoveCartItemMutation();
+
+  // Sync server items when authenticated server cart changes
+  useEffect(() => {
+    if (isAuthenticated && serverCart && Array.isArray(serverCart.items)) {
+      if (serverCart.items.length > 0) {
+        const mapped = serverCart.items.map(mapServerCartItemToUi);
+        dispatch(setCartItems(mapped));
+      }
+    }
+  }, [isAuthenticated, serverCart, dispatch]);
 
   const itemCount = useMemo(
     () => items.reduce((sum, item) => sum + item.quantity, 0),
@@ -51,7 +84,7 @@ export function useCart() {
   }, [dispatch]);
 
   const addProductToCart = useCallback(
-    (
+    async (
       product: Product,
       quantity = 1,
       variant?: CartItemVariant,
@@ -92,23 +125,69 @@ export function useCart() {
         customization,
       };
 
+      // 1. Optimistic Local Store Dispatch
       dispatch(addToCart(cartItem));
+
+      // 2. Persistent Backend Synchronization if authenticated
+      if (isAuthenticated) {
+        try {
+          await addItemApi({
+            productId: product.id,
+            quantity,
+            variantId: variant?.id,
+            customizationData: customization
+              ? {
+                  schemaVersion: customization.schemaVersion || '1.0',
+                  category: customization.category || product.productCategory,
+                  fields: customization.measurements || {
+                    garmentType: customization.garmentType,
+                    fabricColor: customization.fabricColor,
+                  },
+                  specialInstructions: customization.specialInstructions,
+                  referenceImages: customization.referenceImages,
+                }
+              : undefined,
+          }).unwrap();
+        } catch (error) {
+          console.warn('Backend cart item persistence error:', error);
+        }
+      }
     },
-    [dispatch]
+    [dispatch, isAuthenticated, addItemApi]
   );
 
   const updateItemQuantity = useCallback(
-    (id: string, quantity: number) => {
+    async (id: string, quantity: number) => {
+      // 1. Optimistic Local Store Dispatch
       dispatch(updateCartItemQuantity({ id, quantity }));
+
+      // 2. Persistent Backend Synchronization if authenticated
+      if (isAuthenticated && !id.startsWith('cart-')) {
+        try {
+          await updateItemApi({ id, quantity }).unwrap();
+        } catch (error) {
+          console.warn('Backend cart item quantity update error:', error);
+        }
+      }
     },
-    [dispatch]
+    [dispatch, isAuthenticated, updateItemApi]
   );
 
   const removeItem = useCallback(
-    (id: string) => {
+    async (id: string) => {
+      // 1. Optimistic Local Store Dispatch
       dispatch(removeFromCart(id));
+
+      // 2. Persistent Backend Synchronization if authenticated
+      if (isAuthenticated && !id.startsWith('cart-')) {
+        try {
+          await removeItemApi(id).unwrap();
+        } catch (error) {
+          console.warn('Backend cart item removal error:', error);
+        }
+      }
     },
-    [dispatch]
+    [dispatch, isAuthenticated, removeItemApi]
   );
 
   const clearAllCart = useCallback(() => {
@@ -129,7 +208,6 @@ export function useCart() {
       paymentOption: any;
     }) => {
       dispatch(setLastCompletedOrderNumber(orderData.orderNumber));
-      // In presentation mode, clear cart after confirmed order
       dispatch(clearCart());
     },
     [dispatch]
@@ -143,6 +221,9 @@ export function useCart() {
     isCheckoutOpen,
     savedAddresses,
     lastCompletedOrderNumber,
+    isCartLoading,
+    isCartFetching,
+    refetchCart,
     openCart,
     closeCart,
     openCheckout,

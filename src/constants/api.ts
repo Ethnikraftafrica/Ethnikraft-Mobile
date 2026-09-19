@@ -109,6 +109,16 @@ export const API_ENDPOINTS = {
     remove: (productId: string) => `/favorites/${productId}`,
   },
 
+  // Cart & Multi-Step Checkout
+  cart: {
+    get: '/cart',
+    addItem: '/cart/items',
+    updateItem: (id: string) => `/cart/items/${id}`,
+    removeItem: (id: string) => `/cart/items/${id}`,
+    shippingQuotes: '/cart/shipping-quotes',
+    checkout: '/cart/checkout',
+  },
+
   // Vendor Ops & Payouts
   vendor: {
     myProducts: '/products/my-products',

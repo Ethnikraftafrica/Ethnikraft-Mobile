@@ -146,6 +146,7 @@ export const baseApi = createApi({
     'VendorBids',
     'Payouts',
     'Reviews',
+    'Cart',
   ],
   endpoints: () => ({}),
 });
