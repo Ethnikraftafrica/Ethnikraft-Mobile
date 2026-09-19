@@ -47,10 +47,8 @@ export function useCart() {
   // Sync server items when authenticated server cart changes
   useEffect(() => {
     if (isAuthenticated && serverCart && Array.isArray(serverCart.items)) {
-      if (serverCart.items.length > 0) {
-        const mapped = serverCart.items.map(mapServerCartItemToUi);
-        dispatch(setCartItems(mapped));
-      }
+      const mapped = serverCart.items.map(mapServerCartItemToUi);
+      dispatch(setCartItems(mapped));
     }
   }, [isAuthenticated, serverCart, dispatch]);
 
