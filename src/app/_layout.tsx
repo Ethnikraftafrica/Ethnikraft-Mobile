@@ -114,6 +114,13 @@ function RootNavigation() {
             animation: 'slide_from_right',
           }}
         />
+        <Stack.Screen
+          name="payment-success"
+          options={{
+            headerShown: false,
+            animation: 'fade',
+          }}
+        />
       </Stack>
       <GlobalCartCheckoutModals />
     </>

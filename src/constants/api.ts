@@ -119,6 +119,14 @@ export const API_ENDPOINTS = {
     checkout: '/cart/checkout',
   },
 
+  // Payments & Verification
+  payments: {
+    initiate: '/payments/initiate',
+    history: '/payments/history',
+    status: (transactionId: string) => `/payments/${transactionId}/status`,
+    verify: (txRef: string) => `/payments/verify/${txRef}`,
+  },
+
   // Vendor Ops & Payouts
   vendor: {
     myProducts: '/products/my-products',
