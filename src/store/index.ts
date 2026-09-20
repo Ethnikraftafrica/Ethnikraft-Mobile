@@ -19,6 +19,7 @@ export const store = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: false,
+      immutableCheck: { warnAfter: 128 },
     }).concat(baseApi.middleware),
 });
 
