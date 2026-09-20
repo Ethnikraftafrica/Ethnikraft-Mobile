@@ -21,6 +21,7 @@ import {
 } from '@/store/api/ordersApi';
 import { ORDER_STATUS_CONFIG } from './types';
 import { OrderTrackingTimeline } from './OrderTrackingTimeline';
+import { WriteReviewModal, ReviewProductTarget } from '@/components/products';
 
 interface OrderDetailModalProps {
   order: BackendOrder | null;
@@ -34,7 +35,15 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   onClose,
 }) => {
   const [showTracking, setShowTracking] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewTargetProduct, setReviewTargetProduct] = useState<ReviewProductTarget | null>(null);
   const [updateStatus, { isLoading: isUpdating }] = useUpdateOrderStatusMutation();
+
+  const handleOpenReview = useCallback((target: ReviewProductTarget) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setReviewTargetProduct(target);
+    setShowReviewModal(true);
+  }, []);
 
   const handleCancel = useCallback(() => {
     if (!order) return;
@@ -79,6 +88,10 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     order.status === 'PENDING' ||
     order.status === 'PAYMENT_PENDING' ||
     order.status === 'OPEN';
+
+  const isDelivered =
+    order.status === 'DELIVERED' ||
+    order.status === 'COMPLETED';
 
   const isCustomCommission = Boolean(
     order.customRequest || order.customRequestId
@@ -223,6 +236,23 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                       </Text>
                       <Text style={styles.itemQty}>Qty: {item.quantity || 1}</Text>
                     </View>
+                    {isDelivered && (
+                      <TouchableOpacity
+                        style={styles.reviewItemBtn}
+                        onPress={() =>
+                          handleOpenReview({
+                            id: item.productId || item.product?.id || '',
+                            name: item.product?.name || title,
+                            image: item.product?.mainImage,
+                            artisanName: item.product?.vendor?.businessName || vendorName,
+                          })
+                        }
+                        activeOpacity={0.75}
+                      >
+                        <Ionicons name="star" size={13} color="#D97706" style={{ marginRight: 4 }} />
+                        <Text style={styles.reviewItemBtnText}>Rate & Review Item</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </View>
               ))
@@ -231,8 +261,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 <Image
                   source={{
                     uri:
-                      order.customRequest?.inspirationImages?.[0] ||
-                      'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=400&q=80',
+                    order.customRequest?.inspirationImages?.[0] ||
+                    'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=400&q=80',
                   }}
                   style={styles.itemImage}
                   contentFit="cover"
@@ -249,6 +279,23 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     <Text style={styles.itemPrice}>₦{totalAmount.toLocaleString()}</Text>
                     <Text style={styles.itemQty}>Qty: 1</Text>
                   </View>
+                  {isDelivered && (
+                    <TouchableOpacity
+                      style={styles.reviewItemBtn}
+                      onPress={() =>
+                        handleOpenReview({
+                          id: order.customRequest?.id || order.id,
+                          name: title,
+                          image: order.customRequest?.inspirationImages?.[0],
+                          artisanName: vendorName,
+                        })
+                      }
+                      activeOpacity={0.75}
+                    >
+                      <Ionicons name="star" size={13} color="#D97706" style={{ marginRight: 4 }} />
+                      <Text style={styles.reviewItemBtnText}>Rate & Review Commission</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
             )}
@@ -308,6 +355,25 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
           {/* Action Buttons */}
           <View style={styles.actionsContainer}>
+            {isDelivered && (
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => {
+                  const firstItem = items[0];
+                  handleOpenReview({
+                    id: firstItem?.productId || firstItem?.product?.id || order.customRequest?.id || order.id,
+                    name: firstItem?.product?.name || title,
+                    image: firstItem?.product?.mainImage || order.customRequest?.inspirationImages?.[0],
+                    artisanName: vendorName,
+                  });
+                }}
+                style={styles.rateOrderBtn}
+              >
+                <Ionicons name="star" size={18} color={Colors.textInverse} style={{ marginRight: 8 }} />
+                <Text style={styles.rateOrderBtnText}>Rate & Review Purchase</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity
               activeOpacity={0.85}
               onPress={() => {
@@ -342,6 +408,13 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
           order={order}
           visible={showTracking}
           onClose={() => setShowTracking(false)}
+        />
+
+        {/* Write Review Submodal */}
+        <WriteReviewModal
+          visible={showReviewModal}
+          onClose={() => setShowReviewModal(false)}
+          product={reviewTargetProduct}
         />
       </SafeAreaView>
     </Modal>
@@ -633,5 +706,48 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.xs + 1,
     fontFamily: Typography.fontFamily.poppinsSemiBold,
     color: '#DC2626',
+  },
+  rateOrderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#D97706',
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.full,
+    marginBottom: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#D97706',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  rateOrderBtnText: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.poppinsBold,
+    color: Colors.textInverse,
+  },
+  reviewItemBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    marginTop: 8,
+  },
+  reviewItemBtnText: {
+    fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.poppinsSemiBold,
+    color: '#92400E',
   },
 });

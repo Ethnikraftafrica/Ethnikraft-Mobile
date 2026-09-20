@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,8 +9,11 @@ import {
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { FontFamily, Radius } from '@/constants/theme';
+import { Colors, FontFamily, Radius, Spacing, Typography } from '@/constants/theme';
 import { Product, ProductReview, useGetProductReviewsQuery } from '@/store/api/productApi';
+import { useAppSelector } from '@/store';
+import { AuthPromptModal } from '@/components/common/AuthPromptModal';
+import { WriteReviewModal } from './WriteReviewModal';
 
 interface ProductReviewsSectionProps {
   product: Partial<Product>;
@@ -107,20 +110,40 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({ pr
     }));
   };
 
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
   const handleSeeMore = () => {
     Haptics.selectionAsync();
     setVisibleCount((prev) => prev + 3);
   };
 
+  const handleOpenWriteReview = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+    setShowReviewModal(true);
+  }, [isAuthenticated]);
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.headerRow}>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={styles.subHeader}>VERIFIED REVIEWS</Text>
           <Text style={styles.title}>Customer Experiences</Text>
         </View>
-        <Ionicons name="chatbubble-ellipses-outline" size={20} color="#8C532B" />
+        <TouchableOpacity
+          style={styles.writeReviewBtn}
+          onPress={handleOpenWriteReview}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="create-outline" size={14} color={Colors.textInverse} style={{ marginRight: 4 }} />
+          <Text style={styles.writeReviewBtnText}>Write a Review</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Rating Overview & Breakdown */}
@@ -250,6 +273,26 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({ pr
           <Ionicons name="chevron-down" size={14} color="#8C532B" />
         </TouchableOpacity>
       )}
+
+      {/* Write Review Modal */}
+      <WriteReviewModal
+        visible={showReviewModal}
+        onClose={() => setShowReviewModal(false)}
+        product={{
+          id: product.id || '',
+          name: product.name || 'Artisanal Piece',
+          image: product.mainImage,
+          artisanName: product.vendor?.businessName,
+        }}
+      />
+
+      {/* Auth Prompt Modal */}
+      <AuthPromptModal
+        visible={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        title="Sign in to Write a Review"
+        message="Please log in to your Ethnikraft account to share your thoughts and rate verified artisan crafts."
+      />
     </View>
   );
 };
@@ -268,6 +311,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 14,
+  },
+  writeReviewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.secondary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: Radius.full,
+  },
+  writeReviewBtnText: {
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 12,
+    color: Colors.textInverse,
   },
   subHeader: {
     fontSize: 10,

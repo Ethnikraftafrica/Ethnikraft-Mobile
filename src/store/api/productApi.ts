@@ -109,6 +109,20 @@ export interface ProductReviewsResponse {
   averageRating?: number;
 }
 
+export interface CreateProductReviewPayload {
+  productId: string;
+  rating: number; // 1 to 5
+  comment?: string;
+  isPublic?: boolean;
+}
+
+export interface CreateStudioReviewPayload {
+  requestId: string;
+  rating: number; // 1 to 5
+  comment?: string;
+  isPublic?: boolean;
+}
+
 export interface ProductQueryParams {
   skip?: number;
   take?: number;
@@ -369,6 +383,33 @@ export const productApi = baseApi.injectEndpoints({
         return raw?.products || (Array.isArray(raw) ? raw : []);
       },
     }),
+
+    createProductReview: builder.mutation<ProductReview, CreateProductReviewPayload>({
+      query: (body) => ({
+        url: API_ENDPOINTS.reviews.createProductReview,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_result, _error, { productId }) => [
+        { type: 'Reviews' as const, id: productId },
+        { type: 'Products' as const, id: productId },
+      ],
+      transformResponse: (response: any): ProductReview => {
+        return response?.data?.review || response?.data || response;
+      },
+    }),
+
+    createStudioReview: builder.mutation<any, CreateStudioReviewPayload>({
+      query: (body) => ({
+        url: API_ENDPOINTS.reviews.createStudioReview,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['CustomRequests'],
+      transformResponse: (response: any) => {
+        return response?.data || response;
+      },
+    }),
   }),
   overrideExisting: true,
 });
@@ -378,6 +419,8 @@ export const {
   useGetProductByIdQuery,
   useGetProductCategoriesQuery,
   useGetProductReviewsQuery,
+  useCreateProductReviewMutation,
+  useCreateStudioReviewMutation,
   useGetHomeFilterMetadataQuery,
   useGetTopPicksWeekQuery,
   useGetAfricanPaintingsQuery,

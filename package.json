@@ -39,7 +39,8 @@
     "test:studio": "node scripts/test-studio-e2e.js",
     "test:orders": "node scripts/test-orders-e2e.js",
     "test:cart": "node scripts/test-cart-checkout-e2e.js",
-    "test:payments": "node scripts/test-payments-e2e.js"
+    "test:payments": "node scripts/test-payments-e2e.js",
+    "test:reviews": "node scripts/test-reviews-e2e.js"
   },
   "private": true
 }

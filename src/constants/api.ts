@@ -66,6 +66,8 @@ export const API_ENDPOINTS = {
     list: '/reviews',
     details: (id: string) => `/reviews/${id}`,
     vendorStats: (vendorId: string) => `/reviews/vendor/${vendorId}/stats`,
+    createProductReview: '/reviews/product',
+    createStudioReview: '/reviews',
   },
 
   // Orders
