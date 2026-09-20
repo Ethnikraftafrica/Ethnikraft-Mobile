@@ -29,6 +29,7 @@ import {
   useGetCustomerOrdersQuery,
 } from '@/store/api/profileApi';
 import { Colors, Radius, Shadows, Spacing, Typography } from '@/constants/theme';
+import { useCart } from '@/hooks/useCart';
 
 // Profile Modals
 import EditPersonalDetailsModal from '@/components/profile/EditPersonalDetailsModal';
@@ -55,6 +56,7 @@ export default function ProfileScreen() {
     recentlyViewedCount,
     profileCompletionPercentage,
   } = useAppSelector((state) => state.profile);
+  const { openCart, itemCount: cartItemCount } = useCart();
 
   // RTK Query Hooks for Live Backend Data
   const {
@@ -361,6 +363,30 @@ export default function ProfileScreen() {
               <Text style={styles.menuTitle}>Custom Measurements</Text>
               <Text style={styles.menuSubtitle}>Bespoke tailoring, shoes, and ring sizing</Text>
             </View>
+            <Ionicons name="chevron-forward" size={16} color="#A8998A" />
+          </TouchableOpacity>
+
+          {/* Shopping Cart */}
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuItemBorder]}
+            onPress={() => {
+              Haptics.selectionAsync();
+              openCart();
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.menuIconCircle, { backgroundColor: '#F8EFE4' }]}>
+              <Ionicons name="cart" size={18} color="#662502" />
+            </View>
+            <View style={styles.menuTextContainer}>
+              <Text style={styles.menuTitle}>Shopping Cart</Text>
+              <Text style={styles.menuSubtitle}>Review bag, calculate shipping & checkout</Text>
+            </View>
+            {cartItemCount > 0 && (
+              <View style={styles.counterBadge}>
+                <Text style={styles.counterText}>{cartItemCount}</Text>
+              </View>
+            )}
             <Ionicons name="chevron-forward" size={16} color="#A8998A" />
           </TouchableOpacity>
 

@@ -31,6 +31,7 @@ import { ProductSortModal, SortOption } from '@/components/products/ProductSortM
 import { AuthPromptModal } from '@/components/common/AuthPromptModal';
 import FavoritesModal from '@/components/profile/FavoritesModal';
 import { useFavorites } from '@/hooks/useFavorites';
+import { useCart } from '@/hooks/useCart';
 import { Colors, FontFamily, Radius, Shadows, Spacing } from '@/constants/theme';
 import { useAppSelector } from '@/store';
 
@@ -138,6 +139,7 @@ export default function ExploreScreen() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [showFavoritesModal, setShowFavoritesModal] = useState(false);
   const { favoritesCount } = useFavorites();
+  const { openCart, itemCount } = useCart();
 
   // Pagination & Refresh
   const [page, setPage] = useState(1);
@@ -464,10 +466,18 @@ export default function ExploreScreen() {
               style={styles.headerActionBtn}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push('/(user)/orders');
+                openCart();
               }}
+              accessibilityLabel="Shopping Cart"
             >
               <Ionicons name="cart-outline" size={19} color="#1C0D05" />
+              {itemCount > 0 && (
+                <View style={styles.headerBadge}>
+                  <Text style={styles.headerBadgeText}>
+                    {itemCount > 99 ? '99+' : itemCount}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
           </View>
         </View>
