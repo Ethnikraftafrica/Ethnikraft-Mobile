@@ -136,6 +136,13 @@ export default function VendorDocumentsScreen() {
     setErrorMessage(null);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
+    const activeVendorId = vendorId || authState.vendor?.id || '';
+    if (!activeVendorId) {
+      setErrorMessage('Artisan profile session not found. Please sign in to resume.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      return;
+    }
+
     try {
       const formData = new FormData();
 
@@ -180,7 +187,7 @@ export default function VendorDocumentsScreen() {
       }
 
       await uploadDocuments({
-        vendorId,
+        vendorId: activeVendorId,
         formData,
       }).unwrap();
 

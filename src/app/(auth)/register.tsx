@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -153,7 +154,43 @@ export default function RegisterScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       const msg =
         err?.data?.message || err?.error || 'Failed to initiate registration.';
-      setErrorMessage(typeof msg === 'string' ? msg : JSON.stringify(msg));
+      const strMsg = typeof msg === 'string' ? msg : JSON.stringify(msg);
+      setErrorMessage(strMsg);
+
+      const isConflict =
+        err?.status === 409 ||
+        err?.data?.statusCode === 409 ||
+        strMsg.toLowerCase().includes('already exists') ||
+        strMsg.toLowerCase().includes('conflict');
+
+      if (isConflict) {
+        Alert.alert(
+          role === 'vendor' ? 'Artisan Account Exists' : 'Account Exists',
+          role === 'vendor'
+            ? 'An artisan account with this email is already registered. Would you like to sign in to resume your workshop setup?'
+            : 'An account with this email is already registered. Would you like to sign in instead?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Sign In & Resume',
+              onPress: () => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                router.push({
+                  pathname: '/(auth)/login',
+                  params: {
+                    loginType: role === 'vendor' ? 'artisan' : 'customer',
+                    email: cleanEmail,
+                    reason:
+                      role === 'vendor'
+                        ? 'Your artisan account is already registered! Please sign in to resume your workshop setup.'
+                        : 'An account with this email already exists. Please sign in to continue.',
+                  },
+                });
+              },
+            },
+          ]
+        );
+      }
     }
   };
 

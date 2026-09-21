@@ -113,12 +113,19 @@ export default function VendorBusinessInfoScreen() {
       }
     }
 
+    const activeVendorId = vendorId || effectiveVendorId || authState.vendor?.id || '';
+    if (!activeVendorId) {
+      setErrorMessage('Workshop session expired. Please sign in to resume.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      return;
+    }
+
     setErrorMessage(null);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
       await completeBusinessInfo({
-        vendorId,
+        vendorId: activeVendorId,
         businessName: trimmedName,
         businessCategory: selectedCategories,
         businessAddress: trimmedAddress,
@@ -134,7 +141,7 @@ export default function VendorBusinessInfoScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.push({
         pathname: '/(auth)/vendor-documents',
-        params: { vendorId },
+        params: { vendorId: activeVendorId },
       });
     } catch (err: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
