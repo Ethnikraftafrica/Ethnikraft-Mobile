@@ -46,6 +46,27 @@ export default function AuthLayout() {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="vendor-business-info"
+        options={{
+          title: 'Workshop Details',
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="vendor-documents"
+        options={{
+          title: 'Workshop Verification',
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="pending-approval"
+        options={{
+          title: 'Account Pending Approval',
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }

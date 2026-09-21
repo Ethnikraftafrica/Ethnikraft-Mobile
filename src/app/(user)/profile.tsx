@@ -46,7 +46,7 @@ import PaymentMethodsModal from '@/components/profile/PaymentMethodsModal';
 export default function ProfileScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { isAuthenticated, user, hasVendorAccount } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, user, hasVendorAccount, activeRole } = useAppSelector((state) => state.auth);
   const {
     profile,
     savedAddresses,
@@ -57,28 +57,29 @@ export default function ProfileScreen() {
     profileCompletionPercentage,
   } = useAppSelector((state) => state.profile);
   const { openCart, itemCount: cartItemCount } = useCart();
+  const isCustomer = isAuthenticated && activeRole === 'user' && user?.role !== 'VENDOR';
 
   // RTK Query Hooks for Live Backend Data
   const {
     data: remoteProfile,
     isLoading: isProfileLoading,
     refetch: refetchProfile,
-  } = useGetFullUserProfileQuery(undefined, { skip: !isAuthenticated });
+  } = useGetFullUserProfileQuery(undefined, { skip: !isCustomer });
 
   const {
     data: remoteAddresses,
     refetch: refetchAddresses,
-  } = useGetAddressesQuery(undefined, { skip: !isAuthenticated });
+  } = useGetAddressesQuery(undefined, { skip: !isCustomer });
 
   const {
     data: remoteFavorites,
     refetch: refetchFavorites,
-  } = useGetFavoritesQuery(undefined, { skip: !isAuthenticated });
+  } = useGetFavoritesQuery(undefined, { skip: !isCustomer });
 
   const {
     data: remoteOrders,
     refetch: refetchOrders,
-  } = useGetCustomerOrdersQuery(undefined, { skip: !isAuthenticated });
+  } = useGetCustomerOrdersQuery(undefined, { skip: !isCustomer });
 
   const [refreshing, setRefreshing] = useState(false);
 

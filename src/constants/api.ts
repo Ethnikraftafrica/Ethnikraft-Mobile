@@ -22,6 +22,7 @@ export const API_ENDPOINTS = {
     verifyVendorOtp: '/auth/vendor/verify-otp',
     completeVendorRegister: '/auth/vendor/complete-registration',
     completeVendorBusinessInfo: (vendorId: string) => `/auth/vendor/complete-business-info/${vendorId}`,
+    uploadVendorDocuments: (vendorId: string) => `/auth/vendor/upload-documents/${vendorId}`,
     
     // Token Refresh
     refresh: '/auth/refresh',

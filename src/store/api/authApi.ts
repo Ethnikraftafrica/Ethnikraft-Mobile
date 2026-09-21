@@ -30,8 +30,10 @@ export interface UserProfile {
 
 export interface VendorProfile {
   id: string;
+  businessName?: string;
   storeName?: string;
   storeDescription?: string;
+  status?: string;
   isBusinessInfoComplete?: boolean;
   isDocumentsComplete?: boolean;
   businessSubmittedAt?: string | null;
@@ -240,6 +242,16 @@ export const authApi = baseApi.injectEndpoints({
       invalidatesTags: ['VendorProfile', 'UserProfile'],
     }),
 
+    uploadVendorDocuments: builder.mutation<any, { vendorId: string; formData: FormData }>({
+      query: ({ vendorId, formData }) => ({
+        url: API_ENDPOINTS.auth.uploadVendorDocuments(vendorId),
+        method: 'POST',
+        body: formData,
+      }),
+      transformResponse: unwrapResponse,
+      invalidatesTags: ['VendorProfile', 'UserProfile'],
+    }),
+
     initiatePasswordReset: builder.mutation<InitiatePasswordResetResponse, InitiatePasswordResetPayload>({
       query: (body) => ({
         url: API_ENDPOINTS.auth.initiatePasswordReset,
@@ -293,6 +305,7 @@ export const {
   useVerifyVendorOtpMutation,
   useCompleteVendorRegisterMutation,
   useCompleteVendorBusinessInfoMutation,
+  useUploadVendorDocumentsMutation,
   useInitiatePasswordResetMutation,
   useVerifyPasswordResetOtpMutation,
   useCompletePasswordResetMutation,

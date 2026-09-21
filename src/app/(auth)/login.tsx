@@ -64,10 +64,22 @@ export default function LoginScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       dispatch(setAuthSuccess(response));
 
-      // Route based on role
+      // Route based on role and vendor onboarding status
       if (response.user.role === 'VENDOR' || response.vendor) {
         dispatch(setRole('vendor'));
-        router.replace('/(vendor)');
+        const vendorStatus = response.vendor?.status;
+        const isBusinessInfoComplete = response.vendor?.isBusinessInfoComplete;
+
+        if (isBusinessInfoComplete === false && response.vendor?.id) {
+          router.replace({
+            pathname: '/(auth)/vendor-business-info',
+            params: { vendorId: response.vendor.id },
+          });
+        } else if (vendorStatus === 'PENDING') {
+          router.replace('/(auth)/pending-approval');
+        } else {
+          router.replace('/(vendor)');
+        }
       } else {
         dispatch(setRole('user'));
         router.replace('/(user)');

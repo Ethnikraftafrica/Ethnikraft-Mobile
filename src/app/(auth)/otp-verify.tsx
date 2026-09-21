@@ -19,7 +19,6 @@ import {
   useCompleteRegisterMutation,
   useVerifyVendorOtpMutation,
   useCompleteVendorRegisterMutation,
-  useCompleteVendorBusinessInfoMutation,
   useInitiateRegisterMutation,
   useInitiateVendorRegisterMutation,
 } from '@/store/api/authApi';
@@ -46,7 +45,7 @@ export default function OtpVerifyScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [currentRegistrationToken, setCurrentRegistrationToken] = useState(
-    params.registrationToken || ''
+    params.registrationToken
   );
   const [verificationToken, setVerificationToken] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -60,7 +59,6 @@ export default function OtpVerifyScreen() {
   const [verifyVendorOtp, { isLoading: isVerifyingVendor }] = useVerifyVendorOtpMutation();
   const [completeVendorRegister, { isLoading: isCompletingVendor }] =
     useCompleteVendorRegisterMutation();
-  const [completeVendorBusinessInfo] = useCompleteVendorBusinessInfoMutation();
 
   const [initiateRegister] = useInitiateRegisterMutation();
   const [initiateVendorRegister] = useInitiateVendorRegisterMutation();
@@ -206,28 +204,22 @@ export default function OtpVerifyScreen() {
           password,
         }).unwrap();
 
-        const createdVendorId = res.vendor?.id;
-        if (createdVendorId && params.storeName?.trim()) {
-          try {
-            await completeVendorBusinessInfo({
-              vendorId: createdVendorId,
-              businessName: params.storeName.trim(),
-              businessCategory: ['Crafts'],
-              businessAddress: 'Workshop Studio, Lagos State, Nigeria',
-              cityOfOperation: 'Lagos',
-              countryOfOperation: 'Nigeria',
-              businessTagline: 'Master artisan crafted goods',
-              businessPhone: params.phoneNumber,
-            }).unwrap();
-          } catch (bErr) {
-            console.warn('Non-blocking vendor business info initial sync:', bErr);
-          }
-        }
-
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // Persist session tokens so subsequent API requests carry the Authorization header
         dispatch(setAuthSuccess(res));
         dispatch(setRole('vendor'));
-        router.replace('/(vendor)');
+
+        const createdVendorId = res.vendor?.id;
+        // Transition to Step 3: Workshop Details
+        router.replace({
+          pathname: '/(auth)/vendor-business-info',
+          params: {
+            vendorId: createdVendorId,
+            storeName: params.storeName || '',
+            phoneNumber: params.phoneNumber || '',
+            email: params.email || '',
+          },
+        });
       } else {
         const res = await completeRegister({
           verificationToken,
