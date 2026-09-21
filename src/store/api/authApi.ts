@@ -89,6 +89,20 @@ export interface CompleteVendorRegisterPayload {
   ip?: string;
 }
 
+export interface CompleteVendorBusinessPayload {
+  vendorId: string;
+  businessName: string;
+  businessCategory: string[];
+  businessAddress: string;
+  countryOfOperation: string;
+  cityOfOperation: string;
+  businessTagline?: string;
+  businessRegistrationNumber?: string;
+  businessEmail?: string;
+  businessPhone?: string;
+  description?: string;
+}
+
 export interface InitiatePasswordResetPayload {
   email: string;
 }
@@ -216,6 +230,16 @@ export const authApi = baseApi.injectEndpoints({
       invalidatesTags: ['Auth', 'UserProfile', 'VendorProfile'],
     }),
 
+    completeVendorBusinessInfo: builder.mutation<any, CompleteVendorBusinessPayload>({
+      query: ({ vendorId, ...body }) => ({
+        url: API_ENDPOINTS.auth.completeVendorBusinessInfo(vendorId),
+        method: 'POST',
+        body,
+      }),
+      transformResponse: unwrapResponse,
+      invalidatesTags: ['VendorProfile', 'UserProfile'],
+    }),
+
     initiatePasswordReset: builder.mutation<InitiatePasswordResetResponse, InitiatePasswordResetPayload>({
       query: (body) => ({
         url: API_ENDPOINTS.auth.initiatePasswordReset,
@@ -268,6 +292,7 @@ export const {
   useInitiateVendorRegisterMutation,
   useVerifyVendorOtpMutation,
   useCompleteVendorRegisterMutation,
+  useCompleteVendorBusinessInfoMutation,
   useInitiatePasswordResetMutation,
   useVerifyPasswordResetOtpMutation,
   useCompletePasswordResetMutation,

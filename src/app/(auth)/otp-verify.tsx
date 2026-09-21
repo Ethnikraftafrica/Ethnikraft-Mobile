@@ -19,6 +19,7 @@ import {
   useCompleteRegisterMutation,
   useVerifyVendorOtpMutation,
   useCompleteVendorRegisterMutation,
+  useCompleteVendorBusinessInfoMutation,
   useInitiateRegisterMutation,
   useInitiateVendorRegisterMutation,
 } from '@/store/api/authApi';
@@ -59,6 +60,7 @@ export default function OtpVerifyScreen() {
   const [verifyVendorOtp, { isLoading: isVerifyingVendor }] = useVerifyVendorOtpMutation();
   const [completeVendorRegister, { isLoading: isCompletingVendor }] =
     useCompleteVendorRegisterMutation();
+  const [completeVendorBusinessInfo] = useCompleteVendorBusinessInfoMutation();
 
   const [initiateRegister] = useInitiateRegisterMutation();
   const [initiateVendorRegister] = useInitiateVendorRegisterMutation();
@@ -66,6 +68,7 @@ export default function OtpVerifyScreen() {
   const isVendor = params.role === 'vendor';
   const isVerifying = isVerifyingUser || isVerifyingVendor;
   const isCompleting = isCompletingUser || isCompletingVendor;
+  const minPasswordLength = isVendor ? 8 : 6;
 
   // Countdown timer effect
   useEffect(() => {
@@ -78,7 +81,10 @@ export default function OtpVerifyScreen() {
 
   // Password validation checklist matching Ethnikraft backend
   const validations = [
-    { label: '6–20 characters', test: (p: string) => p.length >= 6 && p.length <= 20 },
+    {
+      label: isVendor ? '8–20 characters' : '6–20 characters',
+      test: (p: string) => p.length >= minPasswordLength && p.length <= 20,
+    },
     { label: 'Contains at least an uppercase letter', test: (p: string) => /[A-Z]/.test(p) },
     { label: 'Contains at least a number', test: (p: string) => /\d/.test(p) },
     { label: 'Contains at least a special character', test: (p: string) => /[^a-zA-Z0-9]/.test(p) },
@@ -169,8 +175,8 @@ export default function OtpVerifyScreen() {
 
   // Step 2: Complete Registration with Password
   const handleCompleteRegistration = async () => {
-    if (!password || password.length < 6) {
-      setErrorMessage('Password must be between 6 and 20 characters.');
+    if (!password || password.length < minPasswordLength) {
+      setErrorMessage(`Password must be between ${minPasswordLength} and 20 characters.`);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
@@ -199,6 +205,24 @@ export default function OtpVerifyScreen() {
           phoneNumber: params.phoneNumber || '+2348012345678',
           password,
         }).unwrap();
+
+        const createdVendorId = res.vendor?.id;
+        if (createdVendorId && params.storeName?.trim()) {
+          try {
+            await completeVendorBusinessInfo({
+              vendorId: createdVendorId,
+              businessName: params.storeName.trim(),
+              businessCategory: ['Crafts'],
+              businessAddress: 'Workshop Studio, Lagos State, Nigeria',
+              cityOfOperation: 'Lagos',
+              countryOfOperation: 'Nigeria',
+              businessTagline: 'Master artisan crafted goods',
+              businessPhone: params.phoneNumber,
+            }).unwrap();
+          } catch (bErr) {
+            console.warn('Non-blocking vendor business info initial sync:', bErr);
+          }
+        }
 
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         dispatch(setAuthSuccess(res));
