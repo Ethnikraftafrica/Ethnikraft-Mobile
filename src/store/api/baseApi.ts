@@ -29,8 +29,6 @@ const rawBaseQuery = fetchBaseQuery({
       // to fail immediately with FETCH_ERROR.
       headers.delete('Content-Type');
       headers.delete('x-is-formdata');
-    } else if (!headers.has('Content-Type')) {
-      headers.set('Content-Type', 'application/json');
     }
 
     headers.set('Accept', 'application/json');
@@ -145,7 +143,7 @@ export const baseQueryWithReauth: BaseQueryFn<
       `🚨 [EXPO API ERROR] ${method} ${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}\n` +
       `📊 HTTP Status: ${status}\n` +
       (reqBody ? `📦 Request Body: ${JSON.stringify(reqBody, null, 2)}\n` : '') +
-      `❌ Error Response: ${JSON.stringify(errorData, null, 2)}\n` +
+      `❌ Error Response: ${errorData ? (typeof errorData === 'object' ? JSON.stringify(errorData, null, 2) : errorData) : ((result.error as any).error || 'Network or connection error')}\n` +
       `======================================================\n`
     );
   }

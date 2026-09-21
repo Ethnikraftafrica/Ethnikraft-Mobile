@@ -25,19 +25,19 @@ import {
 export function useCart() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, activeRole } = useAppSelector((state) => state.auth);
   const { items, isCartOpen, isCheckoutOpen, lastCompletedOrderNumber } =
     useAppSelector((state) => state.cart);
   const savedAddresses = useAppSelector((state) => state.profile.savedAddresses);
 
-  // Live Cloud Cart Query (Skipped if not authenticated)
+  // Live Cloud Cart Query (Skipped if not authenticated or in vendor mode)
   const {
     data: serverCart,
     isLoading: isCartLoading,
     isFetching: isCartFetching,
     refetch: refetchCart,
   } = useGetCartQuery(undefined, {
-    skip: !isAuthenticated,
+    skip: !isAuthenticated || activeRole === 'vendor',
   });
 
   const [addItemApi] = useAddItemToCartMutation();

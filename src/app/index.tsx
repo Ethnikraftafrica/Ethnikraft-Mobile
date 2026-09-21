@@ -15,8 +15,8 @@ export default function IndexGateway() {
       return;
     }
 
-    // Route based on role and vendor onboarding status
-    if (activeRole === 'vendor' || vendor) {
+    // Route based on activeRole and vendor onboarding status
+    if (activeRole === 'vendor') {
       const isBusinessComplete = vendor?.isBusinessInfoComplete;
       const isDocsComplete = vendor?.isDocumentsComplete;
       const vendorStatus = vendor?.status?.toUpperCase();

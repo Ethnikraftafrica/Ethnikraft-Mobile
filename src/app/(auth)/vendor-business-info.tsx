@@ -9,13 +9,16 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useAppSelector } from '@/store';
+import { useAppDispatch, useAppSelector } from '@/store';
 import { useCompleteVendorBusinessInfoMutation } from '@/store/api/authApi';
+import { logout, setRole } from '@/store/slices/authSlice';
 import { Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 
 const AVAILABLE_CATEGORIES = [
@@ -30,6 +33,7 @@ const AVAILABLE_CATEGORIES = [
 
 export default function VendorBusinessInfoScreen() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const params = useLocalSearchParams<{
     vendorId?: string;
     storeName?: string;
@@ -39,6 +43,57 @@ export default function VendorBusinessInfoScreen() {
 
   const authState = useAppSelector((state) => state.auth);
   const effectiveVendorId = params.vendorId || authState.vendor?.id || '';
+
+  const handleConfirmSignOut = async () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    dispatch(logout());
+    router.replace('/(auth)/register');
+  };
+
+  const handleStartOver = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Alert.alert(
+      'Start Over?',
+      'Are you sure you want to sign out and start over? Any unsaved workshop details entered on this screen will be cleared.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Sign Out & Start Over',
+          style: 'destructive',
+          onPress: handleConfirmSignOut,
+        },
+      ]
+    );
+  };
+
+  const handleExitOrBack = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Alert.alert(
+      'Exit Workshop Setup?',
+      'You can switch to customer mode to browse the marketplace, or sign out completely. You can return later anytime with your login credentials.',
+      [
+        {
+          text: 'Browse as Customer',
+          onPress: () => {
+            dispatch(setRole('user'));
+            router.replace('/(user)');
+          },
+        },
+        {
+          text: 'Sign Out & Start Over',
+          style: 'destructive',
+          onPress: handleConfirmSignOut,
+        },
+        {
+          text: 'Keep Editing',
+          style: 'cancel',
+        },
+      ]
+    );
+  };
 
   const [vendorId] = useState(effectiveVendorId);
   const [businessName, setBusinessName] = useState(
@@ -165,6 +220,30 @@ export default function VendorBusinessInfoScreen() {
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
     >
+      <SafeAreaView edges={['top']} style={styles.topSafeArea}>
+        <View style={styles.topBar}>
+          <TouchableOpacity
+            onPress={handleExitOrBack}
+            style={styles.topBarBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={20} color="#341B00" />
+            <Text style={styles.topBarBtnText}>Exit</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleStartOver}
+            style={styles.topBarSignOutBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="log-out-outline" size={16} color="#C92929" style={{ marginRight: 4 }} />
+            <Text style={styles.topBarSignOutText}>Sign Out</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
@@ -452,6 +531,31 @@ export default function VendorBusinessInfoScreen() {
                 </View>
               )}
             </TouchableOpacity>
+
+            {/* Escape Hatches / Alternate actions */}
+            <View style={styles.secondaryActionsWrap}>
+              <TouchableOpacity
+                style={styles.secondaryActionBtn}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  dispatch(setRole('user'));
+                  router.replace('/(user)');
+                }}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="bag-handle-outline" size={16} color="#662502" style={{ marginRight: 6 }} />
+                <Text style={styles.secondaryActionText}>Switch to Customer Mode & Browse</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.startOverBtn}
+                onPress={handleStartOver}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="refresh-outline" size={16} color="#C92929" style={{ marginRight: 6 }} />
+                <Text style={styles.startOverBtnText}>Start Over with Another Account</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -607,5 +711,83 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: Typography.fontSize.sm,
     fontWeight: '700',
+  },
+  topSafeArea: {
+    backgroundColor: 'transparent',
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Platform.OS === 'android' ? Spacing.sm : 0,
+    paddingBottom: Spacing.xs,
+  },
+  topBarBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#EAE0D3',
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: '#D4C6B3',
+  },
+  topBarBtnText: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: '700',
+    color: '#341B00',
+    marginLeft: 4,
+  },
+  topBarSignOutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#FDE8E8',
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: '#F8B4B4',
+  },
+  topBarSignOutText: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: '700',
+    color: '#C92929',
+  },
+  secondaryActionsWrap: {
+    marginTop: Spacing.lg,
+    width: '100%',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  secondaryActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.md,
+    backgroundColor: '#EAE0D3',
+    borderWidth: 1,
+    borderColor: '#D4C6B3',
+    width: '100%',
+  },
+  secondaryActionText: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: '700',
+    color: '#662502',
+  },
+  startOverBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: Spacing.md,
+    width: '100%',
+  },
+  startOverBtnText: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: '600',
+    color: '#C92929',
   },
 });

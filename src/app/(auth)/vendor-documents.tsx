@@ -8,14 +8,17 @@ import {
   ActivityIndicator,
   Image,
   Alert,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import { useAppSelector } from '@/store';
+import { useAppDispatch, useAppSelector } from '@/store';
 import { useUploadVendorDocumentsMutation } from '@/store/api/authApi';
+import { logout, setRole } from '@/store/slices/authSlice';
 import { Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 
 interface DocItem {
@@ -30,9 +33,43 @@ interface DocItem {
 
 export default function VendorDocumentsScreen() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const params = useLocalSearchParams<{ vendorId?: string }>();
   const authState = useAppSelector((state) => state.auth);
   const vendorId = params.vendorId || authState.vendor?.id || '';
+
+  const handleConfirmSignOut = async () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    dispatch(logout());
+    router.replace('/(auth)/register');
+  };
+
+  const handleStartOver = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Alert.alert(
+      'Start Over?',
+      'Are you sure you want to sign out and start over? You can log back in at any time to resume document verification.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Sign Out & Start Over',
+          style: 'destructive',
+          onPress: handleConfirmSignOut,
+        },
+      ]
+    );
+  };
+
+  const handleBackToStep3 = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.replace({
+      pathname: '/(auth)/vendor-business-info',
+      params: { vendorId },
+    });
+  };
 
   const [docs, setDocs] = useState<Record<string, DocItem>>({
     businessLogo: {
@@ -259,6 +296,30 @@ export default function VendorDocumentsScreen() {
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
     >
+      <SafeAreaView edges={['top']} style={styles.topSafeArea}>
+        <View style={styles.topBar}>
+          <TouchableOpacity
+            onPress={handleBackToStep3}
+            style={styles.topBarBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={20} color="#341B00" />
+            <Text style={styles.topBarBtnText}>Back to Step 3</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleStartOver}
+            style={styles.topBarSignOutBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="log-out-outline" size={16} color="#C92929" style={{ marginRight: 4 }} />
+            <Text style={styles.topBarSignOutText}>Sign Out</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -364,6 +425,31 @@ export default function VendorDocumentsScreen() {
         >
           <Text style={styles.skipText}>Skip for now & submit later</Text>
         </TouchableOpacity>
+
+        {/* Escape Hatches / Alternate actions */}
+        <View style={styles.secondaryActionsWrap}>
+          <TouchableOpacity
+            style={styles.secondaryActionBtn}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              dispatch(setRole('user'));
+              router.replace('/(user)');
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="bag-handle-outline" size={16} color="#662502" style={{ marginRight: 6 }} />
+            <Text style={styles.secondaryActionText}>Switch to Customer Mode & Browse</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.startOverBtn}
+            onPress={handleStartOver}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="refresh-outline" size={16} color="#C92929" style={{ marginRight: 6 }} />
+            <Text style={styles.startOverBtnText}>Start Over with Another Account</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </LinearGradient>
   );
@@ -567,5 +653,83 @@ const styles = StyleSheet.create({
     color: '#887B6C',
     fontWeight: '600',
     textDecorationLine: 'underline',
+  },
+  topSafeArea: {
+    backgroundColor: 'transparent',
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Platform.OS === 'android' ? Spacing.sm : 0,
+    paddingBottom: Spacing.xs,
+  },
+  topBarBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#EAE0D3',
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: '#D4C6B3',
+  },
+  topBarBtnText: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: '700',
+    color: '#341B00',
+    marginLeft: 4,
+  },
+  topBarSignOutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#FDE8E8',
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: '#F8B4B4',
+  },
+  topBarSignOutText: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: '700',
+    color: '#C92929',
+  },
+  secondaryActionsWrap: {
+    marginTop: Spacing.md,
+    width: '100%',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  secondaryActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.md,
+    backgroundColor: '#EAE0D3',
+    borderWidth: 1,
+    borderColor: '#D4C6B3',
+    width: '100%',
+  },
+  secondaryActionText: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: '700',
+    color: '#662502',
+  },
+  startOverBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: Spacing.md,
+    width: '100%',
+  },
+  startOverBtnText: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: '600',
+    color: '#C92929',
   },
 });
