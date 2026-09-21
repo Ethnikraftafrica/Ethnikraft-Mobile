@@ -243,8 +243,36 @@ export default function RegisterScreen() {
 
           {errorMessage && (
             <View style={styles.errorBanner}>
-              <Ionicons name="alert-circle" size={18} color="#C92929" style={{ marginRight: 6 }} />
-              <Text style={styles.errorText}>{errorMessage}</Text>
+              <Ionicons name="alert-circle" size={18} color="#C92929" style={{ marginRight: 6, alignSelf: 'flex-start', marginTop: 2 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.errorText}>{errorMessage}</Text>
+                {typeof errorMessage === 'string' &&
+                  (errorMessage.toLowerCase().includes('already exists') ||
+                    errorMessage.toLowerCase().includes('conflict')) && (
+                    <TouchableOpacity
+                      style={styles.resumeBtn}
+                      activeOpacity={0.85}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        router.push({
+                          pathname: '/(auth)/login',
+                          params: {
+                            loginType: role === 'vendor' ? 'artisan' : 'customer',
+                            email: email.trim(),
+                            reason:
+                              role === 'vendor'
+                                ? 'Your artisan account is already registered! Please sign in to resume your workshop setup.'
+                                : 'An account with this email already exists. Please sign in to continue.',
+                          },
+                        });
+                      }}
+                    >
+                      <Text style={styles.resumeBtnText}>
+                        Sign in to {role === 'vendor' ? 'resume workshop setup' : 'continue'} →
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+              </View>
             </View>
           )}
 
@@ -481,6 +509,20 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.xs,
     color: '#B91C1C',
     fontWeight: '600',
+    lineHeight: 18,
+  },
+  resumeBtn: {
+    marginTop: 8,
+    backgroundColor: '#341B00',
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: Radius.sm,
+    alignSelf: 'flex-start',
+  },
+  resumeBtnText: {
+    color: '#FFFFFF',
+    fontSize: 11.5,
+    fontWeight: '700',
   },
   formCard: {
     backgroundColor: '#FFFFFF',

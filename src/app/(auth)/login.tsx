@@ -23,17 +23,19 @@ import { Colors, Radius, Shadows, Spacing, Typography } from '@/constants/theme'
 
 export default function LoginScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ loginType?: string }>();
+  const params = useLocalSearchParams<{ loginType?: string; email?: string; reason?: string }>();
   const dispatch = useAppDispatch();
   const [login, { isLoading }] = useLoginMutation();
 
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(params.email || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loginType, setLoginType] = useState<'customer' | 'artisan'>(
     params.loginType === 'artisan' || params.loginType === 'vendor' ? 'artisan' : 'customer'
   );
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(
+    params.reason ? params.reason : null
+  );
 
   useEffect(() => {
     if (params.loginType === 'artisan' || params.loginType === 'vendor') {
@@ -41,7 +43,13 @@ export default function LoginScreen() {
     } else if (params.loginType === 'customer' || params.loginType === 'user') {
       setLoginType('customer');
     }
-  }, [params.loginType]);
+    if (params.email) {
+      setEmail(params.email);
+    }
+    if (params.reason) {
+      setErrorMessage(params.reason);
+    }
+  }, [params.loginType, params.email, params.reason]);
 
   const passwordInputRef = useRef<TextInput>(null);
 
@@ -67,13 +75,24 @@ export default function LoginScreen() {
       // Route based on role and vendor onboarding status
       if (response.user.role === 'VENDOR' || response.vendor) {
         dispatch(setRole('vendor'));
-        const vendorStatus = response.vendor?.status;
-        const isBusinessInfoComplete = response.vendor?.isBusinessInfoComplete;
+        const vendor = response.vendor;
+        const vendorStatus = vendor?.status?.toUpperCase();
+        const isBusinessInfoComplete = vendor?.isBusinessInfoComplete;
+        const isDocumentsComplete = vendor?.isDocumentsComplete;
 
-        if (isBusinessInfoComplete === false && response.vendor?.id) {
+        if (isBusinessInfoComplete === false && vendor?.id) {
           router.replace({
             pathname: '/(auth)/vendor-business-info',
-            params: { vendorId: response.vendor.id },
+            params: {
+              vendorId: vendor.id,
+              storeName: vendor.businessName || '',
+              email: response.user.email || '',
+            },
+          });
+        } else if (isDocumentsComplete === false && vendor?.id) {
+          router.replace({
+            pathname: '/(auth)/vendor-documents',
+            params: { vendorId: vendor.id },
           });
         } else if (vendorStatus === 'PENDING') {
           router.replace('/(auth)/pending-approval');

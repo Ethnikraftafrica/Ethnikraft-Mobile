@@ -6,16 +6,47 @@ import { Colors } from '@/constants/theme';
 
 export default function IndexGateway() {
   const router = useRouter();
-  const activeRole = useAppSelector((state) => state.auth.activeRole);
+  const auth = useAppSelector((state) => state.auth);
+  const { activeRole, isAuthenticated, vendor } = auth;
 
   useEffect(() => {
-    // Route to active dashboard
-    if (activeRole === 'vendor') {
+    if (!isAuthenticated) {
+      router.replace('/(user)');
+      return;
+    }
+
+    // Route based on role and vendor onboarding status
+    if (activeRole === 'vendor' || vendor) {
+      const isBusinessComplete = vendor?.isBusinessInfoComplete;
+      const isDocsComplete = vendor?.isDocumentsComplete;
+      const vendorStatus = vendor?.status?.toUpperCase();
+
+      if (isBusinessComplete === false && vendor?.id) {
+        router.replace({
+          pathname: '/(auth)/vendor-business-info',
+          params: { vendorId: vendor.id },
+        });
+        return;
+      }
+
+      if (isDocsComplete === false && vendor?.id) {
+        router.replace({
+          pathname: '/(auth)/vendor-documents',
+          params: { vendorId: vendor.id },
+        });
+        return;
+      }
+
+      if (vendorStatus === 'PENDING') {
+        router.replace('/(auth)/pending-approval');
+        return;
+      }
+
       router.replace('/(vendor)');
     } else {
       router.replace('/(user)');
     }
-  }, [activeRole, router]);
+  }, [activeRole, isAuthenticated, vendor, router]);
 
   return (
     <View style={styles.container}>

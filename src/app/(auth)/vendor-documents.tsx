@@ -14,6 +14,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
+import { useAppSelector } from '@/store';
 import { useUploadVendorDocumentsMutation } from '@/store/api/authApi';
 import { Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 
@@ -30,7 +31,8 @@ interface DocItem {
 export default function VendorDocumentsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ vendorId?: string }>();
-  const vendorId = params.vendorId || '';
+  const authState = useAppSelector((state) => state.auth);
+  const vendorId = params.vendorId || authState.vendor?.id || '';
 
   const [docs, setDocs] = useState<Record<string, DocItem>>({
     businessLogo: {

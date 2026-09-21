@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useAppSelector } from '@/store';
 import { useCompleteVendorBusinessInfoMutation } from '@/store/api/authApi';
 import { Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 
@@ -36,15 +37,24 @@ export default function VendorBusinessInfoScreen() {
     email?: string;
   }>();
 
-  const [vendorId] = useState(params.vendorId || '');
-  const [businessName, setBusinessName] = useState(params.storeName || '');
+  const authState = useAppSelector((state) => state.auth);
+  const effectiveVendorId = params.vendorId || authState.vendor?.id || '';
+
+  const [vendorId] = useState(effectiveVendorId);
+  const [businessName, setBusinessName] = useState(
+    params.storeName || authState.vendor?.businessName || ''
+  );
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['Crafts']);
   const [businessAddress, setBusinessAddress] = useState('');
   const [cityOfOperation, setCityOfOperation] = useState('Lagos');
   const [countryOfOperation] = useState('Nigeria');
   const [businessTagline, setBusinessTagline] = useState('');
-  const [businessPhone, setBusinessPhone] = useState(params.phoneNumber || '+234');
-  const [businessEmail, setBusinessEmail] = useState(params.email || '');
+  const [businessPhone, setBusinessPhone] = useState(
+    params.phoneNumber || (authState.user as any)?.phoneNumber || '+234'
+  );
+  const [businessEmail, setBusinessEmail] = useState(
+    params.email || authState.user?.email || ''
+  );
   const [businessRegistrationNumber, setBusinessRegistrationNumber] = useState('');
   const [description, setDescription] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
