@@ -20,6 +20,20 @@ import {
 } from '@/store/api/authApi';
 import { Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 
+const sanitizeEmail = (raw: string): string => {
+  return (raw || '')
+    .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '')
+    .trim()
+    .replace(/\s*@\s*/g, '@')
+    .replace(/\s*\.\s*/g, '.');
+};
+
+const isValidEmail = (emailStr: string): boolean => {
+  const emailRegex =
+    /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+  return emailRegex.test(emailStr);
+};
+
 export default function RegisterScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ role?: string }>();
@@ -54,19 +68,19 @@ export default function RegisterScreen() {
   const isSubmitting = isRegisteringUser || isRegisteringVendor;
 
   const handleSubmit = async () => {
-    const trimmedEmail = email.trim();
+    const cleanEmail = sanitizeEmail(email);
     const trimmedFirstName = firstName.trim();
     const trimmedLastName = lastName.trim();
     const trimmedPhone = phoneNumber.trim();
 
-    if (!trimmedFirstName || !trimmedLastName || !trimmedEmail) {
+    if (!trimmedFirstName || !trimmedLastName || !cleanEmail) {
       setErrorMessage('Please fill in all required fields.');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      setErrorMessage('Please enter a valid email address.');
+    if (!isValidEmail(cleanEmail)) {
+      setErrorMessage('Please enter a valid email address (e.g. name@domain.com).');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
@@ -90,7 +104,7 @@ export default function RegisterScreen() {
     try {
       if (role === 'vendor') {
         const res = await initiateVendorRegister({
-          email: trimmedEmail,
+          email: cleanEmail.toLowerCase(),
         }).unwrap();
 
         const token =
@@ -103,7 +117,7 @@ export default function RegisterScreen() {
           pathname: '/(auth)/otp-verify',
           params: {
             registrationToken: token,
-            email: trimmedEmail,
+            email: cleanEmail.toLowerCase(),
             role: 'vendor',
             firstName: trimmedFirstName,
             lastName: trimmedLastName,
@@ -113,7 +127,7 @@ export default function RegisterScreen() {
         });
       } else {
         const res = await initiateRegister({
-          email: trimmedEmail,
+          email: cleanEmail.toLowerCase(),
           firstName: trimmedFirstName,
           lastName: trimmedLastName,
         }).unwrap();
@@ -128,7 +142,7 @@ export default function RegisterScreen() {
           pathname: '/(auth)/otp-verify',
           params: {
             registrationToken: token,
-            email: trimmedEmail,
+            email: cleanEmail.toLowerCase(),
             role: 'user',
             firstName: trimmedFirstName,
             lastName: trimmedLastName,

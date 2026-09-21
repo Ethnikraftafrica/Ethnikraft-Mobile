@@ -219,7 +219,10 @@ export default function LoginScreen() {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   router.push({
                     pathname: '/(auth)/forgot-password',
-                    params: { loginType },
+                    params: {
+                      loginType,
+                      email: email.trim(),
+                    },
                   });
                 }}
               >

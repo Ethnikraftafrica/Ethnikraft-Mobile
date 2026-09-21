@@ -21,9 +21,25 @@ import {
 } from '@/store/api/authApi';
 import { Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 
+// Robust email cleaner: strips zero-width/non-breaking spaces, trims, and fixes accidental whitespace around @ and dots
+const sanitizeEmail = (raw: string): string => {
+  return (raw || '')
+    .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '')
+    .trim()
+    .replace(/\s*@\s*/g, '@')
+    .replace(/\s*\.\s*/g, '.');
+};
+
+const isValidEmail = (emailStr: string): boolean => {
+  // RFC 5322 compatible regex: allows standard addresses, plus tags, subdomains, and international TLDs
+  const emailRegex =
+    /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+  return emailRegex.test(emailStr);
+};
+
 export default function ForgotPasswordScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ loginType?: 'customer' | 'artisan' }>();
+  const params = useLocalSearchParams<{ loginType?: 'customer' | 'artisan'; email?: string }>();
 
   const [portalType, setPortalType] = useState<'customer' | 'artisan'>(
     params.loginType === 'artisan' ? 'artisan' : 'customer'
@@ -31,7 +47,7 @@ export default function ForgotPasswordScreen() {
 
   // Step 1: 'EMAIL', Step 2: 'OTP', Step 3: 'NEW_PASSWORD', Step 4: 'SUCCESS'
   const [step, setStep] = useState<'EMAIL' | 'OTP' | 'NEW_PASSWORD' | 'SUCCESS'>('EMAIL');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(params.email ? sanitizeEmail(params.email) : '');
   const [otp, setOtp] = useState('');
   const [verificationToken, setVerificationToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -57,9 +73,15 @@ export default function ForgotPasswordScreen() {
   ];
 
   const handleInitiateReset = async () => {
-    const trimmedEmail = email.trim();
-    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      setErrorMessage('Please enter a valid email address.');
+    const cleanEmail = sanitizeEmail(email);
+    if (!cleanEmail) {
+      setErrorMessage('Please enter your email address.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      return;
+    }
+
+    if (!isValidEmail(cleanEmail)) {
+      setErrorMessage('Please enter a valid email address (e.g. name@domain.com).');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
@@ -68,7 +90,7 @@ export default function ForgotPasswordScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      await initiateReset({ email: trimmedEmail }).unwrap();
+      await initiateReset({ email: cleanEmail.toLowerCase() }).unwrap();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setStep('OTP');
     } catch (err: any) {
@@ -79,6 +101,7 @@ export default function ForgotPasswordScreen() {
   };
 
   const handleVerifyOtp = async () => {
+    const cleanEmail = sanitizeEmail(email).toLowerCase();
     const trimmedOtp = otp.trim();
     if (trimmedOtp.length !== 6) {
       setErrorMessage('Please enter the 6-digit verification code.');
@@ -91,7 +114,7 @@ export default function ForgotPasswordScreen() {
 
     try {
       const res = await verifyResetOtp({
-        email: email.trim(),
+        email: cleanEmail,
         otp: trimmedOtp,
       }).unwrap();
 
@@ -107,6 +130,7 @@ export default function ForgotPasswordScreen() {
   };
 
   const handleCompleteReset = async () => {
+    const cleanEmail = sanitizeEmail(email).toLowerCase();
     if (newPassword.length < 8) {
       setErrorMessage('Password must be at least 8 characters long.');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -124,7 +148,7 @@ export default function ForgotPasswordScreen() {
 
     try {
       await completeReset({
-        email: email.trim(),
+        email: cleanEmail,
         newPassword,
         verificationToken,
       }).unwrap();
@@ -285,7 +309,10 @@ export default function ForgotPasswordScreen() {
                   placeholder={portalType === 'artisan' ? 'workshop@artisan.com' : 'you@domain.com'}
                   placeholderTextColor="#A8998A"
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={(val) => {
+                    setEmail(val);
+                    if (errorMessage) setErrorMessage(null);
+                  }}
                   autoCapitalize="none"
                   autoCorrect={false}
                   keyboardType="email-address"
@@ -325,7 +352,10 @@ export default function ForgotPasswordScreen() {
                 placeholder="123456"
                 placeholderTextColor="#A8998A"
                 value={otp}
-                onChangeText={setOtp}
+                onChangeText={(val) => {
+                  setOtp(val);
+                  if (errorMessage) setErrorMessage(null);
+                }}
                 keyboardType="number-pad"
                 maxLength={6}
                 returnKeyType="done"
@@ -378,7 +408,10 @@ export default function ForgotPasswordScreen() {
                   placeholder="••••••••••••"
                   placeholderTextColor="#A8998A"
                   value={newPassword}
-                  onChangeText={setNewPassword}
+                  onChangeText={(val) => {
+                    setNewPassword(val);
+                    if (errorMessage) setErrorMessage(null);
+                  }}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -406,7 +439,10 @@ export default function ForgotPasswordScreen() {
                   placeholder="••••••••••••"
                   placeholderTextColor="#A8998A"
                   value={confirmPassword}
-                  onChangeText={setConfirmPassword}
+                  onChangeText={(val) => {
+                    setConfirmPassword(val);
+                    if (errorMessage) setErrorMessage(null);
+                  }}
                   secureTextEntry={!showConfirm}
                   autoCapitalize="none"
                   autoCorrect={false}
