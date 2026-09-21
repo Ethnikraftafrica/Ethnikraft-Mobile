@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import {
@@ -22,12 +22,23 @@ import { Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ role?: string }>();
   const [initiateRegister, { isLoading: isRegisteringUser }] =
     useInitiateRegisterMutation();
   const [initiateVendorRegister, { isLoading: isRegisteringVendor }] =
     useInitiateVendorRegisterMutation();
 
-  const [role, setRole] = useState<'user' | 'vendor'>('user');
+  const initialRole =
+    params.role === 'vendor' || params.role === 'artisan' ? 'vendor' : 'user';
+  const [role, setRole] = useState<'user' | 'vendor'>(initialRole);
+
+  useEffect(() => {
+    if (params.role === 'vendor' || params.role === 'artisan') {
+      setRole('vendor');
+    } else if (params.role === 'user' || params.role === 'customer') {
+      setRole('user');
+    }
+  }, [params.role]);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -356,7 +367,12 @@ export default function RegisterScreen() {
 
           {/* Bottom Sign-In Prompt */}
           <TouchableOpacity
-            onPress={() => router.replace('/(auth)/login')}
+            onPress={() =>
+              router.replace({
+                pathname: '/(auth)/login',
+                params: { loginType: role === 'vendor' ? 'artisan' : 'customer' },
+              })
+            }
             style={styles.signinLink}
             activeOpacity={0.8}
           >

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useLoginMutation } from '@/store/api/authApi';
@@ -23,14 +23,25 @@ import { Colors, Radius, Shadows, Spacing, Typography } from '@/constants/theme'
 
 export default function LoginScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ loginType?: string }>();
   const dispatch = useAppDispatch();
   const [login, { isLoading }] = useLoginMutation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loginType, setLoginType] = useState<'customer' | 'artisan'>('customer');
+  const [loginType, setLoginType] = useState<'customer' | 'artisan'>(
+    params.loginType === 'artisan' || params.loginType === 'vendor' ? 'artisan' : 'customer'
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (params.loginType === 'artisan' || params.loginType === 'vendor') {
+      setLoginType('artisan');
+    } else if (params.loginType === 'customer' || params.loginType === 'user') {
+      setLoginType('customer');
+    }
+  }, [params.loginType]);
 
   const passwordInputRef = useRef<TextInput>(null);
 
@@ -79,8 +90,9 @@ export default function LoginScreen() {
 
   const handleOpenVendorOnboarding = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Linking.openURL('https://vendor.ethnikraft.africa/auth/sign-up').catch(() => {
-      router.push('/(auth)/register');
+    router.push({
+      pathname: '/(auth)/register',
+      params: { role: 'vendor' },
     });
   };
 
@@ -288,9 +300,21 @@ export default function LoginScreen() {
           {/* Footer Area */}
           <View style={styles.footerContainer}>
             <View style={styles.createAccountRow}>
-              <Text style={styles.footerText}>New to Ethnikraft? </Text>
-              <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-                <Text style={styles.footerLinkBold}>Create account »</Text>
+              <Text style={styles.footerText}>
+                {loginType === 'artisan' ? 'New artisan workshop? ' : 'New to Ethnikraft? '}
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push({
+                    pathname: '/(auth)/register',
+                    params: { role: loginType === 'artisan' ? 'vendor' : 'user' },
+                  });
+                }}
+              >
+                <Text style={styles.footerLinkBold}>
+                  {loginType === 'artisan' ? 'Create artisan account »' : 'Create account »'}
+                </Text>
               </TouchableOpacity>
             </View>
 
