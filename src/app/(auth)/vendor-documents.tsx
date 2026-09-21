@@ -144,8 +144,14 @@ export default function VendorDocumentsScreen() {
     }
 
     try {
-      const formatFileUri = (rawUri: string) => {
-        if (!rawUri) return rawUri;
+      const appendFileToFormData = async (
+        fd: FormData,
+        field: string,
+        rawUri?: string,
+        filename?: string,
+        mimeType?: string
+      ) => {
+        if (!rawUri) return;
         let cleaned = rawUri;
         if (cleaned.includes('%25')) {
           try {
@@ -154,49 +160,77 @@ export default function VendorDocumentsScreen() {
             // fallback
           }
         }
-        return cleaned;
+
+        const safeFilename = filename || `${field}.jpg`;
+        const safeMimeType = mimeType || 'image/jpeg';
+
+        try {
+          const fileResp = await fetch(cleaned);
+          const blob = await fileResp.blob();
+          if (typeof File !== 'undefined') {
+            try {
+              const fileObj = new File([blob], safeFilename, { type: safeMimeType });
+              fd.append(field, fileObj);
+            } catch {
+              fd.append(field, blob, safeFilename);
+            }
+          } else {
+            fd.append(field, blob, safeFilename);
+          }
+        } catch (err) {
+          console.warn(`Direct blob conversion failed for ${field}, falling back:`, err);
+          fd.append(field, {
+            uri: cleaned,
+            name: safeFilename,
+            type: safeMimeType,
+          } as any);
+        }
       };
 
       const formData = new FormData();
 
-      if (docs.businessLogo.uri) {
-        formData.append('businessLogo', {
-          uri: formatFileUri(docs.businessLogo.uri),
-          name: docs.businessLogo.name || 'businessLogo.jpg',
-          type: docs.businessLogo.type || 'image/jpeg',
-        } as any);
-      }
+      await appendFileToFormData(
+        formData,
+        'businessLogo',
+        docs.businessLogo.uri,
+        docs.businessLogo.name,
+        docs.businessLogo.type
+      );
 
-      if (docs.proofOfAddress.uri) {
-        formData.append('proofOfAddressDocument', {
-          uri: formatFileUri(docs.proofOfAddress.uri),
-          name: docs.proofOfAddress.name || 'proofOfAddress.jpg',
-          type: docs.proofOfAddress.type || 'image/jpeg',
-        } as any);
-      }
+      await appendFileToFormData(
+        formData,
+        'proofOfAddressDocument',
+        docs.proofOfAddress.uri,
+        docs.proofOfAddress.name,
+        docs.proofOfAddress.type
+      );
 
-      if (docs.businessBanner.uri) {
-        formData.append('businessBanner', {
-          uri: formatFileUri(docs.businessBanner.uri),
-          name: docs.businessBanner.name || 'businessBanner.jpg',
-          type: docs.businessBanner.type || 'image/jpeg',
-        } as any);
-      }
+      await appendFileToFormData(
+        formData,
+        'businessBanner',
+        docs.businessBanner.uri,
+        docs.businessBanner.name,
+        docs.businessBanner.type
+      );
 
       if (docs.cacDocument.uri) {
-        formData.append('cacDocument', {
-          uri: formatFileUri(docs.cacDocument.uri),
-          name: docs.cacDocument.name || 'cacDocument.jpg',
-          type: docs.cacDocument.type || 'image/jpeg',
-        } as any);
+        await appendFileToFormData(
+          formData,
+          'cacDocument',
+          docs.cacDocument.uri,
+          docs.cacDocument.name,
+          docs.cacDocument.type
+        );
       }
 
       if (docs.tinDocument.uri) {
-        formData.append('tinDocument', {
-          uri: formatFileUri(docs.tinDocument.uri),
-          name: docs.tinDocument.name || 'tinDocument.jpg',
-          type: docs.tinDocument.type || 'image/jpeg',
-        } as any);
+        await appendFileToFormData(
+          formData,
+          'tinDocument',
+          docs.tinDocument.uri,
+          docs.tinDocument.name,
+          docs.tinDocument.type
+        );
       }
 
       await uploadDocuments({
