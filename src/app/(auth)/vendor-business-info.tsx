@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -58,6 +58,14 @@ export default function VendorBusinessInfoScreen() {
   const [businessRegistrationNumber, setBusinessRegistrationNumber] = useState('');
   const [description, setDescription] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const addressRef = useRef<TextInput>(null);
+  const cityRef = useRef<TextInput>(null);
+  const taglineRef = useRef<TextInput>(null);
+  const phoneRef = useRef<TextInput>(null);
+  const emailRef = useRef<TextInput>(null);
+  const cacRef = useRef<TextInput>(null);
+  const descriptionRef = useRef<TextInput>(null);
 
   const [completeBusinessInfo, { isLoading }] = useCompleteVendorBusinessInfoMutation();
 
@@ -202,6 +210,11 @@ export default function VendorBusinessInfoScreen() {
                   setBusinessName(val);
                   if (errorMessage) setErrorMessage(null);
                 }}
+                autoCapitalize="words"
+                autoCorrect={false}
+                returnKeyType="next"
+                blurOnSubmit={false}
+                onSubmitEditing={() => addressRef.current?.focus()}
               />
             </View>
 
@@ -248,6 +261,7 @@ export default function VendorBusinessInfoScreen() {
             <View style={styles.inputWrap}>
               <Ionicons name="location-outline" size={18} color="#662502" style={styles.inputIcon} />
               <TextInput
+                ref={addressRef}
                 style={styles.input}
                 placeholder="12 Artisan Lane, Victoria Island, Lagos"
                 placeholderTextColor="#A8998A"
@@ -256,6 +270,13 @@ export default function VendorBusinessInfoScreen() {
                   setBusinessAddress(val);
                   if (errorMessage) setErrorMessage(null);
                 }}
+                autoCapitalize="words"
+                autoCorrect={false}
+                autoComplete="street-address"
+                textContentType="streetAddressLine1"
+                returnKeyType="next"
+                blurOnSubmit={false}
+                onSubmitEditing={() => cityRef.current?.focus()}
               />
             </View>
 
@@ -265,6 +286,7 @@ export default function VendorBusinessInfoScreen() {
                 <Text style={[styles.inputLabel, { marginTop: Spacing.md }]}>CITY *</Text>
                 <View style={styles.inputWrap}>
                   <TextInput
+                    ref={cityRef}
                     style={styles.input}
                     placeholder="Lagos"
                     placeholderTextColor="#A8998A"
@@ -273,6 +295,13 @@ export default function VendorBusinessInfoScreen() {
                       setCityOfOperation(val);
                       if (errorMessage) setErrorMessage(null);
                     }}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    autoComplete="address-line2"
+                    textContentType="addressCity"
+                    returnKeyType="next"
+                    blurOnSubmit={false}
+                    onSubmitEditing={() => taglineRef.current?.focus()}
                   />
                 </View>
               </View>
@@ -292,6 +321,7 @@ export default function VendorBusinessInfoScreen() {
             <View style={styles.inputWrap}>
               <Ionicons name="sparkles-outline" size={18} color="#662502" style={styles.inputIcon} />
               <TextInput
+                ref={taglineRef}
                 style={styles.input}
                 placeholder="Handcrafted authentic African heritage"
                 placeholderTextColor="#A8998A"
@@ -300,6 +330,62 @@ export default function VendorBusinessInfoScreen() {
                   setBusinessTagline(val);
                   if (errorMessage) setErrorMessage(null);
                 }}
+                autoCapitalize="sentences"
+                returnKeyType="next"
+                blurOnSubmit={false}
+                onSubmitEditing={() => phoneRef.current?.focus()}
+              />
+            </View>
+
+            {/* Contact Phone */}
+            <Text style={[styles.inputLabel, { marginTop: Spacing.md }]}>
+              WORKSHOP CONTACT PHONE (E.164)
+            </Text>
+            <View style={styles.inputWrap}>
+              <Ionicons name="call-outline" size={18} color="#662502" style={styles.inputIcon} />
+              <TextInput
+                ref={phoneRef}
+                style={styles.input}
+                placeholder="+2348012345678"
+                placeholderTextColor="#A8998A"
+                value={businessPhone}
+                onChangeText={(val) => {
+                  setBusinessPhone(val);
+                  if (errorMessage) setErrorMessage(null);
+                }}
+                keyboardType="phone-pad"
+                autoComplete="tel"
+                textContentType="telephoneNumber"
+                returnKeyType="next"
+                blurOnSubmit={false}
+                onSubmitEditing={() => emailRef.current?.focus()}
+              />
+            </View>
+
+            {/* Contact Email */}
+            <Text style={[styles.inputLabel, { marginTop: Spacing.md }]}>
+              WORKSHOP CONTACT EMAIL
+            </Text>
+            <View style={styles.inputWrap}>
+              <Ionicons name="mail-outline" size={18} color="#662502" style={styles.inputIcon} />
+              <TextInput
+                ref={emailRef}
+                style={styles.input}
+                placeholder="workshop@artisan.com"
+                placeholderTextColor="#A8998A"
+                value={businessEmail}
+                onChangeText={(val) => {
+                  setBusinessEmail(val);
+                  if (errorMessage) setErrorMessage(null);
+                }}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+                autoComplete="email"
+                textContentType="emailAddress"
+                returnKeyType="next"
+                blurOnSubmit={false}
+                onSubmitEditing={() => cacRef.current?.focus()}
               />
             </View>
 
@@ -310,6 +396,7 @@ export default function VendorBusinessInfoScreen() {
             <View style={styles.inputWrap}>
               <Ionicons name="document-text-outline" size={18} color="#662502" style={styles.inputIcon} />
               <TextInput
+                ref={cacRef}
                 style={styles.input}
                 placeholder="RC1234567"
                 placeholderTextColor="#A8998A"
@@ -319,6 +406,10 @@ export default function VendorBusinessInfoScreen() {
                   if (errorMessage) setErrorMessage(null);
                 }}
                 autoCapitalize="characters"
+                autoCorrect={false}
+                returnKeyType="next"
+                blurOnSubmit={false}
+                onSubmitEditing={() => descriptionRef.current?.focus()}
               />
             </View>
 
@@ -328,6 +419,7 @@ export default function VendorBusinessInfoScreen() {
             </Text>
             <View style={[styles.inputWrap, { alignItems: 'flex-start', paddingTop: 10 }]}>
               <TextInput
+                ref={descriptionRef}
                 style={[styles.input, { height: 70, textAlignVertical: 'top' }]}
                 placeholder="Share your artisan origin story, materials, and tradition..."
                 placeholderTextColor="#A8998A"
@@ -336,8 +428,11 @@ export default function VendorBusinessInfoScreen() {
                   setDescription(val);
                   if (errorMessage) setErrorMessage(null);
                 }}
+                autoCapitalize="sentences"
                 multiline
                 numberOfLines={3}
+                returnKeyType="done"
+                blurOnSubmit={true}
               />
             </View>
 

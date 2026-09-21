@@ -12,12 +12,27 @@ import { logout, updateTokens } from '../slices/authSlice';
 // Base fetch query with automatic Authorization header injection
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: API_BASE_URL,
-  prepareHeaders: async (headers) => {
+  prepareHeaders: async (headers, { endpoint }) => {
     const token = await StorageService.getAccessToken();
     if (token) {
       headers.set('Authorization', `Bearer ${token}`);
     }
-    headers.set('Content-Type', 'application/json');
+
+    const isFormData =
+      headers.has('x-is-formdata') ||
+      endpoint === 'uploadVendorDocuments' ||
+      headers.get('Content-Type') === 'multipart/form-data';
+
+    if (isFormData) {
+      // In React Native fetch, NEVER manually set Content-Type for FormData.
+      // Setting Content-Type overrides the boundary parameter and causes native OkHttp
+      // to fail immediately with FETCH_ERROR.
+      headers.delete('Content-Type');
+      headers.delete('x-is-formdata');
+    } else if (!headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json');
+    }
+
     headers.set('Accept', 'application/json');
     return headers;
   },
@@ -42,11 +57,25 @@ export const baseQueryWithReauth: BaseQueryFn<
   unknown,
   FetchBaseQueryError
 > = async (args, api, extraOptions) => {
-  const url = typeof args === 'string' ? args : args.url;
-  const method = typeof args === 'string' ? 'GET' : args.method || 'GET';
-  const reqBody = typeof args === 'string' ? undefined : args.body;
+  let adjustedArgs = args;
+  const isFormData =
+    typeof args !== 'string' &&
+    args.body &&
+    (args.body instanceof FormData ||
+      (typeof args.body === 'object' && '_parts' in (args.body as any)));
 
-  let result = await rawBaseQuery(args, api, extraOptions);
+  if (isFormData && typeof args !== 'string') {
+    const headers = new Headers(args.headers as any);
+    headers.set('x-is-formdata', 'true');
+    headers.delete('Content-Type');
+    adjustedArgs = { ...args, headers };
+  }
+
+  const url = typeof adjustedArgs === 'string' ? adjustedArgs : adjustedArgs.url;
+  const method = typeof adjustedArgs === 'string' ? 'GET' : adjustedArgs.method || 'GET';
+  const reqBody = typeof adjustedArgs === 'string' ? undefined : adjustedArgs.body;
+
+  let result = await rawBaseQuery(adjustedArgs, api, extraOptions);
 
   // If there's an error from the backend, print formatted details to the Expo terminal logs
   if (result.error) {
