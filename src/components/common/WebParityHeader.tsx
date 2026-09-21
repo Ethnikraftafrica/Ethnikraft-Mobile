@@ -8,8 +8,10 @@ import { useAppSelector } from '@/store';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AuthPromptModal } from './AuthPromptModal';
 import { CurrencyPickerModal } from './CurrencyPickerModal';
+import FavoritesModal from '@/components/profile/FavoritesModal';
 import { FontFamily, Radius, Shadows, Spacing } from '@/constants/theme';
 import { useCart } from '@/hooks/useCart';
+import { useFavorites } from '@/hooks/useFavorites';
 
 export const WebParityHeader = () => {
   const router = useRouter();
@@ -17,8 +19,10 @@ export const WebParityHeader = () => {
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
   const activeCurrency = useAppSelector((state) => state.currency);
   const { itemCount, openCart } = useCart();
+  const { favoritesCount } = useFavorites();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
+  const [showFavoritesModal, setShowFavoritesModal] = useState(false);
 
   const handleProtectedAction = (target: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -113,13 +117,24 @@ export const WebParityHeader = () => {
             <TouchableOpacity
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                handleProtectedAction('/(user)/explore');
+                if (isAuthenticated) {
+                  setShowFavoritesModal(true);
+                } else {
+                  setShowAuthModal(true);
+                }
               }}
               style={styles.subIconBtn}
               activeOpacity={0.75}
-              accessibilityLabel="Favorites"
+              accessibilityLabel="Saved Favorites"
             >
               <Ionicons name="heart" size={15} color="#FFF5DE" />
+              {favoritesCount > 0 && (
+                <View style={styles.favBadge}>
+                  <Text style={styles.cartBadgeText}>
+                    {favoritesCount > 99 ? '99+' : favoritesCount}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
             <View style={styles.pillDivider} />
             <TouchableOpacity
@@ -147,6 +162,11 @@ export const WebParityHeader = () => {
       <AuthPromptModal
         visible={showAuthModal}
         onClose={() => setShowAuthModal(false)}
+      />
+
+      <FavoritesModal
+        visible={showFavoritesModal}
+        onClose={() => setShowFavoritesModal(false)}
       />
 
       <CurrencyPickerModal
@@ -269,6 +289,20 @@ const styles = StyleSheet.create({
     top: -4,
     right: -4,
     backgroundColor: '#C46C27',
+    minWidth: 14,
+    height: 14,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+    borderWidth: 1,
+    borderColor: '#1C0D05',
+  },
+  favBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#DC2626',
     minWidth: 14,
     height: 14,
     borderRadius: 7,
