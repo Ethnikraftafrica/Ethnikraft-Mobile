@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import {
@@ -23,6 +23,11 @@ import { Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ loginType?: 'customer' | 'artisan' }>();
+
+  const [portalType, setPortalType] = useState<'customer' | 'artisan'>(
+    params.loginType === 'artisan' ? 'artisan' : 'customer'
+  );
 
   // Step 1: 'EMAIL', Step 2: 'OTP', Step 3: 'NEW_PASSWORD', Step 4: 'SUCCESS'
   const [step, setStep] = useState<'EMAIL' | 'OTP' | 'NEW_PASSWORD' | 'SUCCESS'>('EMAIL');
@@ -152,18 +157,24 @@ export default function ForgotPasswordScreen() {
           {/* Back Button */}
           <TouchableOpacity
             style={[styles.backBtn, Shadows.sm]}
-            onPress={() => router.back()}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.replace({
+                pathname: '/(auth)/login',
+                params: { loginType: portalType },
+              });
+            }}
             activeOpacity={0.8}
           >
             <Ionicons name="arrow-back" size={20} color="#341B00" />
           </TouchableOpacity>
 
           {/* Icon Badge */}
-          <View style={styles.iconCircle}>
+          <View style={[styles.iconCircle, portalType === 'artisan' && styles.iconCircleVendor]}>
             <Ionicons
               name={
                 step === 'EMAIL'
-                  ? 'key-outline'
+                  ? portalType === 'artisan' ? 'hammer-outline' : 'key-outline'
                   : step === 'OTP'
                   ? 'mail-unread-outline'
                   : step === 'NEW_PASSWORD'
@@ -177,17 +188,82 @@ export default function ForgotPasswordScreen() {
 
           {/* Header Texts */}
           <Text style={styles.title}>
-            {step === 'EMAIL' && 'Reset Password'}
+            {step === 'EMAIL' && (portalType === 'artisan' ? 'Reset Artisan Password' : 'Reset Password')}
             {step === 'OTP' && 'Verify Code'}
             {step === 'NEW_PASSWORD' && 'Create New Password'}
             {step === 'SUCCESS' && 'Password Updated!'}
           </Text>
           <Text style={styles.subtitle}>
-            {step === 'EMAIL' && 'Enter your registered email address and we will send you a 6-digit recovery code.'}
+            {step === 'EMAIL' &&
+              (portalType === 'artisan'
+                ? 'Enter your registered artisan workshop email address and we will send you a 6-digit recovery code.'
+                : 'Enter your registered email address and we will send you a 6-digit recovery code.')}
             {step === 'OTP' && `We sent a 6-digit verification code to ${email}.`}
             {step === 'NEW_PASSWORD' && 'Enter and confirm your new secure account password.'}
-            {step === 'SUCCESS' && 'Your password has been successfully reset. You can now log in with your new credentials.'}
+            {step === 'SUCCESS' &&
+              (portalType === 'artisan'
+                ? 'Your artisan workshop password has been successfully reset. You can now log into your artisan portal.'
+                : 'Your password has been successfully reset. You can now log in with your new credentials.')}
           </Text>
+
+          {/* Portal Type Toggle (Step 1) */}
+          {step === 'EMAIL' && (
+            <View style={[styles.typeSelector, Shadows.sm]}>
+              <TouchableOpacity
+                style={[
+                  styles.typeTab,
+                  portalType === 'customer' && styles.typeTabActive,
+                ]}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setPortalType('customer');
+                  setErrorMessage(null);
+                }}
+              >
+                <Ionicons
+                  name="bag-handle-outline"
+                  size={16}
+                  color={portalType === 'customer' ? '#FFFFFF' : '#662502'}
+                  style={styles.tabIcon}
+                />
+                <Text
+                  style={[
+                    styles.typeTabText,
+                    portalType === 'customer' && styles.typeTabTextActive,
+                  ]}
+                >
+                  Customer Portal
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.typeTab,
+                  portalType === 'artisan' && styles.typeTabActiveVendor,
+                ]}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setPortalType('artisan');
+                  setErrorMessage(null);
+                }}
+              >
+                <Ionicons
+                  name="hammer-outline"
+                  size={16}
+                  color={portalType === 'artisan' ? '#FFFFFF' : '#662502'}
+                  style={styles.tabIcon}
+                />
+                <Text
+                  style={[
+                    styles.typeTabText,
+                    portalType === 'artisan' && styles.typeTabTextActive,
+                  ]}
+                >
+                  Artisan Vendor
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {errorMessage && (
             <View style={styles.errorBanner}>
@@ -199,12 +275,14 @@ export default function ForgotPasswordScreen() {
           {/* Step 1: Email Input */}
           {step === 'EMAIL' && (
             <View style={[styles.card, Shadows.lg]}>
-              <Text style={styles.inputLabel}>EMAIL ADDRESS</Text>
+              <Text style={styles.inputLabel}>
+                {portalType === 'artisan' ? 'WORKSHOP / VENDOR EMAIL' : 'EMAIL ADDRESS'}
+              </Text>
               <View style={styles.inputWrap}>
                 <Ionicons name="mail-outline" size={18} color="#662502" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="you@domain.com"
+                  placeholder={portalType === 'artisan' ? 'workshop@artisan.com' : 'you@domain.com'}
                   placeholderTextColor="#A8998A"
                   value={email}
                   onChangeText={setEmail}
@@ -220,7 +298,11 @@ export default function ForgotPasswordScreen() {
               </View>
 
               <TouchableOpacity
-                style={[styles.btn, isSubmitting && { opacity: 0.7 }]}
+                style={[
+                  styles.btn,
+                  portalType === 'artisan' && styles.btnVendor,
+                  isSubmitting && { opacity: 0.7 },
+                ]}
                 onPress={handleInitiateReset}
                 disabled={isSubmitting}
                 activeOpacity={0.88}
@@ -252,7 +334,11 @@ export default function ForgotPasswordScreen() {
               />
 
               <TouchableOpacity
-                style={[styles.btn, isSubmitting && { opacity: 0.7 }]}
+                style={[
+                  styles.btn,
+                  portalType === 'artisan' && styles.btnVendor,
+                  isSubmitting && { opacity: 0.7 },
+                ]}
                 onPress={handleVerifyOtp}
                 disabled={isSubmitting}
                 activeOpacity={0.88}
@@ -269,7 +355,14 @@ export default function ForgotPasswordScreen() {
                 onPress={handleInitiateReset}
                 disabled={isSubmitting}
               >
-                <Text style={styles.resendText}>Didn't receive code? Resend</Text>
+                <Text
+                  style={[
+                    styles.resendText,
+                    portalType === 'artisan' && { color: '#341B00' },
+                  ]}
+                >
+                  Didn't receive code? Resend
+                </Text>
               </TouchableOpacity>
             </View>
           )}
@@ -350,7 +443,11 @@ export default function ForgotPasswordScreen() {
               </View>
 
               <TouchableOpacity
-                style={[styles.btn, isSubmitting && { opacity: 0.7 }]}
+                style={[
+                  styles.btn,
+                  portalType === 'artisan' && styles.btnVendor,
+                  isSubmitting && { opacity: 0.7 },
+                ]}
                 onPress={handleCompleteReset}
                 disabled={isSubmitting}
                 activeOpacity={0.88}
@@ -370,12 +467,24 @@ export default function ForgotPasswordScreen() {
               <Ionicons name="checkmark-circle" size={54} color="#009D1A" style={{ marginBottom: 12 }} />
               <Text style={styles.successHeading}>All Set!</Text>
               <Text style={styles.successSub}>
-                Your password has been changed successfully. You can now log into your Ethnikraft account.
+                {portalType === 'artisan'
+                  ? 'Your artisan workshop password has been changed successfully. You can now log into your artisan portal.'
+                  : 'Your password has been changed successfully. You can now log into your Ethnikraft account.'}
               </Text>
 
               <TouchableOpacity
-                style={[styles.btn, { width: '100%' }]}
-                onPress={() => router.replace('/(auth)/login')}
+                style={[
+                  styles.btn,
+                  portalType === 'artisan' && styles.btnVendor,
+                  { width: '100%' },
+                ]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.replace({
+                    pathname: '/(auth)/login',
+                    params: { loginType: portalType },
+                  });
+                }}
                 activeOpacity={0.88}
               >
                 <Text style={styles.btnText}>Back to Sign In</Text>
@@ -386,13 +495,26 @@ export default function ForgotPasswordScreen() {
           {/* Return to login link */}
           {step !== 'SUCCESS' && (
             <TouchableOpacity
-              onPress={() => router.replace('/(auth)/login')}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.replace({
+                  pathname: '/(auth)/login',
+                  params: { loginType: portalType },
+                });
+              }}
               style={styles.signinLink}
               activeOpacity={0.8}
             >
               <Text style={styles.signinText}>
                 Remember your password?{' '}
-                <Text style={styles.signinLinkBold}>Sign in »</Text>
+                <Text
+                  style={[
+                    styles.signinLinkBold,
+                    portalType === 'artisan' && { color: '#341B00' },
+                  ]}
+                >
+                  Sign in »
+                </Text>
               </Text>
             </TouchableOpacity>
           )}
@@ -428,7 +550,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#341B00',
+    backgroundColor: '#C46C27',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.sm,
@@ -540,6 +662,47 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     alignItems: 'center',
     marginTop: Spacing.lg,
+  },
+  btnVendor: {
+    backgroundColor: '#341B00',
+  },
+  iconCircleVendor: {
+    backgroundColor: '#341B00',
+  },
+  typeSelector: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(234, 224, 211, 0.7)',
+    borderRadius: Radius.full,
+    padding: 4,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: '#EFE7DA',
+    width: '100%',
+  },
+  typeTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.sm + 2,
+    borderRadius: Radius.full,
+  },
+  typeTabActive: {
+    backgroundColor: '#C46C27',
+  },
+  typeTabActiveVendor: {
+    backgroundColor: '#341B00',
+  },
+  tabIcon: {
+    marginRight: 6,
+  },
+  typeTabText: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: '700',
+    color: '#662502',
+  },
+  typeTabTextActive: {
+    color: '#FFFFFF',
   },
   btnText: {
     color: '#FFFFFF',
