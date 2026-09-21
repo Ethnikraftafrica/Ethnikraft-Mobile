@@ -144,11 +144,24 @@ export default function VendorDocumentsScreen() {
     }
 
     try {
+      const formatFileUri = (rawUri: string) => {
+        if (!rawUri) return rawUri;
+        let cleaned = rawUri;
+        if (cleaned.includes('%25')) {
+          try {
+            cleaned = decodeURI(cleaned);
+          } catch {
+            // fallback
+          }
+        }
+        return cleaned;
+      };
+
       const formData = new FormData();
 
       if (docs.businessLogo.uri) {
         formData.append('businessLogo', {
-          uri: docs.businessLogo.uri,
+          uri: formatFileUri(docs.businessLogo.uri),
           name: docs.businessLogo.name || 'businessLogo.jpg',
           type: docs.businessLogo.type || 'image/jpeg',
         } as any);
@@ -156,7 +169,7 @@ export default function VendorDocumentsScreen() {
 
       if (docs.proofOfAddress.uri) {
         formData.append('proofOfAddressDocument', {
-          uri: docs.proofOfAddress.uri,
+          uri: formatFileUri(docs.proofOfAddress.uri),
           name: docs.proofOfAddress.name || 'proofOfAddress.jpg',
           type: docs.proofOfAddress.type || 'image/jpeg',
         } as any);
@@ -164,7 +177,7 @@ export default function VendorDocumentsScreen() {
 
       if (docs.businessBanner.uri) {
         formData.append('businessBanner', {
-          uri: docs.businessBanner.uri,
+          uri: formatFileUri(docs.businessBanner.uri),
           name: docs.businessBanner.name || 'businessBanner.jpg',
           type: docs.businessBanner.type || 'image/jpeg',
         } as any);
@@ -172,7 +185,7 @@ export default function VendorDocumentsScreen() {
 
       if (docs.cacDocument.uri) {
         formData.append('cacDocument', {
-          uri: docs.cacDocument.uri,
+          uri: formatFileUri(docs.cacDocument.uri),
           name: docs.cacDocument.name || 'cacDocument.jpg',
           type: docs.cacDocument.type || 'image/jpeg',
         } as any);
@@ -180,7 +193,7 @@ export default function VendorDocumentsScreen() {
 
       if (docs.tinDocument.uri) {
         formData.append('tinDocument', {
-          uri: docs.tinDocument.uri,
+          uri: formatFileUri(docs.tinDocument.uri),
           name: docs.tinDocument.name || 'tinDocument.jpg',
           type: docs.tinDocument.type || 'image/jpeg',
         } as any);

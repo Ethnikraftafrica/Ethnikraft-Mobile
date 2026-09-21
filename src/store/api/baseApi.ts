@@ -57,25 +57,84 @@ export const baseQueryWithReauth: BaseQueryFn<
   unknown,
   FetchBaseQueryError
 > = async (args, api, extraOptions) => {
-  let adjustedArgs = args;
   const isFormData =
     typeof args !== 'string' &&
     args.body &&
     (args.body instanceof FormData ||
       (typeof args.body === 'object' && '_parts' in (args.body as any)));
 
+  // In React Native, FormData is an Object that fetchBaseQuery's isJsonifiable mistakenly treats
+  // as a plain object, causing it to call JSON.stringify(formData) and force application/json.
+  // We execute FormData uploads directly with native fetch to ensure OkHttp streams the binary multipart files.
   if (isFormData && typeof args !== 'string') {
-    const headers = new Headers(args.headers as any);
-    headers.set('x-is-formdata', 'true');
-    headers.delete('Content-Type');
-    adjustedArgs = { ...args, headers };
+    const token = await StorageService.getAccessToken();
+    const url = args.url;
+    const method = args.method || 'POST';
+    const fullUrl = `${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+
+    try {
+      const response = await fetch(fullUrl, {
+        method,
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          Accept: 'application/json',
+          // Omit Content-Type: React Native native fetch attaches multipart/form-data with boundary automatically
+        },
+        body: args.body as any,
+      });
+
+      const responseText = await response.text();
+      let responseData: any;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch {
+        responseData = responseText;
+      }
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          api.dispatch(logout());
+        }
+
+        console.error(
+          `\n======================================================\n` +
+          `🚨 [EXPO API ERROR] ${method} ${fullUrl}\n` +
+          `📊 HTTP Status: ${response.status}\n` +
+          `❌ Error Response: ${JSON.stringify(responseData, null, 2)}\n` +
+          `======================================================\n`
+        );
+
+        return {
+          error: {
+            status: response.status,
+            data: responseData,
+          },
+        };
+      }
+
+      return { data: responseData };
+    } catch (err: any) {
+      console.error(
+        `\n======================================================\n` +
+        `🚨 [EXPO API ERROR] ${method} ${fullUrl}\n` +
+        `📊 HTTP Status: FETCH_ERROR\n` +
+        `❌ Error: ${err?.message || err}\n` +
+        `======================================================\n`
+      );
+      return {
+        error: {
+          status: 'FETCH_ERROR',
+          error: err?.message || String(err),
+        },
+      };
+    }
   }
 
-  const url = typeof adjustedArgs === 'string' ? adjustedArgs : adjustedArgs.url;
-  const method = typeof adjustedArgs === 'string' ? 'GET' : adjustedArgs.method || 'GET';
-  const reqBody = typeof adjustedArgs === 'string' ? undefined : adjustedArgs.body;
+  const url = typeof args === 'string' ? args : args.url;
+  const method = typeof args === 'string' ? 'GET' : args.method || 'GET';
+  const reqBody = typeof args === 'string' ? undefined : args.body;
 
-  let result = await rawBaseQuery(adjustedArgs, api, extraOptions);
+  let result = await rawBaseQuery(args, api, extraOptions);
 
   // If there's an error from the backend, print formatted details to the Expo terminal logs
   if (result.error) {
