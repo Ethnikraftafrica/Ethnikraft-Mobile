@@ -57,12 +57,12 @@ export default function VendorTabsLayout() {
           }}
         />
 
-        {/* 3. Store (Center Docked Medallion) */}
+        {/* 3. Studio (Center Docked Medallion) */}
         <Tabs.Screen
-          name="store"
+          name="studio"
           options={{
-            title: 'Atelier Store',
-            tabBarLabel: 'Store',
+            title: 'Artisan Studio',
+            tabBarLabel: 'Studio',
           }}
         />
 

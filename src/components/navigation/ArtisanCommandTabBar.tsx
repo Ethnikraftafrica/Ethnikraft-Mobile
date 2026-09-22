@@ -32,15 +32,15 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
   const bottomInset = insets.bottom > 0 ? insets.bottom : 8;
   const barHeight = 62 + bottomInset;
 
-  // 5 primary tabs in exact order: Hub, Products, Store (Center Docked), Requests, Orders
+  // 5 primary tabs in exact order: Hub, Products, Studio (Center Docked), Requests, Orders
   const hubRoute = state?.routes?.find((r: any) => r.name === 'index');
   const productsRoute = state?.routes?.find((r: any) => r.name === 'catalog');
-  const storeRoute = state?.routes?.find((r: any) => r.name === 'store');
+  const studioRoute = state?.routes?.find((r: any) => r.name === 'studio');
   const requestsRoute = state?.routes?.find((r: any) => r.name === 'requests');
   const ordersRoute = state?.routes?.find((r: any) => r.name === 'orders');
 
-  const storeIndex = state?.routes?.findIndex((r: any) => r.name === 'store');
-  const isStoreActive = storeIndex !== -1 && state?.index === storeIndex;
+  const studioIndex = state?.routes?.findIndex((r: any) => r.name === 'studio');
+  const isStudioActive = studioIndex !== -1 && state?.index === studioIndex;
 
   const renderSegmentItem = (
     route: any,
@@ -113,20 +113,20 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
     );
   };
 
-  const handleStorePress = () => {
+  const handleStudioPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (storeRoute) {
+    if (studioRoute) {
       const event = navigation.emit({
         type: 'tabPress',
-        target: storeRoute.key,
+        target: studioRoute.key,
         canPreventDefault: true,
       });
 
-      if (!isStoreActive && !event.defaultPrevented) {
-        navigation.navigate(storeRoute.name);
+      if (!isStudioActive && !event.defaultPrevented) {
+        navigation.navigate(studioRoute.name);
       }
     } else {
-      navigation.navigate('store');
+      navigation.navigate('studio');
     }
   };
 
@@ -150,19 +150,19 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
           {/* 2. Products */}
           {renderSegmentItem(productsRoute, 'Products', 'book', 'book-outline')}
 
-          {/* 3. Center Store Column (Medallion Slot) */}
-          <View style={styles.storeCenterColumn}>
+          {/* 3. Center Studio Column (Medallion Slot) */}
+          <View style={styles.studioCenterColumn}>
             <TouchableOpacity
-              onPress={handleStorePress}
+              onPress={handleStudioPress}
               activeOpacity={0.88}
               style={[
-                styles.storeMedallionOuter,
-                isStoreActive && styles.storeMedallionOuterActive,
+                styles.studioMedallionOuter,
+                isStudioActive && styles.studioMedallionOuterActive,
               ]}
             >
               <LinearGradient
                 colors={
-                  isStoreActive
+                  isStudioActive
                     ? ['#F3CE86', '#C46C27', '#662502', '#F3CE86']
                     : ['#8A562B', '#421E08', '#220D02', '#8A562B']
                 }
@@ -172,7 +172,7 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
               >
                 <LinearGradient
                   colors={
-                    isStoreActive
+                    isStudioActive
                       ? ['#542407', '#341302', '#1E0B02']
                       : ['#2F1505', '#1C0B02', '#0F0501']
                   }
@@ -181,9 +181,9 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
                   style={styles.medallionInnerDisc}
                 >
                   <Ionicons
-                    name={isStoreActive ? 'storefront' : 'storefront-outline'}
+                    name={isStudioActive ? 'color-palette' : 'color-palette-outline'}
                     size={22}
-                    color={isStoreActive ? '#FFD79E' : '#D4A373'}
+                    color={isStudioActive ? '#FFD79E' : '#D4A373'}
                   />
                 </LinearGradient>
               </LinearGradient>
@@ -191,11 +191,11 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
 
             <Text
               style={[
-                styles.storeLabel,
-                isStoreActive && styles.storeLabelActive,
+                styles.studioLabel,
+                isStudioActive && styles.studioLabelActive,
               ]}
             >
-              Store
+              Studio
             </Text>
           </View>
 
@@ -317,15 +317,15 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // ─── CENTER STORE COLUMN & MEDALLION ───────────────────────
-  storeCenterColumn: {
+  // ─── CENTER STUDIO COLUMN & MEDALLION ───────────────────────
+  studioCenterColumn: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     height: '100%',
     position: 'relative',
   },
-  storeMedallionOuter: {
+  studioMedallionOuter: {
     width: 52,
     height: 52,
     borderRadius: 26,
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 10,
   },
-  storeMedallionOuterActive: {
+  studioMedallionOuterActive: {
     shadowColor: '#FFD79E',
     shadowOpacity: 0.9,
     shadowRadius: 12,
@@ -359,14 +359,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 215, 158, 0.4)',
   },
-  storeLabel: {
+  studioLabel: {
     fontSize: 10,
     fontFamily: FontFamily.poppinsMedium,
     color: '#9E8C7A',
     marginTop: 2,
     letterSpacing: 0.2,
   },
-  storeLabelActive: {
+  studioLabelActive: {
     color: '#FFD79E',
     fontFamily: FontFamily.poppinsBold,
   },
