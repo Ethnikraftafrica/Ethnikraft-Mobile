@@ -78,7 +78,7 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
       <TouchableOpacity
         key={route.key}
         onPress={onPress}
-        style={[styles.segmentColumn, isFocused && styles.segmentColumnActive]}
+        style={styles.segmentColumn}
         activeOpacity={0.78}
       >
         {/* Top Active Gold / Burnt Orange Indicator Line */}
@@ -247,6 +247,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 16,
     position: 'relative',
+    overflow: 'hidden',
   },
   segmentsRow: {
     flex: 1,
@@ -262,10 +263,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     height: '100%',
     position: 'relative',
-    borderRadius: Radius.md,
-  },
-  segmentColumnActive: {
-    backgroundColor: 'rgba(196, 108, 39, 0.15)',
   },
   activeTopLine: {
     position: 'absolute',
