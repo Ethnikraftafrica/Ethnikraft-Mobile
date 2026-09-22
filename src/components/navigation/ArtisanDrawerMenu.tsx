@@ -9,10 +9,8 @@ import {
   Dimensions,
   ScrollView,
   Alert,
-  Platform,
 } from 'react-native';
-import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -34,6 +32,7 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
   onClose,
 }) => {
   const router = useRouter();
+  const pathname = usePathname();
   const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
   const auth = useAppSelector((state) => state.auth);
@@ -71,6 +70,21 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
       ]).start();
     }
   }, [visible, slideAnim, fadeAnim]);
+
+  // Exact 11 navigation links from Ethnikraft-Vendor web portal (sidenav.tsx & desktopSideNav.tsx)
+  const menuLinks = [
+    { label: 'Dashboard',  route: '/(vendor)',          icon: 'stats-chart-outline',        activeIcon: 'stats-chart' },
+    { label: 'Products',   route: '/(vendor)/catalog',  icon: 'cube-outline',               activeIcon: 'cube' },
+    { label: 'Orders',     route: '/(vendor)/orders',   icon: 'receipt-outline',            activeIcon: 'receipt' },
+    { label: 'Profile',    route: '/(vendor)/store',    icon: 'person-outline',             activeIcon: 'person' },
+    { label: 'Studio',     route: '/(vendor)/requests', icon: 'color-palette-outline',      activeIcon: 'color-palette' },
+    { label: 'Customers',  route: '/(vendor)/orders',   icon: 'people-outline',             activeIcon: 'people' },
+    { label: 'Catalog',    route: '/(vendor)/catalog',  icon: 'grid-outline',               activeIcon: 'grid' },
+    { label: 'Statistics', route: '/(vendor)',          icon: 'bar-chart-outline',          activeIcon: 'bar-chart' },
+    { label: 'Settings',   route: '/(vendor)/store',    icon: 'settings-outline',           activeIcon: 'settings' },
+    { label: 'Messenger',  route: '/(vendor)/requests', icon: 'chatbubbles-outline',        activeIcon: 'chatbubbles' },
+    { label: 'Requests',   route: '/(vendor)/requests', icon: 'mail-unread-outline',        activeIcon: 'mail-unread' },
+  ];
 
   const handleNavigate = (route: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -147,23 +161,23 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
             end={{ x: 1, y: 1 }}
           />
 
-          {/* Golden Highlight Border along the Right Edge */}
+          {/* Right Edge Golden Rim */}
           <View style={styles.rightBorderGoldenRim} />
 
           {/* Workshop Profile Header */}
           <View style={styles.profileHeader}>
             <View style={styles.avatarWrapper}>
               <View style={styles.avatarCircle}>
-                <Ionicons name="storefront" size={28} color="#FFD79E" />
+                <Ionicons name="storefront" size={26} color="#FFD79E" />
               </View>
               <View style={styles.verifiedBadge}>
-                <Ionicons name="checkmark-circle" size={16} color="#009D1A" />
+                <Ionicons name="checkmark-circle" size={15} color="#009D1A" />
               </View>
             </View>
 
             <View style={styles.profileInfoCol}>
               <Text style={styles.workshopName} numberOfLines={1}>
-                {vendor?.businessName || `${user?.firstName || 'Artisan'}'s Studio`}
+                {vendor?.businessName || `${user?.firstName || 'Artisan'}'s Workshop`}
               </Text>
               <Text style={styles.workshopEmail} numberOfLines={1}>
                 {user?.email || 'artisan@ethnikraft.com'}
@@ -171,7 +185,7 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
               
               {/* Tier Badge */}
               <View style={styles.tierPill}>
-                <Ionicons name="shield-checkmark" size={12} color="#FFD79E" style={{ marginRight: 4 }} />
+                <Ionicons name="shield-checkmark" size={11} color="#FFD79E" style={{ marginRight: 4 }} />
                 <Text style={styles.tierPillText}>
                   {vendor?.status === 'APPROVED' ? 'MASTER ARTISAN' : 'VERIFIED ARTISAN'}
                 </Text>
@@ -181,108 +195,53 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
 
           <View style={styles.divider} />
 
-          {/* Drawer Menu List */}
+          {/* Drawer Menu List (Exact Ethnikraft-Vendor Web Sidebar Items) */}
           <ScrollView
             style={styles.menuScroll}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.menuScrollContent}
           >
-            {/* Domain Sections */}
-            <Text style={styles.sectionHeader}>FINANCES & OPERATIONS</Text>
+            {menuLinks.map((item) => {
+              const isSelected =
+                pathname === item.route ||
+                (item.route === '/(vendor)' && pathname === '/(vendor)/index');
 
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => handleNavigate('/(vendor)/payouts')}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.menuIconCircle, { backgroundColor: '#3D1E08' }]}>
-                <Ionicons name="wallet-outline" size={18} color="#FFD79E" />
-              </View>
-              <View style={styles.menuItemTextCol}>
-                <Text style={styles.menuItemTitle}>Settlements & Escrow</Text>
-                <Text style={styles.menuItemSubtitle}>Wallet balance, payouts & history</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color="#9E8C7A" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => handleNavigate('/(vendor)/requests')}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.menuIconCircle, { backgroundColor: '#3D1E08' }]}>
-                <Ionicons name="hammer-outline" size={18} color="#FFD79E" />
-              </View>
-              <View style={styles.menuItemTextCol}>
-                <Text style={styles.menuItemTitle}>Bespoke Requests</Text>
-                <Text style={styles.menuItemSubtitle}>Client inquiries & quote bids</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color="#9E8C7A" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => handleNavigate('/(vendor)/orders')}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.menuIconCircle, { backgroundColor: '#3D1E08' }]}>
-                <Ionicons name="bag-check-outline" size={18} color="#FFD79E" />
-              </View>
-              <View style={styles.menuItemTextCol}>
-                <Text style={styles.menuItemTitle}>Fulfillment Pipeline</Text>
-                <Text style={styles.menuItemSubtitle}>Active shipping & delivery</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color="#9E8C7A" />
-            </TouchableOpacity>
-
-            <Text style={[styles.sectionHeader, { marginTop: Spacing.md }]}>
-              WORKSHOP & BRANDING
-            </Text>
-
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => handleNavigate('/(vendor)/store')}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.menuIconCircle, { backgroundColor: '#3D1E08' }]}>
-                <Ionicons name="storefront-outline" size={18} color="#FFD79E" />
-              </View>
-              <View style={styles.menuItemTextCol}>
-                <Text style={styles.menuItemTitle}>Atelier Storefront</Text>
-                <Text style={styles.menuItemSubtitle}>Public profile, banner & story</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color="#9E8C7A" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => handleNavigate('/(vendor)/catalog')}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.menuIconCircle, { backgroundColor: '#3D1E08' }]}>
-                <Ionicons name="cube-outline" size={18} color="#FFD79E" />
-              </View>
-              <View style={styles.menuItemTextCol}>
-                <Text style={styles.menuItemTitle}>Craft Catalog</Text>
-                <Text style={styles.menuItemSubtitle}>Manage products & stock</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color="#9E8C7A" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => handleNavigate('/(auth)/vendor-documents')}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.menuIconCircle, { backgroundColor: '#3D1E08' }]}>
-                <Ionicons name="shield-checkmark-outline" size={18} color="#FFD79E" />
-              </View>
-              <View style={styles.menuItemTextCol}>
-                <Text style={styles.menuItemTitle}>Verification Documents</Text>
-                <Text style={styles.menuItemSubtitle}>CAC & artisan certifications</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color="#9E8C7A" />
-            </TouchableOpacity>
+              return (
+                <TouchableOpacity
+                  key={item.label}
+                  style={[
+                    styles.menuItem,
+                    isSelected && styles.menuItemActive,
+                  ]}
+                  onPress={() => handleNavigate(item.route)}
+                  activeOpacity={0.7}
+                >
+                  <View
+                    style={[
+                      styles.menuIconCircle,
+                      isSelected && styles.menuIconCircleActive,
+                    ]}
+                  >
+                    <Ionicons
+                      name={(isSelected ? item.activeIcon : item.icon) as any}
+                      size={18}
+                      color={isSelected ? '#FFD79E' : '#9E8C7A'}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      styles.menuItemTitle,
+                      isSelected && styles.menuItemTitleActive,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                  {isSelected && (
+                    <View style={styles.activePillDot} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
 
           <View style={styles.divider} />
@@ -295,18 +254,18 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
               onPress={handleSwitchToCustomerMode}
               activeOpacity={0.8}
             >
-              <Ionicons name="bag-handle-outline" size={18} color="#341302" style={{ marginRight: 8 }} />
+              <Ionicons name="bag-handle-outline" size={17} color="#341302" style={{ marginRight: 8 }} />
               <Text style={styles.customerSwitchText}>Switch to Customer Mode</Text>
             </TouchableOpacity>
 
-            {/* Sign Out */}
+            {/* Logout */}
             <TouchableOpacity
               style={styles.signOutBtn}
               onPress={handleSignOut}
               activeOpacity={0.7}
             >
-              <Ionicons name="log-out-outline" size={18} color="#C92929" style={{ marginRight: 6 }} />
-              <Text style={styles.signOutText}>Sign Out of Workshop</Text>
+              <Ionicons name="log-out-outline" size={17} color="#C92929" style={{ marginRight: 6 }} />
+              <Text style={styles.signOutText}>Logout</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -358,9 +317,9 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   avatarCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#381A05',
     justifyContent: 'center',
     alignItems: 'center',
@@ -379,7 +338,7 @@ const styles = StyleSheet.create({
     marginLeft: Spacing.md,
   },
   workshopName: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: FontFamily.poppinsBold,
     color: '#FFF3D6',
   },
@@ -394,15 +353,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(196, 108, 39, 0.22)',
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 2.5,
     borderRadius: Radius.full,
     borderWidth: 1,
     borderColor: 'rgba(255, 215, 158, 0.4)',
     alignSelf: 'flex-start',
-    marginTop: 6,
+    marginTop: 5,
   },
   tierPillText: {
-    fontSize: 9,
+    fontSize: 8.5,
     fontFamily: FontFamily.poppinsBold,
     color: '#FFD79E',
     letterSpacing: 0.5,
@@ -417,53 +376,56 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   menuScrollContent: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-  },
-  sectionHeader: {
-    fontSize: 10,
-    fontFamily: FontFamily.poppinsBold,
-    color: '#9E8C7A',
-    letterSpacing: 0.8,
-    marginBottom: Spacing.xs,
-    marginTop: Spacing.xs,
-    paddingHorizontal: 4,
+    paddingHorizontal: Spacing.sm + 4,
+    paddingVertical: Spacing.xs,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
     borderRadius: Radius.md,
-    marginVertical: 2,
+    marginVertical: 1.5,
+  },
+  menuItemActive: {
+    backgroundColor: 'rgba(196, 108, 39, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 158, 0.25)',
   },
   menuIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(61, 30, 8, 0.6)',
     borderWidth: 1,
-    borderColor: 'rgba(212, 163, 115, 0.2)',
+    borderColor: 'rgba(212, 163, 115, 0.18)',
   },
-  menuItemTextCol: {
-    flex: 1,
-    marginLeft: Spacing.sm + 4,
+  menuIconCircleActive: {
+    backgroundColor: '#662502',
+    borderColor: '#FFD79E',
   },
   menuItemTitle: {
+    flex: 1,
     fontSize: 13,
-    fontFamily: FontFamily.poppinsSemiBold,
-    color: '#FFF3D6',
-  },
-  menuItemSubtitle: {
-    fontSize: 10,
-    fontFamily: FontFamily.poppinsRegular,
+    fontFamily: FontFamily.poppinsMedium,
     color: '#9E8C7A',
-    marginTop: 1,
+    marginLeft: Spacing.sm + 4,
+  },
+  menuItemTitleActive: {
+    color: '#FFF3D6',
+    fontFamily: FontFamily.poppinsBold,
+  },
+  activePillDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FFD79E',
   },
   footerActions: {
     paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm,
+    paddingTop: Spacing.xs,
     gap: Spacing.xs,
   },
   customerSwitchBtn: {
@@ -471,7 +433,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFD79E',
-    paddingVertical: 12,
+    paddingVertical: 11,
     borderRadius: Radius.md,
     shadowColor: '#C46C27',
     shadowOffset: { width: 0, height: 2 },
@@ -488,7 +450,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
+    paddingVertical: 7,
   },
   signOutText: {
     fontSize: 11,
