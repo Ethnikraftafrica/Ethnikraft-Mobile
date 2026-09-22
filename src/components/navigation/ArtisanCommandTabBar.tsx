@@ -81,6 +81,9 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
         style={[styles.segmentColumn, isFocused && styles.segmentColumnActive]}
         activeOpacity={0.78}
       >
+        {/* Top Active Gold / Burnt Orange Indicator Line */}
+        {isFocused && <View style={styles.activeTopLine} />}
+
         <View style={styles.iconContainer}>
           <Ionicons
             name={(isFocused ? activeIcon : inactiveIcon) as any}
@@ -106,9 +109,6 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
         >
           {label}
         </Text>
-
-        {/* Burnt Orange Active Glow Dot */}
-        {isFocused && <View style={styles.activeDot} />}
       </TouchableOpacity>
     );
   };
@@ -139,9 +139,6 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
         end={{ x: 0, y: 1 }}
         style={[styles.barBackground, { paddingBottom: bottomInset }]}
       >
-        {/* Subtle Top Specular Glass Reflection */}
-        <View style={styles.glassTopGleam} />
-
         {/* 5 Equal 20% Columns with Pixel-Perfect Centered Symmetry */}
         <View style={styles.segmentsRow}>
           {/* 1. Hub */}
@@ -180,7 +177,7 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
                       : ['#662502', '#361300', '#251400']
                   }
                   start={{ x: 0, y: 0 }}
-                  end={{ x: 0, y: 1 }}
+                  end={{ x: 1, y: 1 }}
                   style={styles.medallionInnerDisc}
                 >
                   <Ionicons
@@ -244,22 +241,12 @@ const styles = StyleSheet.create({
     borderLeftWidth: 1,
     borderRightWidth: 1,
     borderColor: 'rgba(209, 153, 90, 0.38)',
-    borderTopColor: 'rgba(255, 215, 158, 0.5)',
     shadowColor: '#C46C27',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.35,
     shadowRadius: 12,
     elevation: 16,
     position: 'relative',
-    overflow: 'visible',
-  },
-  glassTopGleam: {
-    position: 'absolute',
-    top: 0,
-    left: 20,
-    right: 20,
-    height: 1,
-    backgroundColor: 'rgba(255, 252, 244, 0.25)',
   },
   segmentsRow: {
     flex: 1,
@@ -278,7 +265,20 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
   },
   segmentColumnActive: {
-    backgroundColor: 'rgba(196, 108, 39, 0.22)',
+    backgroundColor: 'rgba(196, 108, 39, 0.15)',
+  },
+  activeTopLine: {
+    position: 'absolute',
+    top: 0,
+    left: '18%',
+    right: '18%',
+    height: 2.5,
+    backgroundColor: '#FFD79E',
+    borderRadius: 2,
+    shadowColor: '#FFD79E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.9,
+    shadowRadius: 4,
   },
   verticalDivider: {
     width: 1,
@@ -323,17 +323,6 @@ const styles = StyleSheet.create({
   segmentLabelActive: {
     color: '#FFF3D6',
     fontFamily: FontFamily.poppinsBold,
-  },
-  activeDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#C46C27',
-    marginTop: 2,
-    shadowColor: '#C46C27',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.8,
-    shadowRadius: 2,
   },
 
   // ─── CENTER STUDIO DOCKED MEDALLION ───────────────────────
