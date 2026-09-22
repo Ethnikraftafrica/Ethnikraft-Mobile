@@ -76,14 +76,14 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
     { label: 'Dashboard',  route: '/(vendor)',          icon: 'stats-chart-outline',        activeIcon: 'stats-chart' },
     { label: 'Products',   route: '/(vendor)/catalog',  icon: 'cube-outline',               activeIcon: 'cube' },
     { label: 'Orders',     route: '/(vendor)/orders',   icon: 'receipt-outline',            activeIcon: 'receipt' },
-    { label: 'Profile',    route: '/(vendor)/store',    icon: 'person-outline',             activeIcon: 'person' },
-    { label: 'Studio',     route: '/(vendor)/requests', icon: 'color-palette-outline',      activeIcon: 'color-palette' },
+    { label: 'Profile',    route: '/(vendor)/profile',  icon: 'person-outline',             activeIcon: 'person' },
+    { label: 'Studio',     route: '/(vendor)/studio',   icon: 'color-palette-outline',      activeIcon: 'color-palette' },
     { label: 'Customers',  route: '/(vendor)/orders',   icon: 'people-outline',             activeIcon: 'people' },
     { label: 'Catalog',    route: '/(vendor)/catalog',  icon: 'grid-outline',               activeIcon: 'grid' },
     { label: 'Statistics', route: '/(vendor)',          icon: 'bar-chart-outline',          activeIcon: 'bar-chart' },
-    { label: 'Settings',   route: '/(vendor)/store',    icon: 'settings-outline',           activeIcon: 'settings' },
+    { label: 'Settings',   route: '/(vendor)/settings', icon: 'settings-outline',           activeIcon: 'settings' },
     { label: 'Messenger',  route: '/(vendor)/requests', icon: 'chatbubbles-outline',        activeIcon: 'chatbubbles' },
-    { label: 'Requests',   route: '/(vendor)/requests', icon: 'mail-unread-outline',        activeIcon: 'mail-unread' },
+    { label: 'Requests',   route: '/(vendor)/requests', icon: 'hammer-outline',             activeIcon: 'hammer' },
   ];
 
   const handleNavigate = (route: string) => {
@@ -143,7 +143,7 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
           />
         </Animated.View>
 
-        {/* Sliding Drawer Container */}
+        {/* Sliding Drawer Container with Glassmorphic Brown/Burnt Orange */}
         <Animated.View
           style={[
             styles.drawerContent,
@@ -155,7 +155,7 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
           ]}
         >
           <LinearGradient
-            colors={['#24140A', '#160B05', '#0D0602']}
+            colors={['rgba(102, 37, 2, 0.96)', 'rgba(54, 19, 0, 0.98)', 'rgba(37, 20, 0, 1.0)']}
             style={StyleSheet.absoluteFill}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -225,7 +225,7 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
                     <Ionicons
                       name={(isSelected ? item.activeIcon : item.icon) as any}
                       size={18}
-                      color={isSelected ? '#FFD79E' : '#9E8C7A'}
+                      color={isSelected ? '#FFF3D6' : '#D1995A'}
                     />
                   </View>
                   <Text
@@ -254,7 +254,7 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
               onPress={handleSwitchToCustomerMode}
               activeOpacity={0.8}
             >
-              <Ionicons name="bag-handle-outline" size={17} color="#341302" style={{ marginRight: 8 }} />
+              <Ionicons name="bag-handle-outline" size={17} color="#FFF3D6" style={{ marginRight: 8 }} />
               <Text style={styles.customerSwitchText}>Switch to Customer Mode</Text>
             </TouchableOpacity>
 
@@ -290,12 +290,12 @@ const styles = StyleSheet.create({
   drawerContent: {
     width: DRAWER_WIDTH,
     height: '100%',
-    backgroundColor: '#160B05',
+    backgroundColor: '#361300',
     position: 'relative',
     overflow: 'hidden',
-    shadowColor: '#000000',
+    shadowColor: '#C46C27',
     shadowOffset: { width: 4, height: 0 },
-    shadowOpacity: 0.6,
+    shadowOpacity: 0.35,
     shadowRadius: 16,
     elevation: 20,
   },
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     right: 0,
     width: 1.5,
-    backgroundColor: 'rgba(212, 163, 115, 0.35)',
+    backgroundColor: 'rgba(209, 153, 90, 0.38)',
   },
   profileHeader: {
     flexDirection: 'row',
@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#381A05',
+    backgroundColor: '#662502',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
@@ -345,18 +345,18 @@ const styles = StyleSheet.create({
   workshopEmail: {
     fontSize: 11,
     fontFamily: FontFamily.poppinsRegular,
-    color: '#9E8C7A',
+    color: '#D1995A',
     marginTop: 1,
   },
   tierPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(196, 108, 39, 0.22)',
+    backgroundColor: 'rgba(196, 108, 39, 0.3)',
     paddingHorizontal: 8,
     paddingVertical: 2.5,
     borderRadius: Radius.full,
     borderWidth: 1,
-    borderColor: 'rgba(255, 215, 158, 0.4)',
+    borderColor: '#C46C27',
     alignSelf: 'flex-start',
     marginTop: 5,
   },
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(212, 163, 115, 0.16)',
+    backgroundColor: 'rgba(209, 153, 90, 0.22)',
     marginHorizontal: Spacing.md,
     marginVertical: Spacing.xs,
   },
@@ -388,9 +388,9 @@ const styles = StyleSheet.create({
     marginVertical: 1.5,
   },
   menuItemActive: {
-    backgroundColor: 'rgba(196, 108, 39, 0.18)',
+    backgroundColor: 'rgba(196, 108, 39, 0.25)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 215, 158, 0.25)',
+    borderColor: 'rgba(255, 215, 158, 0.35)',
   },
   menuIconCircle: {
     width: 32,
@@ -398,19 +398,19 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(61, 30, 8, 0.6)',
+    backgroundColor: 'rgba(54, 19, 0, 0.6)',
     borderWidth: 1,
-    borderColor: 'rgba(212, 163, 115, 0.18)',
+    borderColor: 'rgba(209, 153, 90, 0.22)',
   },
   menuIconCircleActive: {
     backgroundColor: '#662502',
-    borderColor: '#FFD79E',
+    borderColor: '#C46C27',
   },
   menuItemTitle: {
     flex: 1,
     fontSize: 13,
     fontFamily: FontFamily.poppinsMedium,
-    color: '#9E8C7A',
+    color: '#D1995A',
     marginLeft: Spacing.sm + 4,
   },
   menuItemTitleActive: {
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#FFD79E',
+    backgroundColor: '#C46C27',
   },
   footerActions: {
     paddingHorizontal: Spacing.md,
@@ -432,9 +432,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFD79E',
+    backgroundColor: '#C46C27',
     paddingVertical: 11,
     borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 158, 0.45)',
     shadowColor: '#C46C27',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.4,
@@ -444,7 +446,7 @@ const styles = StyleSheet.create({
   customerSwitchText: {
     fontSize: 12,
     fontFamily: FontFamily.poppinsBold,
-    color: '#341302',
+    color: '#FFF3D6',
   },
   signOutBtn: {
     flexDirection: 'row',

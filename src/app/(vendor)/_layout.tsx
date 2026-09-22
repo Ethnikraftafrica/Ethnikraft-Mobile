@@ -27,7 +27,7 @@ export default function VendorTabsLayout() {
         screenOptions={{
           headerShown: true,
           headerStyle: {
-            backgroundColor: '#160B05',
+            backgroundColor: '#361300',
           },
           headerShadowVisible: false,
           headerTintColor: '#FFF3D6',
@@ -107,17 +107,22 @@ export default function VendorTabsLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#160B05',
+    backgroundColor: '#361300',
   },
   drawerTriggerBtn: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#2A1405',
+    backgroundColor: '#662502',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: Spacing.md,
     borderWidth: 1,
-    borderColor: 'rgba(212, 163, 115, 0.25)',
+    borderColor: 'rgba(209, 153, 90, 0.35)',
+    shadowColor: '#C46C27',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
 });

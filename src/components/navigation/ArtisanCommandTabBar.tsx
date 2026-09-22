@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { FontFamily } from '@/constants/theme';
+import { FontFamily, Radius } from '@/constants/theme';
 
 export interface ArtisanCommandTabBarProps {
   state: any;
@@ -52,7 +52,7 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
     if (!route || !route.key || !descriptors || !descriptors[route.key]) {
       return (
         <View style={styles.segmentColumn}>
-          <Ionicons name={inactiveIcon as any} size={20} color="#9E8C7A" />
+          <Ionicons name={inactiveIcon as any} size={20} color="#D1995A" />
           <Text style={styles.segmentLabelInactive}>{label}</Text>
         </View>
       );
@@ -85,7 +85,7 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
           <Ionicons
             name={(isFocused ? activeIcon : inactiveIcon) as any}
             size={21}
-            color={isFocused ? '#FFD79E' : '#9E8C7A'}
+            color={isFocused ? '#FFF3D6' : '#D1995A'}
           />
 
           {/* Operational Real-time Badge */}
@@ -107,7 +107,7 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
           {label}
         </Text>
 
-        {/* Subtle active glow dot */}
+        {/* Burnt Orange Active Glow Dot */}
         {isFocused && <View style={styles.activeDot} />}
       </TouchableOpacity>
     );
@@ -132,14 +132,17 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
 
   return (
     <View style={[styles.container, { height: barHeight }]}>
-      {/* Dark Ebony & Polished Wood Textured Bar Background with Curved Top Border */}
+      {/* Glassmorphism Brown & Burnt Orange Container */}
       <LinearGradient
-        colors={['#24140A', '#160B05', '#0D0602']}
+        colors={['rgba(102, 37, 2, 0.94)', 'rgba(54, 19, 0, 0.97)', 'rgba(37, 20, 0, 0.99)']}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={[styles.barBackground, { paddingBottom: bottomInset }]}
       >
-        {/* 5 Equal 20% Columns with Centered Symmetry */}
+        {/* Subtle Top Specular Glass Reflection */}
+        <View style={styles.glassTopGleam} />
+
+        {/* 5 Equal 20% Columns with Pixel-Perfect Centered Symmetry */}
         <View style={styles.segmentsRow}>
           {/* 1. Hub */}
           {renderSegmentItem(hubRoute, 'Hub', 'stats-chart', 'stats-chart-outline')}
@@ -150,7 +153,7 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
           {/* 2. Products */}
           {renderSegmentItem(productsRoute, 'Products', 'book', 'book-outline')}
 
-          {/* 3. Center Studio Column (Medallion Slot) */}
+          {/* 3. Center Studio Column (Docked Medallion) */}
           <View style={styles.studioCenterColumn}>
             <TouchableOpacity
               onPress={handleStudioPress}
@@ -163,8 +166,8 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
               <LinearGradient
                 colors={
                   isStudioActive
-                    ? ['#F3CE86', '#C46C27', '#662502', '#F3CE86']
-                    : ['#8A562B', '#421E08', '#220D02', '#8A562B']
+                    ? ['#FFD79E', '#C46C27', '#E68A3E', '#FFD79E']
+                    : ['#C46C27', '#662502', '#361300', '#D1995A']
                 }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -173,8 +176,8 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
                 <LinearGradient
                   colors={
                     isStudioActive
-                      ? ['#542407', '#341302', '#1E0B02']
-                      : ['#2F1505', '#1C0B02', '#0F0501']
+                      ? ['#C46C27', '#662502', '#361300']
+                      : ['#662502', '#361300', '#251400']
                   }
                   start={{ x: 0, y: 0 }}
                   end={{ x: 0, y: 1 }}
@@ -182,8 +185,8 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
                 >
                   <Ionicons
                     name={isStudioActive ? 'color-palette' : 'color-palette-outline'}
-                    size={22}
-                    color={isStudioActive ? '#FFD79E' : '#D4A373'}
+                    size={23}
+                    color={isStudioActive ? '#FFF3D6' : '#FFD79E'}
                   />
                 </LinearGradient>
               </LinearGradient>
@@ -192,7 +195,7 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
             <Text
               style={[
                 styles.studioLabel,
-                isStudioActive && styles.studioLabelActive,
+                isStudioActive ? styles.studioLabelActive : styles.studioLabelInactive,
               ]}
             >
               Studio
@@ -235,17 +238,28 @@ const styles = StyleSheet.create({
   },
   barBackground: {
     flex: 1,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
     borderTopWidth: 1.5,
     borderLeftWidth: 1,
     borderRightWidth: 1,
-    borderColor: 'rgba(212, 163, 115, 0.35)',
-    shadowColor: '#000000',
+    borderColor: 'rgba(209, 153, 90, 0.38)',
+    borderTopColor: 'rgba(255, 215, 158, 0.5)',
+    shadowColor: '#C46C27',
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
     elevation: 16,
+    position: 'relative',
+    overflow: 'visible',
+  },
+  glassTopGleam: {
+    position: 'absolute',
+    top: 0,
+    left: 20,
+    right: 20,
+    height: 1,
+    backgroundColor: 'rgba(255, 252, 244, 0.25)',
   },
   segmentsRow: {
     flex: 1,
@@ -261,14 +275,15 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     height: '100%',
     position: 'relative',
+    borderRadius: Radius.md,
   },
   segmentColumnActive: {
-    backgroundColor: 'rgba(196, 108, 39, 0.08)',
+    backgroundColor: 'rgba(196, 108, 39, 0.22)',
   },
   verticalDivider: {
     width: 1,
-    height: 24,
-    backgroundColor: 'rgba(212, 163, 115, 0.18)',
+    height: 22,
+    backgroundColor: 'rgba(209, 153, 90, 0.22)',
     alignSelf: 'center',
   },
   iconContainer: {
@@ -280,18 +295,18 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -5,
     right: -11,
-    backgroundColor: '#C92929',
+    backgroundColor: '#C46C27',
     paddingHorizontal: 4,
     paddingVertical: 1,
     borderRadius: 7,
     borderWidth: 1,
-    borderColor: '#FFD79E',
+    borderColor: '#FFF3D6',
     minWidth: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   badgeText: {
-    color: '#FFFFFF',
+    color: '#FFF3D6',
     fontSize: 9,
     fontFamily: FontFamily.poppinsBold,
     lineHeight: 11,
@@ -303,21 +318,25 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   segmentLabelInactive: {
-    color: '#9E8C7A',
+    color: '#D1995A',
   },
   segmentLabelActive: {
-    color: '#FFD79E',
+    color: '#FFF3D6',
     fontFamily: FontFamily.poppinsBold,
   },
   activeDot: {
-    width: 3.5,
-    height: 3.5,
+    width: 4,
+    height: 4,
     borderRadius: 2,
-    backgroundColor: '#FFD79E',
+    backgroundColor: '#C46C27',
     marginTop: 2,
+    shadowColor: '#C46C27',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
   },
 
-  // ─── CENTER STUDIO COLUMN & MEDALLION ───────────────────────
+  // ─── CENTER STUDIO DOCKED MEDALLION ───────────────────────
   studioCenterColumn: {
     flex: 1,
     alignItems: 'center',
@@ -333,14 +352,14 @@ const styles = StyleSheet.create({
     marginTop: -18,
     shadowColor: '#C46C27',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    elevation: 10,
+    shadowOpacity: 0.7,
+    shadowRadius: 10,
+    elevation: 12,
   },
   studioMedallionOuterActive: {
     shadowColor: '#FFD79E',
-    shadowOpacity: 0.9,
-    shadowRadius: 12,
+    shadowOpacity: 0.95,
+    shadowRadius: 14,
     transform: [{ scale: 1.05 }],
   },
   bezelRing: {
@@ -357,17 +376,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 215, 158, 0.4)',
+    borderColor: 'rgba(255, 215, 158, 0.45)',
   },
   studioLabel: {
     fontSize: 10,
     fontFamily: FontFamily.poppinsMedium,
-    color: '#9E8C7A',
     marginTop: 2,
     letterSpacing: 0.2,
   },
+  studioLabelInactive: {
+    color: '#D1995A',
+  },
   studioLabelActive: {
-    color: '#FFD79E',
+    color: '#FFF3D6',
     fontFamily: FontFamily.poppinsBold,
   },
 });
