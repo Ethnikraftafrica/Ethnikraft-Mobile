@@ -52,7 +52,7 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
     if (!route || !route.key || !descriptors || !descriptors[route.key]) {
       return (
         <View style={styles.segmentColumn}>
-          <Ionicons name={inactiveIcon as any} size={20} color="#D1995A" />
+          <Ionicons name={inactiveIcon as any} size={21} color="#A8998A" />
           <Text style={styles.segmentLabelInactive}>{label}</Text>
         </View>
       );
@@ -79,16 +79,16 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
         key={route.key}
         onPress={onPress}
         style={styles.segmentColumn}
-        activeOpacity={0.78}
+        activeOpacity={0.75}
       >
-        {/* Top Active Gold / Burnt Orange Indicator Line */}
+        {/* Top Active Amber-Gold Indicator Line */}
         {isFocused && <View style={styles.activeTopLine} />}
 
         <View style={styles.iconContainer}>
           <Ionicons
             name={(isFocused ? activeIcon : inactiveIcon) as any}
-            size={21}
-            color={isFocused ? '#FFF3D6' : '#D1995A'}
+            size={22}
+            color={isFocused ? '#FFF3D6' : '#A8998A'}
           />
 
           {/* Operational Real-time Badge */}
@@ -132,25 +132,22 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
 
   return (
     <View style={[styles.container, { height: barHeight }]}>
-      {/* Glassmorphism Brown & Burnt Orange Container */}
+      {/* Deep African Coffee & Wood Bar Background */}
       <LinearGradient
-        colors={['rgba(102, 37, 2, 0.94)', 'rgba(54, 19, 0, 0.97)', 'rgba(37, 20, 0, 0.99)']}
+        colors={['#2A1203', '#1A0B02', '#100501']}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={[styles.barBackground, { paddingBottom: bottomInset }]}
       >
-        {/* 5 Equal 20% Columns with Pixel-Perfect Centered Symmetry */}
+        {/* 5 Equal 20% Columns with Centered Symmetry */}
         <View style={styles.segmentsRow}>
           {/* 1. Hub */}
           {renderSegmentItem(hubRoute, 'Hub', 'stats-chart', 'stats-chart-outline')}
 
-          {/* Divider 1 */}
-          <View style={styles.verticalDivider} />
-
           {/* 2. Products */}
           {renderSegmentItem(productsRoute, 'Products', 'book', 'book-outline')}
 
-          {/* 3. Center Studio Column (Docked Medallion) */}
+          {/* 3. Center Studio Column (Docked Elevated Medallion) */}
           <View style={styles.studioCenterColumn}>
             <TouchableOpacity
               onPress={handleStudioPress}
@@ -163,8 +160,8 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
               <LinearGradient
                 colors={
                   isStudioActive
-                    ? ['#FFD79E', '#C46C27', '#E68A3E', '#FFD79E']
-                    : ['#C46C27', '#662502', '#361300', '#D1995A']
+                    ? ['#FFD79E', '#C46C27', '#662502', '#FFD79E']
+                    : ['#D1995A', '#8A4A18', '#361300', '#D1995A']
                 }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -174,15 +171,15 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
                   colors={
                     isStudioActive
                       ? ['#C46C27', '#662502', '#361300']
-                      : ['#662502', '#361300', '#251400']
+                      : ['#361300', '#200B01', '#120501']
                   }
                   start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
+                  end={{ x: 0, y: 1 }}
                   style={styles.medallionInnerDisc}
                 >
                   <Ionicons
                     name={isStudioActive ? 'color-palette' : 'color-palette-outline'}
-                    size={23}
+                    size={24}
                     color={isStudioActive ? '#FFF3D6' : '#FFD79E'}
                   />
                 </LinearGradient>
@@ -208,9 +205,6 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
             unreadRequestsCount
           )}
 
-          {/* Divider 2 */}
-          <View style={styles.verticalDivider} />
-
           {/* 5. Orders */}
           {renderSegmentItem(
             ordersRoute,
@@ -232,6 +226,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 90,
+    overflow: 'visible',
+    backgroundColor: 'transparent',
   },
   barBackground: {
     flex: 1,
@@ -240,21 +236,22 @@ const styles = StyleSheet.create({
     borderTopWidth: 1.5,
     borderLeftWidth: 1,
     borderRightWidth: 1,
-    borderColor: 'rgba(209, 153, 90, 0.38)',
-    shadowColor: '#C46C27',
+    borderColor: 'rgba(209, 153, 90, 0.35)',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.5,
     shadowRadius: 12,
     elevation: 16,
     position: 'relative',
-    overflow: 'hidden',
+    overflow: 'visible',
   },
   segmentsRow: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 2,
+    paddingHorizontal: 4,
+    overflow: 'visible',
   },
   segmentColumn: {
     flex: 1,
@@ -276,12 +273,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.9,
     shadowRadius: 4,
-  },
-  verticalDivider: {
-    width: 1,
-    height: 22,
-    backgroundColor: 'rgba(209, 153, 90, 0.22)',
-    alignSelf: 'center',
   },
   iconContainer: {
     position: 'relative',
@@ -315,7 +306,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   segmentLabelInactive: {
-    color: '#D1995A',
+    color: '#A8998A',
   },
   segmentLabelActive: {
     color: '#FFF3D6',
@@ -329,28 +320,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: '100%',
     position: 'relative',
+    overflow: 'visible',
   },
   studioMedallionOuter: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     padding: 2,
-    marginTop: -18,
+    marginTop: -22,
     shadowColor: '#C46C27',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.7,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.65,
     shadowRadius: 10,
     elevation: 12,
+    zIndex: 100,
   },
   studioMedallionOuterActive: {
     shadowColor: '#FFD79E',
     shadowOpacity: 0.95,
     shadowRadius: 14,
-    transform: [{ scale: 1.05 }],
+    transform: [{ scale: 1.04 }],
   },
   bezelRing: {
     flex: 1,
-    borderRadius: 24,
+    borderRadius: 26,
     padding: 2,
     justifyContent: 'center',
     alignItems: 'center',
@@ -358,7 +351,7 @@ const styles = StyleSheet.create({
   medallionInnerDisc: {
     width: '100%',
     height: '100%',
-    borderRadius: 22,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
@@ -371,10 +364,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   studioLabelInactive: {
-    color: '#D1995A',
+    color: '#A8998A',
   },
   studioLabelActive: {
-    color: '#FFF3D6',
+    color: '#FFD79E',
     fontFamily: FontFamily.poppinsBold,
   },
 });
