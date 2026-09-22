@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { FontFamily, Radius } from '@/constants/theme';
+import { useAppTheme } from '@/hooks/useAppTheme';
 
 export interface ArtisanCommandTabBarProps {
   state: any;
@@ -29,6 +30,7 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
   pendingOrdersCount = 3,
 }) => {
   const insets = useSafeAreaInsets();
+  const { theme, isDark } = useAppTheme();
   const bottomInset = insets.bottom > 0 ? insets.bottom : 8;
   const barHeight = 62 + bottomInset;
 
@@ -52,8 +54,8 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
     if (!route || !route.key || !descriptors || !descriptors[route.key]) {
       return (
         <View style={styles.segmentColumn}>
-          <Ionicons name={inactiveIcon as any} size={21} color="#A8998A" />
-          <Text style={styles.segmentLabelInactive}>{label}</Text>
+          <Ionicons name={inactiveIcon as any} size={21} color={theme.navInactiveIcon} />
+          <Text style={[styles.segmentLabelInactive, { color: theme.navInactiveText }]}>{label}</Text>
         </View>
       );
     }
@@ -81,14 +83,24 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
         style={styles.segmentColumn}
         activeOpacity={0.75}
       >
-        {/* Top Active Amber-Gold Indicator Line */}
-        {isFocused && <View style={styles.activeTopLine} />}
+        {/* Top Active Gold / Terracotta Indicator Line */}
+        {isFocused && (
+          <View
+            style={[
+              styles.activeTopLine,
+              {
+                backgroundColor: theme.navActiveIndicator,
+                shadowColor: theme.navActiveIndicator,
+              },
+            ]}
+          />
+        )}
 
         <View style={styles.iconContainer}>
           <Ionicons
             name={(isFocused ? activeIcon : inactiveIcon) as any}
             size={22}
-            color={isFocused ? '#FFF3D6' : '#A8998A'}
+            color={isFocused ? theme.navActiveIcon : theme.navInactiveIcon}
           />
 
           {/* Operational Real-time Badge */}
@@ -104,7 +116,9 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
         <Text
           style={[
             styles.segmentLabel,
-            isFocused ? styles.segmentLabelActive : styles.segmentLabelInactive,
+            isFocused
+              ? [styles.segmentLabelActive, { color: theme.navActiveText }]
+              : [styles.segmentLabelInactive, { color: theme.navInactiveText }],
           ]}
         >
           {label}
@@ -132,12 +146,18 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
 
   return (
     <View style={[styles.container, { height: barHeight }]}>
-      {/* Deep African Coffee & Wood Bar Background */}
+      {/* Dynamic Themed Luxury Bar Background */}
       <LinearGradient
-        colors={['#2A1203', '#1A0B02', '#100501']}
+        colors={theme.navBackgroundGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
-        style={[styles.barBackground, { paddingBottom: bottomInset }]}
+        style={[
+          styles.barBackground,
+          {
+            borderColor: theme.navBorder,
+            paddingBottom: bottomInset,
+          },
+        ]}
       >
         {/* 5 Equal 20% Columns with Centered Symmetry */}
         <View style={styles.segmentsRow}>
@@ -161,7 +181,9 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
                 colors={
                   isStudioActive
                     ? ['#FFD79E', '#C46C27', '#662502', '#FFD79E']
-                    : ['#D1995A', '#8A4A18', '#361300', '#D1995A']
+                    : isDark
+                    ? ['#D1995A', '#8A4A18', '#361300', '#D1995A']
+                    : ['#D1995A', '#C46C27', '#F5EBD5', '#D1995A']
                 }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -171,7 +193,9 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
                   colors={
                     isStudioActive
                       ? ['#C46C27', '#662502', '#361300']
-                      : ['#361300', '#200B01', '#120501']
+                      : isDark
+                      ? ['#361300', '#200B01', '#120501']
+                      : ['#FFFDF9', '#FCF4E1', '#F5EBD5']
                   }
                   start={{ x: 0, y: 0 }}
                   end={{ x: 0, y: 1 }}
@@ -180,7 +204,13 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
                   <Ionicons
                     name={isStudioActive ? 'color-palette' : 'color-palette-outline'}
                     size={24}
-                    color={isStudioActive ? '#FFF3D6' : '#FFD79E'}
+                    color={
+                      isStudioActive
+                        ? '#FFF3D6'
+                        : isDark
+                        ? '#FFD79E'
+                        : '#C46C27'
+                    }
                   />
                 </LinearGradient>
               </LinearGradient>
@@ -189,7 +219,9 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
             <Text
               style={[
                 styles.studioLabel,
-                isStudioActive ? styles.studioLabelActive : styles.studioLabelInactive,
+                isStudioActive
+                  ? [styles.studioLabelActive, { color: theme.navActiveIndicator }]
+                  : [styles.studioLabelInactive, { color: theme.navInactiveText }],
               ]}
             >
               Studio
@@ -236,10 +268,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1.5,
     borderLeftWidth: 1,
     borderRightWidth: 1,
-    borderColor: 'rgba(209, 153, 90, 0.35)',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 16,
     position: 'relative',
@@ -267,9 +298,7 @@ const styles = StyleSheet.create({
     left: '18%',
     right: '18%',
     height: 2.5,
-    backgroundColor: '#FFD79E',
     borderRadius: 2,
-    shadowColor: '#FFD79E',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.9,
     shadowRadius: 4,
@@ -306,10 +335,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   segmentLabelInactive: {
-    color: '#A8998A',
+    fontFamily: FontFamily.poppinsMedium,
   },
   segmentLabelActive: {
-    color: '#FFF3D6',
     fontFamily: FontFamily.poppinsBold,
   },
 
@@ -364,10 +392,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   studioLabelInactive: {
-    color: '#A8998A',
+    fontFamily: FontFamily.poppinsMedium,
   },
   studioLabelActive: {
-    color: '#FFD79E',
     fontFamily: FontFamily.poppinsBold,
   },
 });

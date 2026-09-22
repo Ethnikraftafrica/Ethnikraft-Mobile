@@ -5,6 +5,7 @@ import currencyReducer from './slices/currencySlice';
 import profileReducer from './slices/profileSlice';
 import studioReducer from './slices/studioSlice';
 import cartReducer from './slices/cartSlice';
+import themeReducer from './slices/themeSlice';
 import { baseApi } from './api/baseApi';
 
 export const store = configureStore({
@@ -14,6 +15,7 @@ export const store = configureStore({
     profile: profileReducer,
     studio: studioReducer,
     cart: cartReducer,
+    theme: themeReducer,
     [baseApi.reducerPath]: baseApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>

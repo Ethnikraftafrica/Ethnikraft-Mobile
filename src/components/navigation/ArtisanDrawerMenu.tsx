@@ -17,7 +17,9 @@ import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { logout, setRole } from '@/store/slices/authSlice';
-import { FontFamily, Radius, Shadows, Spacing } from '@/constants/theme';
+import { FontFamily, Radius, Spacing } from '@/constants/theme';
+import { useAppTheme } from '@/hooks/useAppTheme';
+import { ThemeMode } from '@/store/slices/themeSlice';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.82, 330);
@@ -37,6 +39,7 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
   const insets = useSafeAreaInsets();
   const auth = useAppSelector((state) => state.auth);
   const { user, vendor } = auth;
+  const { theme, isDark, mode, setThemeMode } = useAppTheme();
 
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -123,6 +126,10 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
     );
   };
 
+  const handleSelectTheme = (newMode: ThemeMode) => {
+    setThemeMode(newMode);
+  };
+
   if (!visible) return null;
 
   return (
@@ -143,7 +150,7 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
           />
         </Animated.View>
 
-        {/* Sliding Drawer Container with Deep African Coffee & Wood */}
+        {/* Sliding Drawer Container with Dynamic Theme Gradient */}
         <Animated.View
           style={[
             styles.drawerContent,
@@ -155,20 +162,32 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
           ]}
         >
           <LinearGradient
-            colors={['#2A1203', '#1A0B02', '#100501']}
+            colors={theme.drawerBackgroundGradient}
             style={StyleSheet.absoluteFill}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           />
 
           {/* Right Edge Golden Rim */}
-          <View style={styles.rightBorderGoldenRim} />
+          <View style={[styles.rightBorderGoldenRim, { backgroundColor: theme.drawerBorder }]} />
 
           {/* Workshop Profile Header */}
           <View style={styles.profileHeader}>
             <View style={styles.avatarWrapper}>
-              <View style={styles.avatarCircle}>
-                <Ionicons name="storefront" size={26} color="#FFD79E" />
+              <View
+                style={[
+                  styles.avatarCircle,
+                  {
+                    backgroundColor: isDark ? '#361300' : '#FFFFFF',
+                    borderColor: theme.primary,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="storefront"
+                  size={26}
+                  color={isDark ? '#FFD79E' : theme.primary}
+                />
               </View>
               <View style={styles.verifiedBadge}>
                 <Ionicons name="checkmark-circle" size={15} color="#009D1A" />
@@ -176,24 +195,42 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
             </View>
 
             <View style={styles.profileInfoCol}>
-              <Text style={styles.workshopName} numberOfLines={1}>
+              <Text style={[styles.workshopName, { color: theme.textPrimary }]} numberOfLines={1}>
                 {vendor?.businessName || `${user?.firstName || 'Artisan'}'s Workshop`}
               </Text>
-              <Text style={styles.workshopEmail} numberOfLines={1}>
+              <Text style={[styles.workshopEmail, { color: theme.textMuted }]} numberOfLines={1}>
                 {user?.email || 'artisan@ethnikraft.com'}
               </Text>
               
               {/* Tier Badge */}
-              <View style={styles.tierPill}>
-                <Ionicons name="shield-checkmark" size={11} color="#FFD79E" style={{ marginRight: 4 }} />
-                <Text style={styles.tierPillText}>
+              <View
+                style={[
+                  styles.tierPill,
+                  {
+                    backgroundColor: isDark ? 'rgba(196, 108, 39, 0.25)' : '#FEF3C7',
+                    borderColor: theme.primary,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="shield-checkmark"
+                  size={11}
+                  color={isDark ? '#FFD79E' : theme.primary}
+                  style={{ marginRight: 4 }}
+                />
+                <Text
+                  style={[
+                    styles.tierPillText,
+                    { color: isDark ? '#FFD79E' : theme.primary },
+                  ]}
+                >
                   {vendor?.status === 'APPROVED' ? 'MASTER ARTISAN' : 'VERIFIED ARTISAN'}
                 </Text>
               </View>
             </View>
           </View>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
 
           {/* Drawer Menu List (Exact Ethnikraft-Vendor Web Sidebar Items) */}
           <ScrollView
@@ -211,7 +248,15 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
                   key={item.label}
                   style={[
                     styles.menuItem,
-                    isSelected && styles.menuItemActive,
+                    isSelected && [
+                      styles.menuItemActive,
+                      {
+                        backgroundColor: isDark
+                          ? 'rgba(196, 108, 39, 0.18)'
+                          : 'rgba(196, 108, 39, 0.12)',
+                        borderColor: theme.borderSubtle,
+                      },
+                    ],
                   ]}
                   onPress={() => handleNavigate(item.route)}
                   activeOpacity={0.7}
@@ -219,32 +264,119 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
                   <View
                     style={[
                       styles.menuIconCircle,
-                      isSelected && styles.menuIconCircleActive,
+                      {
+                        backgroundColor: isDark
+                          ? 'rgba(54, 19, 0, 0.5)'
+                          : '#FFFFFF',
+                        borderColor: theme.borderSubtle,
+                      },
+                      isSelected && {
+                        backgroundColor: isDark ? '#361300' : '#FEF3C7',
+                        borderColor: theme.primary,
+                      },
                     ]}
                   >
                     <Ionicons
                       name={(isSelected ? item.activeIcon : item.icon) as any}
                       size={18}
-                      color={isSelected ? '#FFF3D6' : '#A8998A'}
+                      color={
+                        isSelected
+                          ? isDark
+                            ? '#FFF3D6'
+                            : theme.primary
+                          : theme.textMuted
+                      }
                     />
                   </View>
                   <Text
                     style={[
                       styles.menuItemTitle,
+                      { color: isSelected ? theme.textPrimary : theme.textMuted },
                       isSelected && styles.menuItemTitleActive,
                     ]}
                   >
                     {item.label}
                   </Text>
                   {isSelected && (
-                    <View style={styles.activePillDot} />
+                    <View
+                      style={[
+                        styles.activePillDot,
+                        { backgroundColor: theme.primary },
+                      ]}
+                    />
                   )}
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
+
+          {/* Theme Mode Selector Pill */}
+          <View style={styles.themeSelectorRow}>
+            <Text style={[styles.themeLabel, { color: theme.textMuted }]}>APPEARANCE</Text>
+            <View style={[styles.themePillContainer, { backgroundColor: isDark ? '#1F0E04' : '#EFE1C3' }]}>
+              <TouchableOpacity
+                style={[styles.themeSegment, mode === 'light' && styles.themeSegmentActive]}
+                onPress={() => handleSelectTheme('light')}
+                activeOpacity={0.75}
+              >
+                <Ionicons
+                  name="sunny"
+                  size={14}
+                  color={mode === 'light' ? '#FFFFFF' : theme.textMuted}
+                />
+                <Text
+                  style={[
+                    styles.themeSegmentText,
+                    { color: mode === 'light' ? '#FFFFFF' : theme.textMuted },
+                  ]}
+                >
+                  Light
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.themeSegment, mode === 'dark' && styles.themeSegmentActive]}
+                onPress={() => handleSelectTheme('dark')}
+                activeOpacity={0.75}
+              >
+                <Ionicons
+                  name="moon"
+                  size={13}
+                  color={mode === 'dark' ? '#FFFFFF' : theme.textMuted}
+                />
+                <Text
+                  style={[
+                    styles.themeSegmentText,
+                    { color: mode === 'dark' ? '#FFFFFF' : theme.textMuted },
+                  ]}
+                >
+                  Dark
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.themeSegment, mode === 'system' && styles.themeSegmentActive]}
+                onPress={() => handleSelectTheme('system')}
+                activeOpacity={0.75}
+              >
+                <Ionicons
+                  name="phone-portrait-outline"
+                  size={13}
+                  color={mode === 'system' ? '#FFFFFF' : theme.textMuted}
+                />
+                <Text
+                  style={[
+                    styles.themeSegmentText,
+                    { color: mode === 'system' ? '#FFFFFF' : theme.textMuted },
+                  ]}
+                >
+                  Auto
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
           {/* Footer Actions */}
           <View style={styles.footerActions}>
@@ -290,7 +422,6 @@ const styles = StyleSheet.create({
   drawerContent: {
     width: DRAWER_WIDTH,
     height: '100%',
-    backgroundColor: '#1A0B02',
     position: 'relative',
     overflow: 'hidden',
     shadowColor: '#000000',
@@ -305,7 +436,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     right: 0,
     width: 1.5,
-    backgroundColor: 'rgba(209, 153, 90, 0.35)',
   },
   profileHeader: {
     flexDirection: 'row',
@@ -320,11 +450,9 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#361300',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#C46C27',
   },
   verifiedBadge: {
     position: 'absolute',
@@ -340,35 +468,29 @@ const styles = StyleSheet.create({
   workshopName: {
     fontSize: 15,
     fontFamily: FontFamily.poppinsBold,
-    color: '#FFF3D6',
   },
   workshopEmail: {
     fontSize: 11,
     fontFamily: FontFamily.poppinsRegular,
-    color: '#A8998A',
     marginTop: 1,
   },
   tierPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(196, 108, 39, 0.25)',
     paddingHorizontal: 8,
     paddingVertical: 2.5,
     borderRadius: Radius.full,
     borderWidth: 1,
-    borderColor: '#C46C27',
     alignSelf: 'flex-start',
     marginTop: 5,
   },
   tierPillText: {
     fontSize: 8.5,
     fontFamily: FontFamily.poppinsBold,
-    color: '#FFD79E',
     letterSpacing: 0.5,
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(209, 153, 90, 0.18)',
     marginHorizontal: Spacing.md,
     marginVertical: Spacing.xs,
   },
@@ -388,9 +510,7 @@ const styles = StyleSheet.create({
     marginVertical: 1.5,
   },
   menuItemActive: {
-    backgroundColor: 'rgba(196, 108, 39, 0.18)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 215, 158, 0.3)',
   },
   menuIconCircle: {
     width: 32,
@@ -398,30 +518,54 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(54, 19, 0, 0.5)',
     borderWidth: 1,
-    borderColor: 'rgba(209, 153, 90, 0.2)',
-  },
-  menuIconCircleActive: {
-    backgroundColor: '#361300',
-    borderColor: '#C46C27',
   },
   menuItemTitle: {
     flex: 1,
     fontSize: 13,
     fontFamily: FontFamily.poppinsMedium,
-    color: '#A8998A',
     marginLeft: Spacing.sm + 4,
   },
   menuItemTitleActive: {
-    color: '#FFF3D6',
     fontFamily: FontFamily.poppinsBold,
   },
   activePillDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
+  },
+  themeSelectorRow: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+  },
+  themeLabel: {
+    fontSize: 9,
+    fontFamily: FontFamily.poppinsBold,
+    letterSpacing: 0.8,
+    marginBottom: 4,
+    marginLeft: 2,
+  },
+  themePillContainer: {
+    flexDirection: 'row',
+    borderRadius: Radius.full,
+    padding: 3,
+    justifyContent: 'space-between',
+  },
+  themeSegment: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 5,
+    borderRadius: Radius.full,
+    gap: 4,
+  },
+  themeSegmentActive: {
     backgroundColor: '#C46C27',
+  },
+  themeSegmentText: {
+    fontSize: 11,
+    fontFamily: FontFamily.poppinsBold,
   },
   footerActions: {
     paddingHorizontal: Spacing.md,
