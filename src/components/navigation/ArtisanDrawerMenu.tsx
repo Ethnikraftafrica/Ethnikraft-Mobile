@@ -143,7 +143,7 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
           />
         </Animated.View>
 
-        {/* Sliding Drawer Container with Glassmorphic Brown/Burnt Orange */}
+        {/* Sliding Drawer Container with Deep African Coffee & Wood */}
         <Animated.View
           style={[
             styles.drawerContent,
@@ -155,7 +155,7 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
           ]}
         >
           <LinearGradient
-            colors={['rgba(102, 37, 2, 0.96)', 'rgba(54, 19, 0, 0.98)', 'rgba(37, 20, 0, 1.0)']}
+            colors={['#2A1203', '#1A0B02', '#100501']}
             style={StyleSheet.absoluteFill}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -225,7 +225,7 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
                     <Ionicons
                       name={(isSelected ? item.activeIcon : item.icon) as any}
                       size={18}
-                      color={isSelected ? '#FFF3D6' : '#D1995A'}
+                      color={isSelected ? '#FFF3D6' : '#A8998A'}
                     />
                   </View>
                   <Text
@@ -290,12 +290,12 @@ const styles = StyleSheet.create({
   drawerContent: {
     width: DRAWER_WIDTH,
     height: '100%',
-    backgroundColor: '#361300',
+    backgroundColor: '#1A0B02',
     position: 'relative',
     overflow: 'hidden',
-    shadowColor: '#C46C27',
+    shadowColor: '#000000',
     shadowOffset: { width: 4, height: 0 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.5,
     shadowRadius: 16,
     elevation: 20,
   },
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     right: 0,
     width: 1.5,
-    backgroundColor: 'rgba(209, 153, 90, 0.38)',
+    backgroundColor: 'rgba(209, 153, 90, 0.35)',
   },
   profileHeader: {
     flexDirection: 'row',
@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#662502',
+    backgroundColor: '#361300',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
@@ -345,13 +345,13 @@ const styles = StyleSheet.create({
   workshopEmail: {
     fontSize: 11,
     fontFamily: FontFamily.poppinsRegular,
-    color: '#D1995A',
+    color: '#A8998A',
     marginTop: 1,
   },
   tierPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(196, 108, 39, 0.3)',
+    backgroundColor: 'rgba(196, 108, 39, 0.25)',
     paddingHorizontal: 8,
     paddingVertical: 2.5,
     borderRadius: Radius.full,
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(209, 153, 90, 0.22)',
+    backgroundColor: 'rgba(209, 153, 90, 0.18)',
     marginHorizontal: Spacing.md,
     marginVertical: Spacing.xs,
   },
@@ -388,9 +388,9 @@ const styles = StyleSheet.create({
     marginVertical: 1.5,
   },
   menuItemActive: {
-    backgroundColor: 'rgba(196, 108, 39, 0.25)',
+    backgroundColor: 'rgba(196, 108, 39, 0.18)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 215, 158, 0.35)',
+    borderColor: 'rgba(255, 215, 158, 0.3)',
   },
   menuIconCircle: {
     width: 32,
@@ -398,19 +398,19 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(54, 19, 0, 0.6)',
+    backgroundColor: 'rgba(54, 19, 0, 0.5)',
     borderWidth: 1,
-    borderColor: 'rgba(209, 153, 90, 0.22)',
+    borderColor: 'rgba(209, 153, 90, 0.2)',
   },
   menuIconCircleActive: {
-    backgroundColor: '#662502',
+    backgroundColor: '#361300',
     borderColor: '#C46C27',
   },
   menuItemTitle: {
     flex: 1,
     fontSize: 13,
     fontFamily: FontFamily.poppinsMedium,
-    color: '#D1995A',
+    color: '#A8998A',
     marginLeft: Spacing.sm + 4,
   },
   menuItemTitleActive: {
