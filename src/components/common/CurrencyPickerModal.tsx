@@ -14,7 +14,8 @@ import * as Haptics from 'expo-haptics';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { setCurrency, SUPPORTED_CURRENCIES } from '@/store/slices/currencySlice';
 import { StorageService } from '@/services/storage.service';
-import { FontFamily, Radius, Shadows, Spacing, Typography } from '@/constants/theme';
+import { useAppTheme } from '@/hooks/useAppTheme';
+import { FontFamily, Radius, Shadows, Spacing } from '@/constants/theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -29,6 +30,7 @@ export const CurrencyPickerModal: React.FC<CurrencyPickerModalProps> = ({
 }) => {
   const dispatch = useAppDispatch();
   const currentCurrency = useAppSelector((state) => state.currency);
+  const { theme, isDark } = useAppTheme();
 
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -114,27 +116,28 @@ export const CurrencyPickerModal: React.FC<CurrencyPickerModalProps> = ({
           style={[
             styles.bottomSheet,
             {
+              backgroundColor: isDark ? '#1F0E04' : '#FFFFFF',
               transform: [{ translateY: slideAnim }],
             },
           ]}
         >
           {/* Drag Handle */}
-          <View style={styles.dragHandle} />
+          <View style={[styles.dragHandle, { backgroundColor: isDark ? 'rgba(209, 153, 90, 0.4)' : '#E5E0D8' }]} />
 
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, { borderBottomColor: theme.borderSubtle }]}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.title}>Select Currency</Text>
-              <Text style={styles.subtitle}>
-                Prices will be converted at current estimated rates
+              <Text style={[styles.title, { color: theme.textPrimary }]}>Select Currency</Text>
+              <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+                Prices will be converted at live exchange rates
               </Text>
             </View>
             <TouchableOpacity
-              style={styles.closeBtn}
+              style={[styles.closeBtn, { backgroundColor: isDark ? '#361300' : '#F7F3EE' }]}
               onPress={() => handleDismiss()}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons name="close" size={20} color="#8C7765" />
+              <Ionicons name="close" size={20} color={theme.textPrimary} />
             </TouchableOpacity>
           </View>
 
@@ -147,7 +150,18 @@ export const CurrencyPickerModal: React.FC<CurrencyPickerModalProps> = ({
                   key={curr.code}
                   style={[
                     styles.currencyItem,
-                    isSelected && styles.currencyItemSelected,
+                    {
+                      backgroundColor: isSelected
+                        ? isDark
+                          ? '#361300'
+                          : '#FFF8F2'
+                        : isDark
+                        ? '#160902'
+                        : '#FAF6F0',
+                      borderColor: isSelected
+                        ? theme.primary
+                        : theme.borderSubtle,
+                    },
                   ]}
                   onPress={() => handleSelectCurrency(curr.code)}
                   activeOpacity={0.7}
@@ -156,25 +170,25 @@ export const CurrencyPickerModal: React.FC<CurrencyPickerModalProps> = ({
                     <Text style={styles.currencyFlag}>{curr.flag}</Text>
                     <View style={styles.currencyTextCol}>
                       <View style={styles.currencyCodeRow}>
-                        <Text style={styles.currencyCode}>{curr.code}</Text>
-                        <View style={styles.currencySymbolBadge}>
-                          <Text style={styles.currencySymbol}>{curr.symbol}</Text>
+                        <Text style={[styles.currencyCode, { color: theme.textPrimary }]}>{curr.code}</Text>
+                        <View style={[styles.currencySymbolBadge, { backgroundColor: isDark ? '#1F0E04' : '#EFEAE2' }]}>
+                          <Text style={[styles.currencySymbol, { color: theme.primary }]}>{curr.symbol}</Text>
                         </View>
                       </View>
-                      <Text style={styles.currencyName}>{curr.name}</Text>
+                      <Text style={[styles.currencyName, { color: theme.textSecondary }]}>{curr.name}</Text>
                     </View>
                   </View>
 
                   <View style={styles.currencyRight}>
                     {isSelected ? (
-                      <View style={styles.checkIconBadge}>
+                      <View style={[styles.checkIconBadge, { backgroundColor: theme.primary }]}>
                         <Ionicons name="checkmark" size={16} color="#FFFFFF" />
                       </View>
                     ) : (
                       <Ionicons
                         name="chevron-forward"
                         size={18}
-                        color="#8C7765"
+                        color={theme.textMuted}
                         style={{ opacity: 0.5 }}
                       />
                     )}

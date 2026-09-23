@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { FontFamily, Radius, Shadows, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { useAppSelector } from '@/store';
+import { formatPrice } from '@/utils/price';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -26,6 +27,7 @@ export default function ArtisanDashboardScreen() {
   const { theme, isDark } = useAppTheme();
   const auth = useAppSelector((state) => state.auth);
   const { user, vendor } = auth;
+  const { code: currencyCode, rate: exchangeRate } = useAppSelector((state) => state.currency);
 
   const [refreshing, setRefreshing] = useState(false);
   const [selectedRange, setSelectedRange] = useState<RangePeriod>('this_week');
@@ -55,29 +57,29 @@ export default function ArtisanDashboardScreen() {
     switch (selectedRange) {
       case 'today':
         return [
-          { title: 'Today\'s Revenue', value: '₦85,000', change: '+12.5%', isPos: true, icon: 'cash-outline', iconColor: '#10B981', bg: isDark ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7' },
+          { title: 'Today\'s Revenue', value: formatPrice(85000, currencyCode, exchangeRate), change: '+12.5%', isPos: true, icon: 'cash-outline', iconColor: '#10B981', bg: isDark ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7' },
           { title: 'Orders in Studio', value: '2 Pending', change: '1 ready to ship', isPos: true, icon: 'construct-outline', iconColor: '#F59E0B', bg: isDark ? 'rgba(245, 158, 11, 0.15)' : '#FEF3C7' },
           { title: 'Active Bids', value: '3 Inquiries', change: '2 new patrons', isPos: true, icon: 'hammer-outline', iconColor: theme.primary, bg: isDark ? 'rgba(196, 108, 39, 0.15)' : '#FFEDD5' },
           { title: 'Artisan Rating', value: '4.95 ★', change: 'Top 3% Atelier', isPos: true, icon: 'star-outline', iconColor: '#8B5CF6', bg: isDark ? 'rgba(139, 92, 246, 0.15)' : '#EDE9FE' },
         ];
       case 'this_month':
         return [
-          { title: 'Month Revenue', value: '₦3,850,000', change: '+28.4%', isPos: true, icon: 'cash-outline', iconColor: '#10B981', bg: isDark ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7' },
+          { title: 'Month Revenue', value: formatPrice(3850000, currencyCode, exchangeRate), change: '+28.4%', isPos: true, icon: 'cash-outline', iconColor: '#10B981', bg: isDark ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7' },
           { title: 'Completed Orders', value: '28 Fulfilled', change: '98% on-time', isPos: true, icon: 'checkmark-done-circle-outline', iconColor: '#F59E0B', bg: isDark ? 'rgba(245, 158, 11, 0.15)' : '#FEF3C7' },
           { title: 'Accepted Bids', value: '14 Custom Works', change: '+4 this week', isPos: true, icon: 'hammer-outline', iconColor: theme.primary, bg: isDark ? 'rgba(196, 108, 39, 0.15)' : '#FFEDD5' },
           { title: 'Artisan Rank', value: '#5 Nationwide', change: 'Steady Master', isPos: true, icon: 'trophy-outline', iconColor: '#8B5CF6', bg: isDark ? 'rgba(139, 92, 246, 0.15)' : '#EDE9FE' },
         ];
       case 'all_time':
         return [
-          { title: 'Lifetime Gross', value: '₦18,420,000', change: '142 sales', isPos: true, icon: 'cash-outline', iconColor: '#10B981', bg: isDark ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7' },
+          { title: 'Lifetime Gross', value: formatPrice(18420000, currencyCode, exchangeRate), change: '142 sales', isPos: true, icon: 'cash-outline', iconColor: '#10B981', bg: isDark ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7' },
           { title: 'Total Products', value: '38 Listed', change: '4 collections', isPos: true, icon: 'cube-outline', iconColor: '#F59E0B', bg: isDark ? 'rgba(245, 158, 11, 0.15)' : '#FEF3C7' },
-          { title: 'Custom Bids Won', value: '45 Bespoke', change: '₦4.8m volume', isPos: true, icon: 'hammer-outline', iconColor: theme.primary, bg: isDark ? 'rgba(196, 108, 39, 0.15)' : '#FFEDD5' },
+          { title: 'Custom Bids Won', value: '45 Bespoke', change: `${formatPrice(4800000, currencyCode, exchangeRate)} vol`, isPos: true, icon: 'hammer-outline', iconColor: theme.primary, bg: isDark ? 'rgba(196, 108, 39, 0.15)' : '#FFEDD5' },
           { title: 'Artisan Score', value: '98.5 / 100', change: 'Verified Master', isPos: true, icon: 'shield-checkmark-outline', iconColor: '#8B5CF6', bg: isDark ? 'rgba(139, 92, 246, 0.15)' : '#EDE9FE' },
         ];
       case 'this_week':
       default:
         return [
-          { title: 'Weekly Revenue', value: '₦1,245,000', change: '+18.4% vs last week', isPos: true, icon: 'cash-outline', iconColor: '#10B981', bg: isDark ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7' },
+          { title: 'Weekly Revenue', value: formatPrice(1245000, currencyCode, exchangeRate), change: '+18.4% vs last week', isPos: true, icon: 'cash-outline', iconColor: '#10B981', bg: isDark ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7' },
           { title: 'Orders in Studio', value: '6 Orders', change: '3 due for shipping', isPos: true, icon: 'construct-outline', iconColor: '#F59E0B', bg: isDark ? 'rgba(245, 158, 11, 0.15)' : '#FEF3C7' },
           { title: 'Custom Requests', value: '5 Inquiries', change: '3 pending quotes', isPos: true, icon: 'hammer-outline', iconColor: theme.primary, bg: isDark ? 'rgba(196, 108, 39, 0.15)' : '#FFEDD5' },
           { title: 'Artisan Rating', value: '4.96 ★', change: '142 Reviews', isPos: true, icon: 'star-outline', iconColor: '#8B5CF6', bg: isDark ? 'rgba(139, 92, 246, 0.15)' : '#EDE9FE' },
@@ -91,7 +93,7 @@ export default function ArtisanDashboardScreen() {
       id: 'ORD-8942',
       customer: 'Chief Adebayo O.',
       item: 'Royal Hand-Carved Benin Leopard Bronze',
-      amount: '₦320,000',
+      amount: formatPrice(320000, currencyCode, exchangeRate),
       status: 'In Progress',
       statusColor: '#F59E0B',
       statusBg: isDark ? 'rgba(245, 158, 11, 0.18)' : '#FEF3C7',
@@ -102,7 +104,7 @@ export default function ArtisanDashboardScreen() {
       id: 'ORD-8938',
       customer: 'Dr. Folake B.',
       item: 'Vintage Indigo-Dyed Yoruba Adire Kaftan',
-      amount: '₦85,000',
+      amount: formatPrice(85000, currencyCode, exchangeRate),
       status: 'Ready to Ship',
       statusColor: '#10B981',
       statusBg: isDark ? 'rgba(16, 185, 129, 0.18)' : '#DCFCE7',
@@ -113,7 +115,7 @@ export default function ArtisanDashboardScreen() {
       id: 'ORD-8931',
       customer: 'Kofi Mensah',
       item: 'Custom Handwoven Ashanti Kente Sash',
-      amount: '₦145,000',
+      amount: formatPrice(145000, currencyCode, exchangeRate),
       status: 'Design Review',
       statusColor: '#6366F1',
       statusBg: isDark ? 'rgba(99, 102, 241, 0.18)' : '#EEF2FF',

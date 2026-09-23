@@ -19,6 +19,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { FontFamily, Radius, Shadows, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/useAppTheme';
+import { useAppSelector } from '@/store';
+import { formatPrice } from '@/utils/price';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -324,6 +326,7 @@ type FormTabType = typeof FORM_STAGES[number]['id'];
 
 export default function VendorCatalogScreen() {
   const { theme, isDark } = useAppTheme();
+  const { code: currencyCode, rate: exchangeRate } = useAppSelector((state) => state.currency);
 
   // ── State Management ─────────────────────────────────────────────────────────
   const [products, setProducts] = useState<CraftProductItem[]>(INITIAL_PRODUCTS);
@@ -619,7 +622,7 @@ export default function VendorCatalogScreen() {
 
   // Helper formatting for currency
   const formatNaira = (val: number) => {
-    return '₦' + val.toLocaleString('en-NG');
+    return formatPrice(val, currencyCode, exchangeRate);
   };
 
   return (

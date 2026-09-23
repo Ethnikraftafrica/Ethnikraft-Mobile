@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -17,9 +17,11 @@ import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { logout, setRole } from '@/store/slices/authSlice';
-import { FontFamily, Radius, Spacing } from '@/constants/theme';
-import { useAppTheme } from '@/hooks/useAppTheme';
 import { ThemeMode } from '@/store/slices/themeSlice';
+import { CurrencyPickerModal } from '@/components/common/CurrencyPickerModal';
+import { setCurrency, SUPPORTED_CURRENCIES } from '@/store/slices/currencySlice';
+import { useAppTheme } from '@/hooks/useAppTheme';
+import { FontFamily, Radius, Spacing } from '@/constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.82, 330);
@@ -39,7 +41,9 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
   const insets = useSafeAreaInsets();
   const auth = useAppSelector((state) => state.auth);
   const { user, vendor } = auth;
+  const currentCurrency = useAppSelector((state) => state.currency);
   const { theme, isDark, mode, setThemeMode } = useAppTheme();
+  const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
 
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -378,6 +382,40 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
             </View>
           </View>
 
+          {/* Currency Selector Pill */}
+          <View style={[styles.themeSelectorRow, { marginTop: 8 }]}>
+            <Text style={[styles.themeLabel, { color: theme.textMuted }]}>CURRENCY</Text>
+            <View style={[styles.themePillContainer, { backgroundColor: isDark ? '#1F0E04' : '#EFE1C3' }]}>
+              {Object.values(SUPPORTED_CURRENCIES).map((c) => {
+                const isSelected = currentCurrency.code === c.code;
+                return (
+                  <TouchableOpacity
+                    key={c.code}
+                    style={[
+                      styles.currencySegment,
+                      isSelected && styles.themeSegmentActive,
+                    ]}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      dispatch(setCurrency(c.code));
+                    }}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={styles.currencySegmentFlag}>{c.flag}</Text>
+                    <Text
+                      style={[
+                        styles.themeSegmentText,
+                        { color: isSelected ? '#FFFFFF' : theme.textMuted },
+                      ]}
+                    >
+                      {c.code}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
           {/* Footer Actions */}
           <View style={styles.footerActions}>
             {/* Switch to Customer Mode */}
@@ -402,6 +440,12 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
           </View>
         </Animated.View>
       </View>
+
+      {/* Currency Picker Modal */}
+      <CurrencyPickerModal
+        visible={currencyModalVisible}
+        onClose={() => setCurrencyModalVisible(false)}
+      />
     </Modal>
   );
 };
@@ -566,6 +610,18 @@ const styles = StyleSheet.create({
   themeSegmentText: {
     fontSize: 11,
     fontFamily: FontFamily.poppinsBold,
+  },
+  currencySegment: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 5,
+    borderRadius: Radius.full,
+    gap: 3,
+  },
+  currencySegmentFlag: {
+    fontSize: 11,
   },
   footerActions: {
     paddingHorizontal: Spacing.md,
