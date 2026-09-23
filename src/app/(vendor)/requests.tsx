@@ -1,61 +1,111 @@
 import React from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import * as Haptics from 'expo-haptics';
+import { FontFamily, Radius, Shadows, Spacing } from '@/constants/theme';
+import { useAppTheme } from '@/hooks/useAppTheme';
+import { useAppSelector } from '@/store';
+import { formatPrice } from '@/utils/price';
 
 export default function VendorRequestsScreen() {
+  const router = useRouter();
+  const { theme, isDark } = useAppTheme();
+  const { code: currencyCode, rate: exchangeRate } = useAppSelector((state) => state.currency);
+
   const requests = [
     {
-      id: 'REQ-3901',
-      customer: 'Dr. Adeyemi',
-      title: 'Custom Velvet Agbada with Hand-beaded Neckline',
-      budget: '₦220,000 - ₦260,000',
+      id: 'REQ-8821',
+      customer: 'Dr. Folake Balogun',
+      location: 'Ikoyi, Lagos, Nigeria',
+      title: 'Custom Beaded Royal Velvet Agbada Ensemble',
+      budget: 280000,
       deadline: 'Needed in 14 days',
-      materials: 'Burgundy Velvet, Gold Beads, Aso Oke accents',
+      materials: 'Burgundy Velvet, Gold Beads, Aso-Oke Accents',
     },
     {
-      id: 'REQ-3904',
-      customer: 'Zainab B.',
-      title: 'Hand-carved Mahogany Dining Centerpiece',
-      budget: '₦150,000 - ₦180,000',
-      deadline: 'Needed in 21 days',
-      materials: 'Polished Seasoned Mahogany',
+      id: 'REQ-8824',
+      customer: 'Adewale Adeleke',
+      location: 'Victoria Island, Lagos',
+      title: 'Hand-Carved Seasoned Mahogany Benin Leopard Mask',
+      budget: 195000,
+      deadline: 'Needed in 8 days',
+      materials: 'Seasoned Mahogany & Hand-Hammered Brass',
+    },
+    {
+      id: 'REQ-8830',
+      customer: 'Kofi Mensah',
+      location: 'Accra, Ghana (Global Shipping)',
+      title: 'Bespoke Hand-Tooled Fulani Leather Travel Duffle',
+      budget: 145000,
+      deadline: 'Needed in 20 days',
+      materials: 'Vegetable-Tanned Full-Grain Cowhide',
     },
   ];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>Open Commission Requests</Text>
-      <Text style={styles.subheading}>
-        Customers looking for bespoke craftsmanship. Submit quotes and establish milestones.
-      </Text>
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.background }]}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.headerBlock}>
+        <Text style={[styles.heading, { color: theme.textPrimary }]}>Open Commission Briefs</Text>
+        <Text style={[styles.subheading, { color: theme.textSecondary }]}>
+          Patrons seeking master craftsmanship. Tap below to inspect specifications and submit bids directly in the Atelier Studio.
+        </Text>
+      </View>
 
       {requests.map((item) => (
-        <View key={item.id} style={styles.requestCard}>
+        <View
+          key={item.id}
+          style={[
+            styles.requestCard,
+            {
+              backgroundColor: isDark ? '#1F0E04' : '#FFFFFF',
+              borderColor: isDark ? 'rgba(209, 153, 90, 0.22)' : 'rgba(196, 108, 39, 0.14)',
+            },
+          ]}
+        >
           <View style={styles.cardHeader}>
-            <Text style={styles.reqId}>{item.id}</Text>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{item.deadline}</Text>
+            <Text style={[styles.reqId, { color: theme.primary }]}>{item.id}</Text>
+            <View style={[styles.badge, { backgroundColor: isDark ? '#361300' : '#FEF3C7' }]}>
+              <Text style={[styles.badgeText, { color: isDark ? '#FFD79E' : '#92400E' }]}>{item.deadline}</Text>
             </View>
           </View>
-          <Text style={styles.reqTitle}>{item.title}</Text>
-          <Text style={styles.reqCustomer}>Client: {item.customer}</Text>
-          <Text style={styles.reqMaterials}>Materials: {item.materials}</Text>
-          
-          <View style={styles.divider} />
-          
+          <Text style={[styles.reqTitle, { color: theme.textPrimary }]}>{item.title}</Text>
+          <Text style={[styles.reqCustomer, { color: theme.textMuted }]}>
+            Client: <Text style={{ color: theme.textPrimary, fontFamily: FontFamily.poppinsBold }}>{item.customer}</Text> • {item.location}
+          </Text>
+          <Text style={[styles.reqMaterials, { color: theme.textSecondary }]}>
+            Materials: {item.materials}
+          </Text>
+
+          <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
+
           <View style={styles.cardFooter}>
             <View>
-              <Text style={styles.budgetLabel}>Target Budget</Text>
-              <Text style={styles.budgetValue}>{item.budget}</Text>
+              <Text style={[styles.budgetLabel, { color: theme.textMuted }]}>TARGET BUDGET</Text>
+              <Text style={[styles.budgetValue, { color: theme.primary }]}>
+                {formatPrice(item.budget, currencyCode, exchangeRate)}
+              </Text>
             </View>
-            <TouchableOpacity style={styles.bidBtn}>
-              <Ionicons name="paper-plane-outline" size={16} color={Colors.textInverse} style={styles.btnIcon} />
-              <Text style={styles.bidBtnText}>Submit Bid</Text>
+            <TouchableOpacity
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push('/(vendor)/studio' as any);
+              }}
+              style={[styles.bidBtn, { backgroundColor: theme.primary }]}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="hammer" size={15} color="#FFFFFF" style={styles.btnIcon} />
+              <Text style={styles.bidBtnText}>Open in Studio</Text>
             </TouchableOpacity>
           </View>
         </View>
       ))}
+
+      <View style={{ height: 100 }} />
     </ScrollView>
   );
 }
@@ -63,29 +113,29 @@ export default function VendorRequestsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   content: {
     padding: Spacing.md,
   },
+  headerBlock: {
+    marginBottom: Spacing.md,
+  },
   heading: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textPrimary,
+    fontFamily: FontFamily.cormorantBold,
+    fontSize: 20,
   },
   subheading: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.md,
-    marginTop: 2,
+    fontFamily: FontFamily.poppinsRegular,
+    fontSize: 12,
+    marginTop: 4,
+    lineHeight: 18,
   },
   requestCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.md,
+    borderRadius: Radius.xl,
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: Colors.border,
     marginBottom: Spacing.md,
+    ...Shadows.sm,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -94,39 +144,35 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   reqId: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.primary,
+    fontFamily: FontFamily.poppinsBold,
+    fontSize: 11,
+    letterSpacing: 0.5,
   },
   badge: {
-    backgroundColor: '#FEF3C7',
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: Radius.full,
   },
   badgeText: {
-    fontSize: Typography.fontSize.xs,
-    color: '#92400E',
-    fontWeight: Typography.fontWeight.medium,
+    fontFamily: FontFamily.poppinsBold,
+    fontSize: 10,
   },
   reqTitle: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.textPrimary,
+    fontFamily: FontFamily.poppinsBold,
+    fontSize: 15,
     marginBottom: 4,
   },
   reqCustomer: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textMuted,
+    fontFamily: FontFamily.poppinsRegular,
+    fontSize: 12,
     marginBottom: 2,
   },
   reqMaterials: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
+    fontFamily: FontFamily.poppinsMedium,
+    fontSize: 12,
   },
   divider: {
     height: 1,
-    backgroundColor: Colors.border,
     marginVertical: Spacing.sm,
   },
   cardFooter: {
@@ -135,29 +181,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   budgetLabel: {
-    fontSize: 10,
-    color: Colors.textMuted,
-    textTransform: 'uppercase',
+    fontFamily: FontFamily.poppinsBold,
+    fontSize: 9,
+    letterSpacing: 0.5,
   },
   budgetValue: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.secondary,
+    fontFamily: FontFamily.poppinsBold,
+    fontSize: 16,
+    marginTop: 1,
   },
   bidBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.secondary,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs + 2,
-    borderRadius: Radius.full,
+    paddingVertical: 10,
+    borderRadius: Radius.lg,
   },
   btnIcon: {
-    marginRight: 4,
+    marginRight: 6,
   },
   bidBtnText: {
-    color: Colors.textInverse,
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.bold,
+    color: '#FFFFFF',
+    fontFamily: FontFamily.poppinsBold,
+    fontSize: 12,
   },
 });
