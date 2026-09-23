@@ -312,6 +312,16 @@ const PACKAGE_SIZE_PRESETS = [
   { id: 'CUSTOM', label: 'Custom Dimension', desc: 'Specify bespoke weight & dimensions' },
 ];
 
+const FORM_STAGES = [
+  { id: 'BASIC', stepNumber: 1, title: 'Basic Details', icon: 'information-circle-outline', shortName: '1. Details' },
+  { id: 'MEDIA', stepNumber: 2, title: 'Media Studio', icon: 'images-outline', shortName: '2. Media' },
+  { id: 'BESPOKE', stepNumber: 3, title: 'Made-to-Order', icon: 'hammer-outline', shortName: '3. Custom' },
+  { id: 'SHIPPING', stepNumber: 4, title: 'Packaging & Weight', icon: 'cube-outline', shortName: '4. Shipping' },
+  { id: 'STORY', stepNumber: 5, title: 'Heritage Provenance', icon: 'book-outline', shortName: '5. Provenance' },
+] as const;
+
+type FormTabType = typeof FORM_STAGES[number]['id'];
+
 export default function VendorCatalogScreen() {
   const { theme, isDark } = useAppTheme();
 
@@ -338,7 +348,7 @@ export default function VendorCatalogScreen() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // ── Form State for Add / Edit ────────────────────────────────────────────────
-  const [formActiveTab, setFormActiveTab] = useState<'BASIC' | 'MEDIA' | 'BESPOKE' | 'SHIPPING' | 'STORY'>('BASIC');
+  const [formActiveTab, setFormActiveTab] = useState<FormTabType>('BASIC');
   const [formTitle, setFormTitle] = useState('');
   const [formCategory, setFormCategory] = useState<ProductCategoryType>('CRAFTS');
   const [formPrice, setFormPrice] = useState('');
@@ -426,6 +436,25 @@ export default function VendorCatalogScreen() {
     return products.filter((p) => p.isRequestable).length;
   }, [products]);
 
+  // ── Form Step Management ─────────────────────────────────────────────────────
+  const currentStepIndex = FORM_STAGES.findIndex((s) => s.id === formActiveTab);
+
+  const handleNextStep = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (currentStepIndex < FORM_STAGES.length - 1) {
+      setFormActiveTab(FORM_STAGES[currentStepIndex + 1].id);
+    } else {
+      handleSaveProductForm();
+    }
+  };
+
+  const handlePrevStep = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (currentStepIndex > 0) {
+      setFormActiveTab(FORM_STAGES[currentStepIndex - 1].id);
+    }
+  };
+
   // ── Actions ──────────────────────────────────────────────────────────────────
   const handleOpenAddForm = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -475,6 +504,7 @@ export default function VendorCatalogScreen() {
     if (!formTitle.trim() || !formPrice.trim()) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showToast('Please provide a Craft Title and Price');
+      setFormActiveTab('BASIC');
       return;
     }
 
@@ -896,7 +926,7 @@ export default function VendorCatalogScreen() {
       </ScrollView>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          MODAL 1: ADD / EDIT UNIVERSAL PRODUCT FORM (FULL SHEET)
+          MODAL 1: ADD / EDIT UNIVERSAL PRODUCT FORM (FULL REFINED SHEET)
       ══════════════════════════════════════════════════════════════════════ */}
       <Modal
         visible={formModalVisible}
@@ -933,62 +963,98 @@ export default function VendorCatalogScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Segmented Form Navigation */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={[styles.formTabRibbon, { backgroundColor: isDark ? '#120701' : '#F5EFE6' }]}
-            contentContainerStyle={{ paddingHorizontal: Spacing.md, paddingVertical: 8 }}
-          >
-            {[
-              { id: 'BASIC', label: '1. Basic Info', icon: 'information-circle-outline' },
-              { id: 'MEDIA', label: '2. Media Studio', icon: 'images-outline' },
-              { id: 'BESPOKE', label: '3. Made-to-Order', icon: 'hammer-outline' },
-              { id: 'SHIPPING', label: '4. Packaging', icon: 'cube-outline' },
-              { id: 'STORY', label: '5. Heritage Story', icon: 'book-outline' },
-            ].map((tab) => {
-              const active = formActiveTab === tab.id;
-              return (
-                <TouchableOpacity
-                  key={tab.id}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setFormActiveTab(tab.id as any);
-                  }}
-                  style={[
-                    styles.formTabBtn,
-                    {
-                      backgroundColor: active ? theme.primary : 'transparent',
-                      borderColor: active ? theme.primary : theme.borderSubtle,
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name={tab.icon as any}
-                    size={13}
-                    color={active ? '#FFFFFF' : theme.textSecondary}
-                    style={{ marginRight: 4 }}
-                  />
-                  <Text
+          {/* Sleek Step Progress Tracker (Discrete 5-Segment Bar) */}
+          <View style={[styles.wizardProgressWrap, { backgroundColor: isDark ? '#160902' : '#F9F5EE', borderBottomColor: theme.borderSubtle }]}>
+            <View style={styles.progressSegmentsRow}>
+              {FORM_STAGES.map((st, idx) => {
+                const isPassed = idx < currentStepIndex;
+                const isCurrent = idx === currentStepIndex;
+                return (
+                  <View
+                    key={st.id}
                     style={[
-                      styles.formTabBtnText,
+                      styles.progressSegmentTrack,
                       {
-                        color: active ? '#FFFFFF' : theme.textSecondary,
-                        fontFamily: active ? FontFamily.poppinsBold : FontFamily.poppinsRegular,
+                        backgroundColor: isCurrent
+                          ? theme.primary
+                          : isPassed
+                          ? '#D1995A'
+                          : isDark
+                          ? 'rgba(255,255,255,0.12)'
+                          : 'rgba(0,0,0,0.08)',
+                      },
+                    ]}
+                  />
+                );
+              })}
+            </View>
+
+            {/* Step Label & Direct Chip Selectors */}
+            <View style={styles.stepInfoRow}>
+              <Text style={[styles.stepCurrentLabel, { color: theme.textSecondary }]}>
+                Step <Text style={{ color: theme.primary, fontFamily: FontFamily.poppinsBold }}>{currentStepIndex + 1}</Text> of 5 • {FORM_STAGES[currentStepIndex].title}
+              </Text>
+            </View>
+
+            {/* Compact Horizontal Quick-Jump Chips (Height 34px strictly constrained) */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.wizardChipsScrollView}
+              contentContainerStyle={styles.wizardChipsContent}
+            >
+              {FORM_STAGES.map((tab) => {
+                const active = formActiveTab === tab.id;
+                return (
+                  <TouchableOpacity
+                    key={tab.id}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setFormActiveTab(tab.id);
+                    }}
+                    style={[
+                      styles.wizardChipBtn,
+                      {
+                        backgroundColor: active
+                          ? theme.primary
+                          : isDark
+                          ? '#1F0E04'
+                          : '#FFFFFF',
+                        borderColor: active
+                          ? theme.primary
+                          : isDark
+                          ? 'rgba(209, 153, 90, 0.25)'
+                          : 'rgba(196, 108, 39, 0.15)',
                       },
                     ]}
                   >
-                    {tab.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+                    <Ionicons
+                      name={tab.icon as any}
+                      size={12}
+                      color={active ? '#FFFFFF' : theme.textSecondary}
+                      style={{ marginRight: 4 }}
+                    />
+                    <Text
+                      style={[
+                        styles.wizardChipBtnText,
+                        {
+                          color: active ? '#FFFFFF' : theme.textPrimary,
+                          fontFamily: active ? FontFamily.poppinsBold : FontFamily.poppinsMedium,
+                        },
+                      ]}
+                    >
+                      {tab.shortName}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
 
-          {/* Form Content Body */}
+          {/* Form Content Body (flex: 1) */}
           <ScrollView
             style={styles.modalBody}
-            contentContainerStyle={{ padding: Spacing.lg, paddingBottom: 60 }}
+            contentContainerStyle={{ padding: Spacing.lg, paddingBottom: 90 }}
             showsVerticalScrollIndicator={false}
           >
             {/* TAB 1: BASIC INFO */}
@@ -1332,6 +1398,33 @@ export default function VendorCatalogScreen() {
               </View>
             )}
           </ScrollView>
+
+          {/* Floating Bottom Step Wizard Navigation */}
+          <View style={[styles.wizardBottomBar, { backgroundColor: isDark ? '#1F0E04' : '#FFFFFF', borderTopColor: theme.borderSubtle }]}>
+            {currentStepIndex > 0 ? (
+              <TouchableOpacity
+                onPress={handlePrevStep}
+                style={[styles.wizardPrevBtn, { borderColor: theme.borderSubtle }]}
+              >
+                <Ionicons name="chevron-back" size={16} color={theme.textSecondary} />
+                <Text style={[styles.wizardPrevBtnText, { color: theme.textSecondary }]}>Previous</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={{ flex: 0.6 }} />
+            )}
+
+            <TouchableOpacity
+              onPress={handleNextStep}
+              style={[styles.wizardNextBtn, { backgroundColor: theme.primary }]}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.wizardNextBtnText}>
+                {currentStepIndex === FORM_STAGES.length - 1
+                  ? (activeProduct ? 'Update Masterpiece ✦' : 'Publish Masterpiece ✦')
+                  : `Next: ${FORM_STAGES[currentStepIndex + 1].title} →`}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </KeyboardAvoidingView>
       </Modal>
 
@@ -2478,22 +2571,92 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.poppinsBold,
     fontSize: 11,
   },
-  formTabRibbon: {
+
+  // Wizard Tracker & Segmented Chips
+  wizardProgressWrap: {
+    paddingTop: 8,
+    paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(209, 153, 90, 0.2)',
   },
-  formTabBtn: {
+  progressSegmentsRow: {
+    flexDirection: 'row',
+    gap: 4,
+    paddingHorizontal: Spacing.md,
+    marginBottom: 6,
+  },
+  progressSegmentTrack: {
+    flex: 1,
+    height: 3,
+    borderRadius: 1.5,
+  },
+  stepInfoRow: {
+    paddingHorizontal: Spacing.md,
+    marginBottom: 6,
+  },
+  stepCurrentLabel: {
+    fontSize: 10.5,
+    fontFamily: FontFamily.poppinsRegular,
+  },
+  wizardChipsScrollView: {
+    flexGrow: 0,
+    height: 36,
+  },
+  wizardChipsContent: {
+    paddingHorizontal: Spacing.md,
+    alignItems: 'center',
+    gap: 6,
+  },
+  wizardChipBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: Radius.full,
     borderWidth: 1,
-    marginRight: 8,
+    height: 28,
   },
-  formTabBtnText: {
-    fontSize: 11,
+  wizardChipBtnText: {
+    fontSize: 10.5,
   },
+
+  // Wizard Floating Bottom Bar
+  wizardBottomBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    gap: 10,
+  },
+  wizardPrevBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    gap: 4,
+  },
+  wizardPrevBtnText: {
+    fontSize: 12,
+    fontFamily: FontFamily.poppinsMedium,
+  },
+  wizardNextBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 11,
+    borderRadius: Radius.full,
+    ...Shadows.sm,
+  },
+  wizardNextBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12.5,
+    fontFamily: FontFamily.poppinsBold,
+  },
+
   modalBody: {
     flex: 1,
   },
