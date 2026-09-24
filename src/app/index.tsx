@@ -10,42 +10,46 @@ export default function IndexGateway() {
   const { activeRole, isAuthenticated, vendor } = auth;
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.replace('/(user)');
-      return;
-    }
-
-    // Route based on activeRole and vendor onboarding status
-    if (activeRole === 'vendor') {
-      const isBusinessComplete = vendor?.isBusinessInfoComplete;
-      const isDocsComplete = vendor?.isDocumentsComplete;
-      const vendorStatus = vendor?.status?.toUpperCase();
-
-      if (isBusinessComplete === false && vendor?.id) {
-        router.replace({
-          pathname: '/(auth)/vendor-business-info',
-          params: { vendorId: vendor.id },
-        });
+    const timer = setTimeout(() => {
+      if (!isAuthenticated) {
+        router.replace('/(user)');
         return;
       }
 
-      if (isDocsComplete === false && vendor?.id) {
-        router.replace({
-          pathname: '/(auth)/vendor-documents',
-          params: { vendorId: vendor.id },
-        });
-        return;
-      }
+      // Route based on activeRole and vendor onboarding status
+      if (activeRole === 'vendor') {
+        const isBusinessComplete = vendor?.isBusinessInfoComplete;
+        const isDocsComplete = vendor?.isDocumentsComplete;
+        const vendorStatus = vendor?.status?.toUpperCase();
 
-      if (vendorStatus === 'PENDING') {
-        router.replace('/(auth)/pending-approval');
-        return;
-      }
+        if (isBusinessComplete === false && vendor?.id) {
+          router.replace({
+            pathname: '/(auth)/vendor-business-info',
+            params: { vendorId: vendor.id },
+          });
+          return;
+        }
 
-      router.replace('/(vendor)');
-    } else {
-      router.replace('/(user)');
-    }
+        if (isDocsComplete === false && vendor?.id) {
+          router.replace({
+            pathname: '/(auth)/vendor-documents',
+            params: { vendorId: vendor.id },
+          });
+          return;
+        }
+
+        if (vendorStatus === 'PENDING') {
+          router.replace('/(auth)/pending-approval');
+          return;
+        }
+
+        router.replace('/(vendor)');
+      } else {
+        router.replace('/(user)');
+      }
+    }, 10);
+
+    return () => clearTimeout(timer);
   }, [activeRole, isAuthenticated, vendor, router]);
 
   return (
