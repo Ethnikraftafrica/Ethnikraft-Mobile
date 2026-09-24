@@ -7,20 +7,25 @@ import {
   TouchableOpacity,
   RefreshControl,
   Image,
+  ImageBackground,
   Dimensions,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { FontFamily, Radius, Shadows, Spacing } from '@/constants/theme';
+import { FontFamily, Radius, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { useAppSelector } from '@/store';
 import { formatPrice } from '@/utils/price';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-type RangePeriod = 'today' | 'this_week' | 'this_month' | 'all_time';
+const HERO_BG_LIGHT = require('../../../assets/images/vendor-hero-bg.png');
+const HERO_BG_DARK = require('../../../assets/images/vendor-hero-bg-dark.png');
+const AVATAR_DEFAULT = require('../../../assets/images/vendor-avatar-default.png');
+
+type RangePeriod = 'all_time' | 'this_week' | 'this_month' | 'today';
 
 export default function ArtisanDashboardScreen() {
   const router = useRouter();
@@ -30,7 +35,8 @@ export default function ArtisanDashboardScreen() {
   const { code: currencyCode, rate: exchangeRate } = useAppSelector((state) => state.currency);
 
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedRange, setSelectedRange] = useState<RangePeriod>('this_week');
+  const [selectedRange, setSelectedRange] = useState<RangePeriod>('all_time');
+  const [rangeModalVisible, setRangeModalVisible] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
   const onRefresh = () => {
@@ -52,42 +58,139 @@ export default function ArtisanDashboardScreen() {
     router.push(route as any);
   };
 
-  // Dynamic KPI Data corresponding to Backend Overview metrics
+  const getRangeLabel = () => {
+    switch (selectedRange) {
+      case 'all_time':
+        return 'All';
+      case 'this_week':
+        return 'Week';
+      case 'this_month':
+        return 'Month';
+      case 'today':
+        return 'Today';
+    }
+  };
+
+  // Performance metrics corresponding directly to Figma 7274:15088 specs
   const getKpiData = () => {
     switch (selectedRange) {
       case 'today':
         return [
-          { title: 'Today\'s Revenue', value: formatPrice(85000, currencyCode, exchangeRate), change: '+12.5%', isPos: true, icon: 'cash-outline', iconColor: '#10B981', bg: isDark ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7' },
-          { title: 'Orders in Studio', value: '2 Pending', change: '1 ready to ship', isPos: true, icon: 'construct-outline', iconColor: '#F59E0B', bg: isDark ? 'rgba(245, 158, 11, 0.15)' : '#FEF3C7' },
-          { title: 'Active Bids', value: '3 Inquiries', change: '2 new patrons', isPos: true, icon: 'hammer-outline', iconColor: theme.primary, bg: isDark ? 'rgba(196, 108, 39, 0.15)' : '#FFEDD5' },
-          { title: 'Artisan Rating', value: '4.95 ★', change: 'Top 3% Atelier', isPos: true, icon: 'star-outline', iconColor: '#8B5CF6', bg: isDark ? 'rgba(139, 92, 246, 0.15)' : '#EDE9FE' },
+          {
+            title: "Today's Revenue",
+            value: formatPrice(85000, currencyCode, exchangeRate),
+            badge: '+12.5% vs yesterday',
+            icon: 'cash-outline',
+          },
+          {
+            title: 'Orders in Studio',
+            value: '2 Orders',
+            badge: '1 ready to ship',
+            icon: 'cube-outline',
+          },
+          {
+            title: 'Custom Requests',
+            value: '2 Inquiries',
+            badge: '1 new quote',
+            icon: 'document-text-outline',
+          },
+          {
+            title: 'Your rating',
+            value: '4.98',
+            hasStar: true,
+            badge: '18 Reviews',
+            icon: 'star-outline',
+          },
         ];
       case 'this_month':
         return [
-          { title: 'Month Revenue', value: formatPrice(3850000, currencyCode, exchangeRate), change: '+28.4%', isPos: true, icon: 'cash-outline', iconColor: '#10B981', bg: isDark ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7' },
-          { title: 'Completed Orders', value: '28 Fulfilled', change: '98% on-time', isPos: true, icon: 'checkmark-done-circle-outline', iconColor: '#F59E0B', bg: isDark ? 'rgba(245, 158, 11, 0.15)' : '#FEF3C7' },
-          { title: 'Accepted Bids', value: '14 Custom Works', change: '+4 this week', isPos: true, icon: 'hammer-outline', iconColor: theme.primary, bg: isDark ? 'rgba(196, 108, 39, 0.15)' : '#FFEDD5' },
-          { title: 'Artisan Rank', value: '#5 Nationwide', change: 'Steady Master', isPos: true, icon: 'trophy-outline', iconColor: '#8B5CF6', bg: isDark ? 'rgba(139, 92, 246, 0.15)' : '#EDE9FE' },
-        ];
-      case 'all_time':
-        return [
-          { title: 'Lifetime Gross', value: formatPrice(18420000, currencyCode, exchangeRate), change: '142 sales', isPos: true, icon: 'cash-outline', iconColor: '#10B981', bg: isDark ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7' },
-          { title: 'Total Products', value: '38 Listed', change: '4 collections', isPos: true, icon: 'cube-outline', iconColor: '#F59E0B', bg: isDark ? 'rgba(245, 158, 11, 0.15)' : '#FEF3C7' },
-          { title: 'Custom Bids Won', value: '45 Bespoke', change: `${formatPrice(4800000, currencyCode, exchangeRate)} vol`, isPos: true, icon: 'hammer-outline', iconColor: theme.primary, bg: isDark ? 'rgba(196, 108, 39, 0.15)' : '#FFEDD5' },
-          { title: 'Artisan Score', value: '98.5 / 100', change: 'Verified Master', isPos: true, icon: 'shield-checkmark-outline', iconColor: '#8B5CF6', bg: isDark ? 'rgba(139, 92, 246, 0.15)' : '#EDE9FE' },
+          {
+            title: 'Monthly Revenue',
+            value: formatPrice(2850000, currencyCode, exchangeRate),
+            badge: '+24.2% vs last month',
+            icon: 'cash-outline',
+          },
+          {
+            title: 'Orders in Studio',
+            value: '24 Orders',
+            badge: '8 due this week',
+            icon: 'cube-outline',
+          },
+          {
+            title: 'Custom Requests',
+            value: '14 Inquiries',
+            badge: '6 pending quotes',
+            icon: 'document-text-outline',
+          },
+          {
+            title: 'Your rating',
+            value: '4.95',
+            hasStar: true,
+            badge: '380 Reviews',
+            icon: 'star-outline',
+          },
         ];
       case 'this_week':
+        return [
+          {
+            title: 'Weekly Revenue',
+            value: currencyCode === 'GBP' ? '£ 698.95' : formatPrice(698.95 * 1800, currencyCode, exchangeRate),
+            badge: '+18.4% vs last week',
+            icon: 'cash-outline',
+          },
+          {
+            title: 'Orders in Studio',
+            value: '6 Orders',
+            badge: '3 due for shipping',
+            icon: 'cube-outline',
+          },
+          {
+            title: 'Custom Requests',
+            value: '5 Inquiries',
+            badge: '3 pending quotes',
+            icon: 'document-text-outline',
+          },
+          {
+            title: 'Your rating',
+            value: '4.96',
+            hasStar: true,
+            badge: '142 Reviews',
+            icon: 'star-outline',
+          },
+        ];
+      case 'all_time':
       default:
         return [
-          { title: 'Weekly Revenue', value: formatPrice(1245000, currencyCode, exchangeRate), change: '+18.4% vs last week', isPos: true, icon: 'cash-outline', iconColor: '#10B981', bg: isDark ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7' },
-          { title: 'Orders in Studio', value: '6 Orders', change: '3 due for shipping', isPos: true, icon: 'construct-outline', iconColor: '#F59E0B', bg: isDark ? 'rgba(245, 158, 11, 0.15)' : '#FEF3C7' },
-          { title: 'Custom Requests', value: '5 Inquiries', change: '3 pending quotes', isPos: true, icon: 'hammer-outline', iconColor: theme.primary, bg: isDark ? 'rgba(196, 108, 39, 0.15)' : '#FFEDD5' },
-          { title: 'Artisan Rating', value: '4.96 ★', change: '142 Reviews', isPos: true, icon: 'star-outline', iconColor: '#8B5CF6', bg: isDark ? 'rgba(139, 92, 246, 0.15)' : '#EDE9FE' },
+          {
+            title: 'Weekly Revenue',
+            value: currencyCode === 'GBP' ? '£ 698.95' : formatPrice(698.95 * 1800, currencyCode, exchangeRate),
+            badge: '+18.4% vs last week',
+            icon: 'cash-outline',
+          },
+          {
+            title: 'Orders in Studio',
+            value: '6 Orders',
+            badge: '3 due for shipping',
+            icon: 'cube-outline',
+          },
+          {
+            title: 'Custom Requests',
+            value: '5 Inquiries',
+            badge: '3 pending quotes',
+            icon: 'document-text-outline',
+          },
+          {
+            title: 'Your rating',
+            value: '4.96',
+            hasStar: true,
+            badge: '142 Reviews',
+            icon: 'star-outline',
+          },
         ];
     }
   };
 
-  // Recent In-Studio Orders matching backend order structure
+  // Recent in-studio orders
   const recentOrders = [
     {
       id: 'ORD-8942',
@@ -95,21 +198,17 @@ export default function ArtisanDashboardScreen() {
       item: 'Royal Hand-Carved Benin Leopard Bronze',
       amount: formatPrice(320000, currencyCode, exchangeRate),
       status: 'In Progress',
-      statusColor: '#F59E0B',
-      statusBg: isDark ? 'rgba(245, 158, 11, 0.18)' : '#FEF3C7',
+      statusColor: '#C46C27',
       edd: 'Sep 28, 2026',
-      icon: 'sparkles',
     },
     {
       id: 'ORD-8938',
       customer: 'Dr. Folake B.',
       item: 'Vintage Indigo-Dyed Yoruba Adire Kaftan',
       amount: formatPrice(85000, currencyCode, exchangeRate),
-      status: 'Ready to Ship',
-      statusColor: '#10B981',
-      statusBg: isDark ? 'rgba(16, 185, 129, 0.18)' : '#DCFCE7',
+      status: 'Due for shipping',
+      statusColor: theme.success,
       edd: 'Tomorrow',
-      icon: 'shirt-outline',
     },
     {
       id: 'ORD-8931',
@@ -117,1002 +216,664 @@ export default function ArtisanDashboardScreen() {
       item: 'Custom Handwoven Ashanti Kente Sash',
       amount: formatPrice(145000, currencyCode, exchangeRate),
       status: 'Design Review',
-      statusColor: '#6366F1',
-      statusBg: isDark ? 'rgba(99, 102, 241, 0.18)' : '#EEF2FF',
+      statusColor: '#556B2F',
       edd: 'Oct 02, 2026',
-      icon: 'color-palette-outline',
-    },
-  ];
-
-  // Active Bespoke Inquiries
-  const activeBespokeRequests = [
-    {
-      id: 'REQ-1092',
-      patron: 'Amara Nwosu',
-      requestTitle: 'Bespoke Igbo Ceremonial Beaded Coral Crown & Necklace',
-      budget: '₦280,000',
-      deadline: 'Needed by Oct 12',
-      city: 'Enugu, Nigeria',
-    },
-    {
-      id: 'REQ-1088',
-      patron: 'Tariq Al-Mansoor',
-      requestTitle: 'Hand-Carved Mahogany Royal Benin Mask Set (Pair)',
-      budget: '₦450,000',
-      deadline: 'Flexible Timeline',
-      city: 'London, UK',
     },
   ];
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: theme.background }]}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor={theme.primary}
-          colors={[theme.primary]}
-        />
-      }
-    >
-      {/* ─── 1. MASTER ARTISAN HERO BANNER ────────────────────── */}
-      <View style={[styles.heroCard, Shadows.md]}>
-        <LinearGradient
-          colors={
-            isDark
-              ? ['#361300', '#241205', '#120701']
-              : ['#2A1203', '#3E1C03', '#241205']
-          }
-          style={StyleSheet.absoluteFill}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        />
-        {/* Top Gold Accent Rim */}
-        <View style={styles.heroGoldRim} />
-
-        <View style={styles.heroTopRow}>
-          <View style={styles.avatarWrapper}>
-            <View style={styles.avatarCircle}>
-              <Ionicons name="storefront" size={28} color="#FFD79E" />
-            </View>
-            <View style={styles.avatarBadge}>
-              <Ionicons name="checkmark-circle" size={16} color="#009D1A" />
-            </View>
-          </View>
-
-          <View style={styles.heroTextCol}>
-            <View style={styles.workshopBadgeRow}>
-              <View style={styles.masterBadgePill}>
-                <Ionicons name="shield-checkmark" size={11} color="#FFD79E" style={{ marginRight: 4 }} />
-                <Text style={styles.masterBadgeText}>
-                  {vendor?.status === 'APPROVED' ? 'MASTER ARTISAN WORKSHOP' : 'VERIFIED ARTISAN'}
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.welcomeGreeting} numberOfLines={1}>
-              Welcome back, {user?.firstName || 'Artisan'}! 🌟
-            </Text>
-            <Text style={styles.workshopBusinessName} numberOfLines={1}>
-              {vendor?.businessName || "Your Atelier Workshop"}
-            </Text>
-          </View>
-        </View>
-
-        {/* Inspirational Slogan Quote */}
-        <View style={styles.quoteBox}>
-          <Text style={styles.quoteText}>
-            “Your hands don&apos;t just create — they inspire. Let&apos;s craft something amazing today.”
-          </Text>
-        </View>
-
-        {/* Copy Store Link Button */}
-        <TouchableOpacity
-          style={styles.storeLinkBar}
-          onPress={handleCopyStoreLink}
-          activeOpacity={0.8}
-        >
-          <Ionicons
-            name={copiedLink ? 'checkmark-done-circle' : 'copy-outline'}
-            size={16}
-            color={copiedLink ? '#4ADE80' : '#FFD79E'}
-            style={{ marginRight: 6 }}
+    <View style={[styles.mainWrapper, { backgroundColor: theme.background }]}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.primary}
+            colors={[theme.primary]}
           />
-          <Text style={styles.storeLinkText} numberOfLines={1}>
-            {copiedLink
-              ? 'Store Link Copied to Clipboard!'
-              : `home.ethnikraft.africa/products/vendor/${vendor?.id ? vendor.id.slice(-6) : 'atelier'}`}
-          </Text>
-          <View style={styles.copyActionChip}>
-            <Text style={styles.copyActionText}>{copiedLink ? 'Copied' : 'Share'}</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
+        }
+      >
+        {/* ─── 1. HERO SECTION (FIGMA AUTHENTIC TEXTILE BACKDROP) ─── */}
+        <View style={styles.heroOuterWrap}>
+          <ImageBackground
+            source={isDark ? HERO_BG_DARK : HERO_BG_LIGHT}
+            style={styles.heroCard}
+            imageStyle={styles.heroCardImage}
+            resizeMode="cover"
+          >
+            {/* Top Row: Avatar + Store Name + Category Pills */}
+            <View style={styles.heroTopRow}>
+              <Image source={AVATAR_DEFAULT} style={styles.artisanAvatar} />
+              <View style={styles.heroHeaderInfo}>
+                <Text style={styles.storeNameText} numberOfLines={1}>
+                  {vendor?.businessName || "Greywolf's stiches"}
+                </Text>
+                <View style={styles.categoryPillsRow}>
+                  {['Wears', 'Accessories', 'Crafts'].map((tag) => (
+                    <View key={tag} style={styles.categoryPill}>
+                      <Text style={styles.categoryPillText}>{tag}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </View>
 
-      {/* ─── 2. TIME RANGE SELECTOR & KPIS ────────────────────── */}
-      <View style={styles.rangeHeaderRow}>
-        <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
-          WORKSHOP PERFORMANCE
-        </Text>
+            {/* Middle: Welcome Greeting & Quote */}
+            <Text style={styles.heroGreetingText}>
+              Welcome back, {user?.firstName || 'Jackie'}!
+            </Text>
+            <Text style={styles.heroQuoteText}>
+              &ldquo;Your hands don&rsquo;t just create - that inspire... Lets create something amazing today&rdquo;
+            </Text>
 
-        {/* Period Chips */}
-        <View style={[styles.periodChipsWrap, { backgroundColor: isDark ? '#1F0E04' : '#EFE1C3' }]}>
-          {(
-            [
-              { key: 'today', label: 'Day' },
-              { key: 'this_week', label: 'Week' },
-              { key: 'this_month', label: 'Month' },
-              { key: 'all_time', label: 'All' },
-            ] as const
-          ).map((p) => {
-            const isActive = selectedRange === p.key;
-            return (
+            {/* Bottom Row: Copy Link Action */}
+            <View style={styles.heroBottomRow}>
               <TouchableOpacity
-                key={p.key}
-                style={[
-                  styles.periodChip,
-                  isActive && { backgroundColor: theme.primary },
-                ]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setSelectedRange(p.key);
-                }}
-                activeOpacity={0.75}
-              >
-                <Text
-                  style={[
-                    styles.periodChipText,
-                    {
-                      color: isActive
-                        ? '#FFF3D6'
-                        : isDark
-                        ? '#A8998A'
-                        : '#57534E',
-                    },
-                  ]}
-                >
-                  {p.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      {/* 2x2 Performance KPI Grid */}
-      <View style={styles.kpiGrid}>
-        {getKpiData().map((kpi, idx) => (
-          <View
-            key={kpi.title}
-            style={[
-              styles.kpiCard,
-              {
-                backgroundColor: theme.card,
-                borderColor: theme.borderSubtle,
-              },
-              Shadows.sm,
-            ]}
-          >
-            <View style={styles.kpiCardTop}>
-              <View style={[styles.kpiIconCircle, { backgroundColor: kpi.bg }]}>
-                <Ionicons name={kpi.icon as any} size={20} color={kpi.iconColor} />
-              </View>
-              <View style={styles.kpiTrendBadge}>
-                <Text style={styles.kpiTrendText}>{kpi.change}</Text>
-              </View>
-            </View>
-
-            <Text style={[styles.kpiValue, { color: theme.textPrimary }]}>
-              {kpi.value}
-            </Text>
-            <Text style={[styles.kpiTitle, { color: theme.textMuted }]}>
-              {kpi.title}
-            </Text>
-          </View>
-        ))}
-      </View>
-
-      {/* ─── 3. QUICK ARTISAN WORKBENCH ACTIONS ───────────────── */}
-      <View style={styles.quickActionsRow}>
-        <TouchableOpacity
-          style={[
-            styles.quickActionBtn,
-            { backgroundColor: theme.card, borderColor: theme.borderSubtle },
-            Shadows.sm,
-          ]}
-          onPress={() => handleNavigate('/(vendor)/catalog')}
-          activeOpacity={0.8}
-        >
-          <View style={[styles.actionIconPill, { backgroundColor: 'rgba(196, 108, 39, 0.15)' }]}>
-            <Ionicons name="add-circle-outline" size={22} color={theme.primary} />
-          </View>
-          <Text style={[styles.actionBtnTitle, { color: theme.textPrimary }]}>New Craft</Text>
-          <Text style={[styles.actionBtnSubtitle, { color: theme.textMuted }]}>Add to catalog</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.quickActionBtn,
-            { backgroundColor: theme.card, borderColor: theme.borderSubtle },
-            Shadows.sm,
-          ]}
-          onPress={() => handleNavigate('/(vendor)/requests')}
-          activeOpacity={0.8}
-        >
-          <View style={[styles.actionIconPill, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
-            <Ionicons name="hammer-outline" size={22} color="#D97706" />
-          </View>
-          <Text style={[styles.actionBtnTitle, { color: theme.textPrimary }]}>Custom Bids</Text>
-          <Text style={[styles.actionBtnSubtitle, { color: theme.textMuted }]}>Review patrons</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.quickActionBtn,
-            { backgroundColor: theme.card, borderColor: theme.borderSubtle },
-            Shadows.sm,
-          ]}
-          onPress={() => handleNavigate('/(vendor)/studio')}
-          activeOpacity={0.8}
-        >
-          <View style={[styles.actionIconPill, { backgroundColor: 'rgba(99, 102, 241, 0.15)' }]}>
-            <Ionicons name="color-palette-outline" size={22} color="#6366F1" />
-          </View>
-          <Text style={[styles.actionBtnTitle, { color: theme.textPrimary }]}>Studio</Text>
-          <Text style={[styles.actionBtnSubtitle, { color: theme.textMuted }]}>Milestone pipeline</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* ─── 4. ORDERS IN STUDIO (FULFILLMENT PIPELINE) ────────── */}
-      <View style={styles.sectionHeaderRow}>
-        <View style={styles.sectionTitleWithBadge}>
-          <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
-            ORDERS IN STUDIO
-          </Text>
-          <View style={styles.countBadge}>
-            <Text style={styles.countBadgeText}>{recentOrders.length}</Text>
-          </View>
-        </View>
-
-        <TouchableOpacity
-          onPress={() => handleNavigate('/(vendor)/orders')}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.seeAllText, { color: theme.primary }]}>Show all →</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.ordersListWrap}>
-        {recentOrders.map((order) => (
-          <TouchableOpacity
-            key={order.id}
-            style={[
-              styles.orderCard,
-              {
-                backgroundColor: theme.card,
-                borderColor: theme.borderSubtle,
-              },
-              Shadows.sm,
-            ]}
-            onPress={() => handleNavigate('/(vendor)/orders')}
-            activeOpacity={0.85}
-          >
-            <View style={styles.orderCardHeader}>
-              <View style={styles.orderIdBadge}>
-                <Text style={styles.orderIdText}>{order.id}</Text>
-              </View>
-
-              <View style={[styles.orderStatusPill, { backgroundColor: order.statusBg }]}>
-                <Text style={[styles.orderStatusText, { color: order.statusColor }]}>
-                  {order.status}
-                </Text>
-              </View>
-            </View>
-
-            <Text style={[styles.orderItemTitle, { color: theme.textPrimary }]} numberOfLines={1}>
-              {order.item}
-            </Text>
-
-            <View style={styles.orderMetaRow}>
-              <View style={styles.metaCustomerCol}>
-                <Ionicons name="person-circle-outline" size={14} color={theme.textMuted} style={{ marginRight: 4 }} />
-                <Text style={[styles.metaCustomerText, { color: theme.textSecondary }]}>
-                  {order.customer}
-                </Text>
-              </View>
-
-              <View style={styles.metaAmountCol}>
-                <Text style={[styles.metaAmountVal, { color: theme.primary }]}>
-                  {order.amount}
-                </Text>
-              </View>
-            </View>
-
-            <View style={[styles.orderCardFooter, { borderTopColor: theme.borderSubtle }]}>
-              <View style={styles.eddRow}>
-                <Ionicons name="time-outline" size={13} color={theme.textMuted} style={{ marginRight: 4 }} />
-                <Text style={[styles.eddText, { color: theme.textMuted }]}>
-                  Est. Delivery: <Text style={{ color: theme.textPrimary, fontFamily: FontFamily.poppinsSemiBold }}>{order.edd}</Text>
-                </Text>
-              </View>
-
-              <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* ─── 5. ACTIVE BESPOKE REQUESTS (COMMISSIONS) ──────────── */}
-      <View style={styles.sectionHeaderRow}>
-        <View style={styles.sectionTitleWithBadge}>
-          <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
-            BESPOKE PATRON INQUIRIES
-          </Text>
-          <View style={[styles.countBadge, { backgroundColor: '#F59E0B' }]}>
-            <Text style={styles.countBadgeText}>{activeBespokeRequests.length}</Text>
-          </View>
-        </View>
-
-        <TouchableOpacity
-          onPress={() => handleNavigate('/(vendor)/requests')}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.seeAllText, { color: theme.primary }]}>View Bids →</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.requestsListWrap}>
-        {activeBespokeRequests.map((req) => (
-          <TouchableOpacity
-            key={req.id}
-            style={[
-              styles.requestCard,
-              {
-                backgroundColor: theme.card,
-                borderColor: theme.borderSubtle,
-              },
-              Shadows.sm,
-            ]}
-            onPress={() => handleNavigate('/(vendor)/requests')}
-            activeOpacity={0.85}
-          >
-            <View style={styles.reqTopRow}>
-              <View style={styles.reqPatronCol}>
-                <Ionicons name="person-outline" size={13} color={theme.primary} style={{ marginRight: 4 }} />
-                <Text style={[styles.reqPatronName, { color: theme.textPrimary }]}>
-                  {req.patron}
-                </Text>
-                <Text style={[styles.reqLocation, { color: theme.textMuted }]}>
-                  • {req.city}
-                </Text>
-              </View>
-              <Text style={[styles.reqBudgetVal, { color: '#10B981' }]}>
-                {req.budget}
-              </Text>
-            </View>
-
-            <Text style={[styles.reqTitleText, { color: theme.textPrimary }]} numberOfLines={2}>
-              {req.requestTitle}
-            </Text>
-
-            <View style={styles.reqFooterRow}>
-              <View style={styles.reqDeadlinePill}>
-                <Ionicons name="calendar-outline" size={12} color="#D97706" style={{ marginRight: 4 }} />
-                <Text style={styles.reqDeadlineText}>{req.deadline}</Text>
-              </View>
-
-              <TouchableOpacity
-                style={[styles.bidActionBtn, { backgroundColor: theme.primary }]}
-                onPress={() => handleNavigate('/(vendor)/requests')}
+                style={styles.copyLinkBtn}
+                onPress={handleCopyStoreLink}
                 activeOpacity={0.8}
               >
-                <Text style={styles.bidActionBtnText}>Submit Bid</Text>
+                <Ionicons
+                  name={copiedLink ? 'checkmark-circle' : 'copy-outline'}
+                  size={15}
+                  color="#FFFFFF"
+                />
+                <Text style={styles.copyLinkText}>
+                  {copiedLink ? 'Copied' : 'Copy Link'}
+                </Text>
               </TouchableOpacity>
             </View>
+          </ImageBackground>
+        </View>
+
+        {/* ─── 2. WORKSHOP PERFORMANCE HEADER & 2x2 METRICS GRID ─── */}
+        <View style={styles.performanceHeaderRow}>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
+            Workshop Performance
+          </Text>
+
+          {/* Time Range Filter Pill (13px radius) */}
+          <TouchableOpacity
+            style={[
+              styles.rangePillBtn,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+              },
+            ]}
+            onPress={() => setRangeModalVisible(true)}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.rangePillText, { color: theme.textPrimary }]}>
+              {getRangeLabel()}
+            </Text>
+            <Ionicons name="chevron-down" size={13} color={theme.textPrimary} />
           </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* ─── 6. ARTISAN MASTERY & RANKING CARD ─────────────────── */}
-      <View style={[styles.achievementCard, Shadows.md]}>
-        <LinearGradient
-          colors={
-            isDark
-              ? ['#361300', '#251205', '#160802']
-              : ['#FCF4E1', '#F7EBD2', '#F2E2C2']
-          }
-          style={StyleSheet.absoluteFill}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        />
-        <View style={[styles.achievementBorderRim, { backgroundColor: theme.primary }]} />
-
-        <View style={styles.achievementHeaderRow}>
-          <View style={styles.medalCircle}>
-            <Ionicons name="ribbon-outline" size={26} color="#FFD79E" />
-          </View>
-          <View style={styles.achievementTitleCol}>
-            <Text style={[styles.achievementMainTitle, { color: isDark ? '#FFF3D6' : '#361300' }]}>
-              Artisan Mastery Milestone
-            </Text>
-            <Text style={[styles.achievementSubtitle, { color: isDark ? '#D1995A' : '#78350F' }]}>
-              You are officially a <Text style={{ fontFamily: FontFamily.poppinsBold }}>Steady Master Seller</Text>! 🌟
-            </Text>
-          </View>
         </View>
 
-        <Text style={[styles.achievementDescText, { color: isDark ? '#FFF3D6' : '#57534E' }]}>
-          ⭐ 96% of your reviews are 5 stars — patrons nationwide recognize your extraordinary heritage craftsmanship.
-        </Text>
+        {/* 2x2 Metric Cards Grid */}
+        <View style={styles.kpiGrid}>
+          {getKpiData().map((kpi) => (
+            <View
+              key={kpi.title}
+              style={[
+                styles.kpiCard,
+                {
+                  backgroundColor: theme.card,
+                  borderColor: theme.border,
+                },
+              ]}
+            >
+              {/* Top Pill Badge */}
+              <View style={styles.kpiPillBadge}>
+                <Ionicons name={kpi.icon as any} size={11} color={theme.success} />
+                <Text style={[styles.kpiPillText, { color: theme.success }]}>
+                  {kpi.badge}
+                </Text>
+              </View>
 
-        <View style={[styles.rankStatsRow, { borderTopColor: isDark ? 'rgba(212, 163, 115, 0.2)' : 'rgba(212, 163, 115, 0.35)' }]}>
-          <View style={styles.rankStatCol}>
-            <Text style={[styles.rankStatLabel, { color: isDark ? '#A8998A' : '#8A7A6A' }]}>Atelier Rank</Text>
-            <Text style={[styles.rankStatValue, { color: isDark ? '#FFD79E' : '#361300' }]}>#5 National</Text>
-          </View>
+              {/* Metric Main Value */}
+              <View style={styles.kpiValueRow}>
+                <Text style={[styles.kpiValueText, { color: theme.textPrimary }]}>
+                  {kpi.value}
+                </Text>
+                {kpi.hasStar && (
+                  <Ionicons
+                    name="star"
+                    size={16}
+                    color="#C46C27"
+                    style={{ marginLeft: 4, marginTop: 4 }}
+                  />
+                )}
+              </View>
 
-          <View style={styles.rankDivider} />
-
-          <View style={styles.rankStatCol}>
-            <Text style={[styles.rankStatLabel, { color: isDark ? '#A8998A' : '#8A7A6A' }]}>Quality Score</Text>
-            <Text style={[styles.rankStatValue, { color: '#10B981' }]}>98.5 / 100</Text>
-          </View>
-
-          <View style={styles.rankDivider} />
-
-          <View style={styles.rankStatCol}>
-            <Text style={[styles.rankStatLabel, { color: isDark ? '#A8998A' : '#8A7A6A' }]}>Repeat Patrons</Text>
-            <Text style={[styles.rankStatValue, { color: theme.primary }]}>42%</Text>
-          </View>
+              {/* Subtitle */}
+              <Text style={styles.kpiSubtitleText}>{kpi.title}</Text>
+            </View>
+          ))}
         </View>
-      </View>
 
-      {/* ─── 7. TIP OF THE DAY CARD ────────────────────────────── */}
-      <View
-        style={[
-          styles.tipCard,
-          {
-            backgroundColor: theme.card,
-            borderColor: theme.borderSubtle,
-          },
-          Shadows.sm,
-        ]}
+        {/* ─── 3. THREE QUICK ACTION CARDS ─────────────────────── */}
+        <View style={styles.quickActionsRow}>
+          {/* Action 1: Add a Product */}
+          <TouchableOpacity
+            style={[
+              styles.quickActionCard,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+              },
+            ]}
+            onPress={() => handleNavigate('/(vendor)/catalog')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="add-circle-outline" size={24} color="#C46C27" />
+            <Text style={[styles.quickActionLabel, { color: theme.textPrimary }]}>
+              Add a Product
+            </Text>
+          </TouchableOpacity>
+
+          {/* Action 2: View Products */}
+          <TouchableOpacity
+            style={[
+              styles.quickActionCard,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+              },
+            ]}
+            onPress={() => handleNavigate('/(vendor)/catalog')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="eye" size={24} color="#D27451" />
+            <Text style={[styles.quickActionLabel, { color: theme.textPrimary }]}>
+              View Products
+            </Text>
+          </TouchableOpacity>
+
+          {/* Action 3: Custom Bids */}
+          <TouchableOpacity
+            style={[
+              styles.quickActionCard,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+              },
+            ]}
+            onPress={() => handleNavigate('/(vendor)/requests')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="brush-outline" size={24} color="#556B2F" />
+            <Text style={[styles.quickActionLabel, { color: theme.textPrimary }]}>
+              Custom Bids
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ─── 4. STUDIO ORDERS SECTION ────────────────────────── */}
+        <View style={styles.ordersHeaderRow}>
+          <View style={styles.ordersTitleGroup}>
+            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
+              Studio Orders
+            </Text>
+            <View style={styles.orderCountBadge}>
+              <Text style={styles.orderCountBadgeText}>{recentOrders.length}</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            onPress={() => handleNavigate('/(vendor)/orders')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.showAllLink, { color: theme.primaryLight }]}>
+              Show all →
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Studio Orders Container Card (7px radius) */}
+        <View
+          style={[
+            styles.ordersContainerBox,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+            },
+          ]}
+        >
+          {recentOrders.map((order, index) => (
+            <TouchableOpacity
+              key={order.id}
+              style={[
+                styles.orderItemRow,
+                index < recentOrders.length - 1 && {
+                  borderBottomWidth: 1,
+                  borderBottomColor: theme.borderSubtle,
+                },
+              ]}
+              onPress={() => handleNavigate('/(vendor)/orders')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.orderItemLeft}>
+                <View style={styles.orderIdStatusRow}>
+                  <Text style={[styles.orderItemCode, { color: theme.primary }]}>
+                    {order.id}
+                  </Text>
+                  <View
+                    style={[
+                      styles.orderItemStatusPill,
+                      {
+                        backgroundColor: isDark
+                          ? 'rgba(255, 255, 255, 0.08)'
+                          : 'rgba(255, 255, 255, 0.65)',
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.orderItemStatusText,
+                        { color: order.statusColor },
+                      ]}
+                    >
+                      {order.status}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text
+                  style={[styles.orderItemTitle, { color: theme.textPrimary }]}
+                  numberOfLines={1}
+                >
+                  {order.item}
+                </Text>
+
+                <Text style={styles.orderItemCustomer}>
+                  {order.customer} • <Text style={{ color: theme.textPrimary, fontFamily: FontFamily.headingBold }}>{order.amount}</Text>
+                </Text>
+              </View>
+
+              <Ionicons
+                name="chevron-forward"
+                size={16}
+                color={theme.textMuted}
+              />
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
+
+      {/* ─── TIME RANGE PICKER MODAL ─────────────────────────── */}
+      <Modal
+        visible={rangeModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRangeModalVisible(false)}
       >
-        <View style={styles.tipHeaderRow}>
-          <Ionicons name="bulb-outline" size={20} color="#F59E0B" style={{ marginRight: 6 }} />
-          <Text style={[styles.tipCardHeading, { color: theme.textPrimary }]}>
-            Tip of the Day for Artisans
-          </Text>
-        </View>
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setRangeModalVisible(false)}
+        >
+          <View
+            style={[
+              styles.rangeModalCard,
+              {
+                backgroundColor: isDark ? '#191919' : '#FCF4E1',
+                borderColor: theme.border,
+              },
+            ]}
+          >
+            <Text style={[styles.modalHeaderTitle, { color: theme.textPrimary }]}>
+              Select Performance Period
+            </Text>
 
-        <View style={styles.tipBulletRow}>
-          <Ionicons name="camera-outline" size={16} color={theme.primary} style={{ marginTop: 2, marginRight: 8 }} />
-          <Text style={[styles.tipBulletText, { color: theme.textSecondary }]}>
-            Products with 3+ high-resolution daylight craft photos sell <Text style={{ fontFamily: FontFamily.poppinsBold, color: theme.textPrimary }}>40% faster</Text>.
-          </Text>
-        </View>
-
-        <View style={styles.tipBulletRow}>
-          <Ionicons name="book-outline" size={16} color={theme.primary} style={{ marginTop: 2, marginRight: 8 }} />
-          <Text style={[styles.tipBulletText, { color: theme.textSecondary }]}>
-            Sharing cultural provenance and tribal weaving origin increases buyer trust by <Text style={{ fontFamily: FontFamily.poppinsBold, color: theme.textPrimary }}>25%</Text>.
-          </Text>
-        </View>
-      </View>
-    </ScrollView>
+            {(
+              [
+                { key: 'all_time', label: 'All (Lifetime Overview)' },
+                { key: 'this_week', label: 'Week (Last 7 Days)' },
+                { key: 'this_month', label: 'Month (Last 30 Days)' },
+                { key: 'today', label: 'Today (Live Summary)' },
+              ] as const
+            ).map((opt) => {
+              const isSelected = selectedRange === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[
+                    styles.modalOptionRow,
+                    isSelected && {
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.55)',
+                    },
+                  ]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setSelectedRange(opt.key);
+                    setRangeModalVisible(false);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.modalOptionText,
+                      {
+                        color: isSelected ? theme.primaryLight : theme.textPrimary,
+                        fontFamily: isSelected
+                          ? FontFamily.headingBold
+                          : FontFamily.bodyRegular,
+                      },
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                  {isSelected && (
+                    <Ionicons name="checkmark" size={18} color={theme.primaryLight} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  mainWrapper: {
+    flex: 1,
+  },
   container: {
     flex: 1,
   },
   scrollContent: {
     padding: Spacing.md,
-    paddingBottom: 110, // Avoid bottom nav bar overlap
+    paddingBottom: 110,
   },
 
-  // ─── 1. HERO BANNER ─────────────────────────────────────────
-  heroCard: {
-    borderRadius: Radius.xl,
-    padding: Spacing.lg,
+  // ─── 1. HERO SECTION ─────────────────────────────────────────
+  heroOuterWrap: {
+    borderRadius: Radius.xl, // 17px
     overflow: 'hidden',
-    position: 'relative',
     marginBottom: Spacing.lg,
     borderWidth: 1,
-    borderColor: 'rgba(212, 163, 115, 0.35)',
+    borderColor: 'rgba(54, 19, 0, 0.25)',
   },
-  heroGoldRim: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    backgroundColor: '#FFD79E',
+  heroCard: {
+    padding: Spacing.md + 2,
+    borderRadius: Radius.xl,
+    minHeight: 180,
+    justifyContent: 'space-between',
+  },
+  heroCardImage: {
+    borderRadius: Radius.xl,
   },
   heroTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  avatarWrapper: {
-    position: 'relative',
+  artisanAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: '#D1995A',
   },
-  avatarCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#381A05',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFD79E',
+  heroHeaderInfo: {
+    marginLeft: 10,
+    flex: 1,
   },
-  avatarBadge: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
+  storeNameText: {
+    fontSize: 15,
+    fontFamily: FontFamily.headingBold,
+    color: '#FFFFFF',
+    letterSpacing: -0.2,
+  },
+  categoryPillsRow: {
+    flexDirection: 'row',
+    marginTop: 4,
+  },
+  categoryPill: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 8,
+    borderRadius: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 1.5,
+    marginRight: 6,
   },
-  heroTextCol: {
-    flex: 1,
-    marginLeft: Spacing.md,
+  categoryPillText: {
+    fontSize: 9.5,
+    fontFamily: FontFamily.headingBold,
+    color: '#000000',
   },
-  workshopBadgeRow: {
+  heroGreetingText: {
+    fontSize: 21,
+    fontFamily: FontFamily.headingBold,
+    color: '#FFFFFF',
+    marginTop: 14,
+    letterSpacing: -0.3,
+  },
+  heroQuoteText: {
+    fontSize: 12,
+    fontFamily: FontFamily.bodyRegular,
+    color: 'rgba(255, 255, 255, 0.88)',
+    marginTop: 4,
+    lineHeight: 17,
+  },
+  heroBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 10,
+  },
+  copyLinkBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 3,
-  },
-  masterBadgePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(196, 108, 39, 0.3)',
-    paddingHorizontal: 8,
+    gap: 5,
+    paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 215, 158, 0.4)',
   },
-  masterBadgeText: {
-    fontSize: 8.5,
-    fontFamily: FontFamily.poppinsBold,
-    color: '#FFD79E',
-    letterSpacing: 0.5,
-  },
-  welcomeGreeting: {
-    fontSize: 17,
-    fontFamily: FontFamily.poppinsBold,
-    color: '#FFF3D6',
-  },
-  workshopBusinessName: {
+  copyLinkText: {
     fontSize: 12,
-    fontFamily: FontFamily.poppinsMedium,
-    color: '#D1995A',
-  },
-  quoteBox: {
-    backgroundColor: 'rgba(255, 243, 214, 0.08)',
-    borderRadius: Radius.md,
-    padding: Spacing.sm + 2,
-    marginTop: Spacing.md,
-    borderLeftWidth: 3,
-    borderLeftColor: '#C46C27',
-  },
-  quoteText: {
-    fontSize: 12,
-    fontFamily: FontFamily.poppinsMedium,
-    color: '#FFF3D6',
-    lineHeight: 18,
-  },
-  storeLinkBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.sm + 4,
-    paddingVertical: Spacing.sm,
-    marginTop: Spacing.sm + 2,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 215, 158, 0.25)',
-  },
-  storeLinkText: {
-    flex: 1,
-    fontSize: 11,
-    fontFamily: FontFamily.poppinsMedium,
-    color: '#FFF3D6',
-  },
-  copyActionChip: {
-    backgroundColor: '#C46C27',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: Radius.sm,
-    marginLeft: 6,
-  },
-  copyActionText: {
-    fontSize: 10,
-    fontFamily: FontFamily.poppinsBold,
-    color: '#FFF3D6',
+    fontFamily: FontFamily.headingBold,
+    color: '#FFFFFF',
   },
 
-  // ─── 2. RANGE SELECTOR & KPIS ───────────────────────────────
-  rangeHeaderRow: {
+  // ─── 2. PERFORMANCE HEADER & KPIS ───────────────────────────
+  performanceHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.sm,
   },
-  sectionHeading: {
-    fontSize: 11,
-    fontFamily: FontFamily.poppinsBold,
-    letterSpacing: 0.8,
+  sectionTitle: {
+    fontSize: 18,
+    fontFamily: FontFamily.headingBold,
+    letterSpacing: -0.3,
   },
-  periodChipsWrap: {
+  rangePillBtn: {
     flexDirection: 'row',
-    borderRadius: Radius.full,
-    padding: 2,
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: Radius.lg, // 13px
+    borderWidth: 1,
+    gap: 6,
   },
-  periodChip: {
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: Radius.full,
-  },
-  periodChipText: {
-    fontSize: 10,
-    fontFamily: FontFamily.poppinsBold,
+  rangePillText: {
+    fontSize: 13,
+    fontFamily: FontFamily.headingBold,
   },
   kpiGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.sm,
-    marginBottom: Spacing.lg,
+    gap: 10,
+    marginBottom: Spacing.md,
   },
   kpiCard: {
-    width: (SCREEN_WIDTH - Spacing.md * 2 - Spacing.sm) / 2,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
+    width: (SCREEN_WIDTH - Spacing.md * 2 - 10) / 2,
+    borderRadius: Radius.md, // 7px
+    padding: Spacing.sm + 4,
     borderWidth: 1,
   },
-  kpiCardTop: {
+  kpiPillBadge: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  kpiIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  kpiTrendBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 255, 255, 0.35)',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: Radius.full,
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderRadius: 4,
+    gap: 4,
   },
-  kpiTrendText: {
-    fontSize: 9,
-    fontFamily: FontFamily.poppinsBold,
-    color: '#10B981',
-  },
-  kpiValue: {
-    fontSize: 18,
-    fontFamily: FontFamily.poppinsBold,
-    marginBottom: 2,
-  },
-  kpiTitle: {
-    fontSize: 11,
-    fontFamily: FontFamily.poppinsMedium,
-  },
-
-  // ─── 3. QUICK WORKBENCH ACTIONS ─────────────────────────────
-  quickActionsRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginBottom: Spacing.lg,
-  },
-  quickActionBtn: {
-    flex: 1,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  actionIconPill: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  actionBtnTitle: {
-    fontSize: 12,
-    fontFamily: FontFamily.poppinsBold,
-    textAlign: 'center',
-  },
-  actionBtnSubtitle: {
-    fontSize: 9,
-    fontFamily: FontFamily.poppinsRegular,
-    textAlign: 'center',
-    marginTop: 1,
-  },
-
-  // ─── 4. ORDERS IN STUDIO ────────────────────────────────────
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-    paddingHorizontal: 2,
-  },
-  sectionTitleWithBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  countBadge: {
-    backgroundColor: '#C46C27',
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: Radius.full,
-    marginLeft: 6,
-  },
-  countBadgeText: {
-    fontSize: 9,
-    fontFamily: FontFamily.poppinsBold,
-    color: '#FFF3D6',
-  },
-  seeAllText: {
-    fontSize: 12,
-    fontFamily: FontFamily.poppinsBold,
-  },
-  ordersListWrap: {
-    gap: Spacing.sm,
-    marginBottom: Spacing.lg,
-  },
-  orderCard: {
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
-  },
-  orderCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  orderIdBadge: {
-    backgroundColor: 'rgba(196, 108, 39, 0.15)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: Radius.sm,
-  },
-  orderIdText: {
+  kpiPillText: {
     fontSize: 10,
-    fontFamily: FontFamily.poppinsBold,
-    color: '#C46C27',
+    fontFamily: FontFamily.headingBold,
   },
-  orderStatusPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: Radius.full,
-  },
-  orderStatusText: {
-    fontSize: 10,
-    fontFamily: FontFamily.poppinsBold,
-  },
-  orderItemTitle: {
-    fontSize: 14,
-    fontFamily: FontFamily.poppinsBold,
-    marginBottom: 6,
-  },
-  orderMetaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  metaCustomerCol: {
+  kpiValueRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 8,
   },
-  metaCustomerText: {
-    fontSize: 12,
-    fontFamily: FontFamily.poppinsMedium,
+  kpiValueText: {
+    fontSize: 22,
+    fontFamily: FontFamily.headingBold,
+    letterSpacing: -0.4,
   },
-  metaAmountCol: {},
-  metaAmountVal: {
-    fontSize: 15,
-    fontFamily: FontFamily.poppinsBold,
-  },
-  orderCardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: Spacing.xs + 2,
-    borderTopWidth: 1,
-  },
-  eddRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  eddText: {
-    fontSize: 11,
-    fontFamily: FontFamily.poppinsRegular,
-  },
-
-  // ─── 5. BESPOKE REQUESTS ────────────────────────────────────
-  requestsListWrap: {
-    gap: Spacing.sm,
-    marginBottom: Spacing.lg,
-  },
-  requestCard: {
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
-  },
-  reqTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  reqPatronCol: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  reqPatronName: {
-    fontSize: 12,
-    fontFamily: FontFamily.poppinsBold,
-  },
-  reqLocation: {
-    fontSize: 11,
-    fontFamily: FontFamily.poppinsRegular,
-    marginLeft: 4,
-  },
-  reqBudgetVal: {
-    fontSize: 14,
-    fontFamily: FontFamily.poppinsBold,
-  },
-  reqTitleText: {
-    fontSize: 13,
-    fontFamily: FontFamily.poppinsMedium,
-    marginBottom: Spacing.sm,
-    lineHeight: 18,
-  },
-  reqFooterRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  reqDeadlinePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(245, 158, 11, 0.12)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: Radius.full,
-  },
-  reqDeadlineText: {
-    fontSize: 10,
-    fontFamily: FontFamily.poppinsBold,
-    color: '#D97706',
-  },
-  bidActionBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: Radius.md,
-  },
-  bidActionBtnText: {
-    fontSize: 11,
-    fontFamily: FontFamily.poppinsBold,
-    color: '#FFF3D6',
-  },
-
-  // ─── 6. ACHIEVEMENT CARD ────────────────────────────────────
-  achievementCard: {
-    borderRadius: Radius.xl,
-    padding: Spacing.lg,
-    overflow: 'hidden',
-    position: 'relative',
-    marginBottom: Spacing.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(212, 163, 115, 0.35)',
-  },
-  achievementBorderRim: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-  },
-  achievementHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  medalCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#381A05',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#FFD79E',
-  },
-  achievementTitleCol: {
-    flex: 1,
-    marginLeft: Spacing.md,
-  },
-  achievementMainTitle: {
-    fontSize: 16,
-    fontFamily: FontFamily.poppinsBold,
-  },
-  achievementSubtitle: {
-    fontSize: 12,
-    fontFamily: FontFamily.poppinsMedium,
+  kpiSubtitleText: {
+    fontSize: 11.5,
+    fontFamily: FontFamily.headingBold,
+    color: '#808080',
     marginTop: 2,
   },
-  achievementDescText: {
-    fontSize: 12,
-    fontFamily: FontFamily.poppinsRegular,
-    lineHeight: 18,
-    marginBottom: Spacing.md,
-  },
-  rankStatsRow: {
+
+  // ─── 3. THREE QUICK ACTION CARDS ────────────────────────────
+  quickActionsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
+    gap: 10,
+    marginBottom: Spacing.lg,
   },
-  rankStatCol: {
+  quickActionCard: {
     flex: 1,
+    borderRadius: Radius.md, // 7px
+    borderWidth: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 4,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  rankStatLabel: {
-    fontSize: 10,
-    fontFamily: FontFamily.poppinsRegular,
-    marginBottom: 2,
-  },
-  rankStatValue: {
-    fontSize: 14,
-    fontFamily: FontFamily.poppinsBold,
-  },
-  rankDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: 'rgba(212, 163, 115, 0.25)',
+  quickActionLabel: {
+    fontSize: 12,
+    fontFamily: FontFamily.headingBold,
+    marginTop: 8,
+    textAlign: 'center',
   },
 
-  // ─── 7. TIP CARD ────────────────────────────────────────────
-  tipCard: {
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
-    marginBottom: Spacing.md,
-  },
-  tipHeaderRow: {
+  // ─── 4. STUDIO ORDERS SECTION ───────────────────────────────
+  ordersHeaderRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.sm,
   },
-  tipCardHeading: {
-    fontSize: 14,
-    fontFamily: FontFamily.poppinsBold,
-  },
-  tipBulletRow: {
+  ordersTitleGroup: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 6,
+    alignItems: 'center',
   },
-  tipBulletText: {
-    flex: 1,
+  orderCountBadge: {
+    backgroundColor: '#C46C27',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 6,
+  },
+  orderCountBadgeText: {
+    fontSize: 10,
+    fontFamily: FontFamily.headingBold,
+    color: '#FFFFFF',
+  },
+  showAllLink: {
     fontSize: 12,
-    fontFamily: FontFamily.poppinsRegular,
-    lineHeight: 18,
+    fontFamily: FontFamily.headingBold,
+  },
+  ordersContainerBox: {
+    borderRadius: Radius.md, // 7px
+    borderWidth: 1,
+    padding: Spacing.sm,
+  },
+  orderItemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+  },
+  orderItemLeft: {
+    flex: 1,
+    paddingRight: Spacing.sm,
+  },
+  orderIdStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 3,
+  },
+  orderItemCode: {
+    fontSize: 11,
+    fontFamily: FontFamily.headingBold,
+  },
+  orderItemStatusPill: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  orderItemStatusText: {
+    fontSize: 10,
+    fontFamily: FontFamily.headingBold,
+  },
+  orderItemTitle: {
+    fontSize: 13,
+    fontFamily: FontFamily.headingBold,
+    marginBottom: 2,
+  },
+  orderItemCustomer: {
+    fontSize: 11,
+    fontFamily: FontFamily.bodyRegular,
+    color: '#808080',
+  },
+
+  // ─── MODAL STYLES ───────────────────────────────────────────
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.lg,
+  },
+  rangeModalCard: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: Radius.md, // 7px
+    borderWidth: 1,
+    padding: Spacing.md,
+  },
+  modalHeaderTitle: {
+    fontSize: 15,
+    fontFamily: FontFamily.headingBold,
+    marginBottom: Spacing.md,
+    textAlign: 'center',
+  },
+  modalOptionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: 6,
+    marginBottom: 4,
+  },
+  modalOptionText: {
+    fontSize: 13,
   },
 });

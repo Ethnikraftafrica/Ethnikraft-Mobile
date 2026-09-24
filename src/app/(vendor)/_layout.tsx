@@ -21,8 +21,8 @@ export default function VendorTabsLayout() {
       style={[
         styles.drawerTriggerBtn,
         {
-          backgroundColor: isDark ? '#361300' : '#FFFFFF',
-          borderColor: theme.borderSubtle,
+          backgroundColor: isDark ? '#191919' : '#FCF4E1',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(54, 19, 0, 0.25)',
         },
       ]}
       activeOpacity={0.75}
@@ -31,7 +31,7 @@ export default function VendorTabsLayout() {
       <Ionicons
         name="menu-outline"
         size={22}
-        color={isDark ? '#FFF3D6' : theme.textPrimary}
+        color={isDark ? '#FFFFFF' : '#341B00'}
       />
     </TouchableOpacity>
   );
@@ -42,21 +42,21 @@ export default function VendorTabsLayout() {
       style={[
         styles.currencyTriggerBtn,
         {
-          backgroundColor: isDark ? '#361300' : '#FFFFFF',
-          borderColor: isDark ? 'rgba(209, 153, 90, 0.3)' : 'rgba(196, 108, 39, 0.2)',
+          backgroundColor: isDark ? '#191919' : '#FCF4E1',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(54, 19, 0, 0.25)',
         },
       ]}
       activeOpacity={0.75}
       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
     >
       <Text style={styles.currencyFlagText}>{currentCurrency.flag}</Text>
-      <Text style={[styles.currencyCodeText, { color: isDark ? '#FFF3D6' : theme.textPrimary }]}>
+      <Text style={[styles.currencyCodeText, { color: isDark ? '#FFFFFF' : '#341B00' }]}>
         {currentCurrency.code}
       </Text>
       <Ionicons
         name="chevron-down"
-        size={11}
-        color={isDark ? '#FFD79E' : theme.primary}
+        size={12}
+        color={isDark ? '#CBD2CF' : '#341B00'}
       />
     </TouchableOpacity>
   );
@@ -73,21 +73,21 @@ export default function VendorTabsLayout() {
           headerShadowVisible: false,
           headerTintColor: theme.headerText,
           headerTitleStyle: {
-            fontFamily: FontFamily.cormorantBold,
+            fontFamily: FontFamily.headingBold,
             fontSize: 20,
-            letterSpacing: 0.2,
+            letterSpacing: -0.2,
             color: theme.headerText,
           },
           headerLeft: renderHeaderLeft,
           headerRight: renderHeaderRight,
         }}
       >
-        {/* 1. Hub */}
+        {/* 1. Dashboard */}
         <Tabs.Screen
           name="index"
           options={{
-            title: 'Artisan Hub',
-            tabBarLabel: 'Hub',
+            title: 'Dashboard',
+            tabBarLabel: 'Dashboard',
           }}
         />
 
@@ -158,40 +158,30 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   drawerTriggerBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: Radius.md,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: Spacing.md,
     borderWidth: 1,
-    shadowColor: '#C46C27',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 3,
   },
   currencyTriggerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: Radius.full,
+    borderRadius: Radius.lg,
     borderWidth: 1,
     marginRight: Spacing.md,
-    gap: 4,
-    shadowColor: '#C46C27',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 2,
+    gap: 6,
   },
   currencyFlagText: {
-    fontSize: 13,
+    fontSize: 14,
   },
   currencyCodeText: {
-    fontSize: 11.5,
-    fontFamily: FontFamily.poppinsBold,
+    fontSize: 13,
+    fontFamily: FontFamily.headingBold,
     letterSpacing: 0.3,
   },
 });
