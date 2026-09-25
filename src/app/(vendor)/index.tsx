@@ -220,7 +220,17 @@ export default function ArtisanDashboardScreen() {
         }
       >
         {/* ─── 1. HERO SECTION (FIGMA AUTHENTIC TEXTILE BACKDROP) ─── */}
-        <View style={styles.heroOuterWrap}>
+        <View
+          style={[
+            styles.heroOuterWrap,
+            {
+              borderColor: isDark
+                ? 'rgba(255, 255, 255, 0.15)'
+                : 'rgba(54, 19, 0, 0.25)',
+              backgroundColor: isDark ? '#191919' : '#1E140A',
+            },
+          ]}
+        >
           <ImageBackground
             source={isDark ? HERO_BG_DARK : HERO_BG_LIGHT}
             style={styles.heroCard}
@@ -597,16 +607,16 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: Spacing.lg,
     borderWidth: 1,
-    borderColor: 'rgba(54, 19, 0, 0.25)',
   },
   heroCard: {
-    padding: Spacing.md + 2,
+    padding: Spacing.md + 4,
     borderRadius: Radius.xl,
-    minHeight: 180,
+    minHeight: 200,
     justifyContent: 'space-between',
   },
   heroCardImage: {
     borderRadius: Radius.xl,
+    resizeMode: 'cover',
   },
   heroTopRow: {
     flexDirection: 'row',
@@ -685,7 +695,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20, // EXACT FIGMA 20px
     fontFamily: FontFamily.headingBold,
     letterSpacing: -0.3,
   },
@@ -712,7 +722,8 @@ const styles = StyleSheet.create({
     width: (SCREEN_WIDTH - Spacing.md * 2 - 10) / 2,
     height: 130, // EXACT FIGMA HEIGHT
     borderRadius: Radius.md, // 7px
-    padding: 12,
+    paddingHorizontal: 13,
+    paddingVertical: 12,
     borderWidth: 1,
     justifyContent: 'space-between',
   },
@@ -720,13 +731,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    paddingHorizontal: 7,
+    paddingHorizontal: 8,
     paddingVertical: 2.5,
+    height: 24, // EXACT FIGMA PILL HEIGHT
     borderRadius: 4,
-    gap: 5,
+    gap: 6,
   },
   kpiPillText: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontFamily: FontFamily.headingBold,
   },
   kpiValueRow: {
@@ -741,7 +753,7 @@ const styles = StyleSheet.create({
   },
   kpiSubtitleText: {
     fontSize: 12, // EXACT FIGMA SUBTITLE SIZE
-    fontFamily: FontFamily.bodyRegular,
+    fontFamily: FontFamily.headingBold, // EXACT FIGMA BOLD SUBTITLE
     color: '#808080',
     marginTop: 1,
   },
@@ -757,14 +769,15 @@ const styles = StyleSheet.create({
     height: 130, // EXACT FIGMA HEIGHT
     borderRadius: Radius.md, // 7px
     borderWidth: 1,
+    paddingTop: 22, // EXACT FIGMA TOP OFFSET
     paddingHorizontal: 4,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
   quickActionLabel: {
     fontSize: 14, // EXACT FIGMA 14px BOLD
     fontFamily: FontFamily.headingBold,
-    marginTop: 12,
+    marginTop: 24, // EXACT FIGMA 24px GAP
     textAlign: 'center',
     lineHeight: 18,
   },

@@ -162,18 +162,26 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
               transform: [{ translateX: slideAnim }],
               paddingTop: Math.max(insets.top, 24),
               paddingBottom: Math.max(insets.bottom, 16),
+              backgroundColor: isDark ? '#17120F' : theme.background,
             },
           ]}
         >
-          <LinearGradient
-            colors={theme.drawerBackgroundGradient}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
+          {!isDark && (
+            <LinearGradient
+              colors={theme.drawerBackgroundGradient}
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            />
+          )}
 
           {/* Right Edge Golden Rim */}
-          <View style={[styles.rightBorderGoldenRim, { backgroundColor: theme.drawerBorder }]} />
+          <View
+            style={[
+              styles.rightBorderGoldenRim,
+              { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.10)' : theme.drawerBorder },
+            ]}
+          />
 
           {/* Workshop Profile Header */}
           <View style={styles.profileHeader}>

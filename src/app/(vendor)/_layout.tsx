@@ -18,19 +18,13 @@ export default function VendorTabsLayout() {
   const renderHeaderLeft = () => (
     <TouchableOpacity
       onPress={() => setDrawerVisible(true)}
-      style={[
-        styles.drawerTriggerBtn,
-        {
-          backgroundColor: isDark ? '#191919' : '#FCF4E1',
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(54, 19, 0, 0.25)',
-        },
-      ]}
+      style={styles.drawerTriggerBtn}
       activeOpacity={0.75}
       hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
     >
       <Ionicons
         name="menu-outline"
-        size={22}
+        size={24}
         color={isDark ? '#FFFFFF' : '#341B00'}
       />
     </TouchableOpacity>
@@ -158,13 +152,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   drawerTriggerBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.md,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: Spacing.md,
-    borderWidth: 1,
+    padding: Spacing.xs,
   },
   currencyTriggerBtn: {
     flexDirection: 'row',
