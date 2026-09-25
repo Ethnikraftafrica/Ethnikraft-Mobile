@@ -18,6 +18,16 @@ import { FontFamily, Radius, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { useAppSelector } from '@/store';
 import { formatPrice } from '@/utils/price';
+import {
+  AddProductFigmaIcon,
+  ViewProductsFigmaIcon,
+  CustomBidsFigmaIcon,
+  PackageFigmaIcon,
+  StarFigmaIcon,
+  IncomeFigmaIcon,
+  TrendingUpFigmaIcon,
+  StarOutlineFigmaIcon,
+} from '@/components/vendor/DashboardFigmaIcons';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -80,26 +90,26 @@ export default function ArtisanDashboardScreen() {
             title: "Today's Revenue",
             value: formatPrice(85000, currencyCode, exchangeRate),
             badge: '+12.5% vs yesterday',
-            icon: 'cash-outline',
+            type: 'revenue' as const,
           },
           {
             title: 'Orders in Studio',
             value: '2 Orders',
             badge: '1 ready to ship',
-            icon: 'cube-outline',
+            type: 'orders' as const,
           },
           {
             title: 'Custom Requests',
             value: '2 Inquiries',
             badge: '1 new quote',
-            icon: 'document-text-outline',
+            type: 'requests' as const,
           },
           {
             title: 'Your rating',
             value: '4.98',
             hasStar: true,
             badge: '18 Reviews',
-            icon: 'star-outline',
+            type: 'rating' as const,
           },
         ];
       case 'this_month':
@@ -108,56 +118,29 @@ export default function ArtisanDashboardScreen() {
             title: 'Monthly Revenue',
             value: formatPrice(2850000, currencyCode, exchangeRate),
             badge: '+24.2% vs last month',
-            icon: 'cash-outline',
+            type: 'revenue' as const,
           },
           {
             title: 'Orders in Studio',
             value: '24 Orders',
             badge: '8 due this week',
-            icon: 'cube-outline',
+            type: 'orders' as const,
           },
           {
             title: 'Custom Requests',
             value: '14 Inquiries',
             badge: '6 pending quotes',
-            icon: 'document-text-outline',
+            type: 'requests' as const,
           },
           {
             title: 'Your rating',
             value: '4.95',
             hasStar: true,
             badge: '380 Reviews',
-            icon: 'star-outline',
+            type: 'rating' as const,
           },
         ];
       case 'this_week':
-        return [
-          {
-            title: 'Weekly Revenue',
-            value: currencyCode === 'GBP' ? '£ 698.95' : formatPrice(698.95 * 1800, currencyCode, exchangeRate),
-            badge: '+18.4% vs last week',
-            icon: 'cash-outline',
-          },
-          {
-            title: 'Orders in Studio',
-            value: '6 Orders',
-            badge: '3 due for shipping',
-            icon: 'cube-outline',
-          },
-          {
-            title: 'Custom Requests',
-            value: '5 Inquiries',
-            badge: '3 pending quotes',
-            icon: 'document-text-outline',
-          },
-          {
-            title: 'Your rating',
-            value: '4.96',
-            hasStar: true,
-            badge: '142 Reviews',
-            icon: 'star-outline',
-          },
-        ];
       case 'all_time':
       default:
         return [
@@ -165,26 +148,26 @@ export default function ArtisanDashboardScreen() {
             title: 'Weekly Revenue',
             value: currencyCode === 'GBP' ? '£ 698.95' : formatPrice(698.95 * 1800, currencyCode, exchangeRate),
             badge: '+18.4% vs last week',
-            icon: 'cash-outline',
+            type: 'revenue' as const,
           },
           {
             title: 'Orders in Studio',
             value: '6 Orders',
             badge: '3 due for shipping',
-            icon: 'cube-outline',
+            type: 'orders' as const,
           },
           {
             title: 'Custom Requests',
             value: '5 Inquiries',
             badge: '3 pending quotes',
-            icon: 'document-text-outline',
+            type: 'requests' as const,
           },
           {
             title: 'Your rating',
             value: '4.96',
             hasStar: true,
             badge: '142 Reviews',
-            icon: 'star-outline',
+            type: 'rating' as const,
           },
         ];
     }
@@ -262,8 +245,14 @@ export default function ArtisanDashboardScreen() {
                   {vendor?.businessName || "Greywolf's stiches"}
                 </Text>
                 <View style={styles.categoryPillsRow}>
-                  {['Wears', 'Accessories', 'Crafts'].map((tag) => (
-                    <View key={tag} style={styles.categoryPill}>
+                  {['Wears', 'Accessories', 'Crafts'].map((tag, idx) => (
+                    <View
+                      key={tag}
+                      style={[
+                        styles.categoryPill,
+                        idx > 0 && { opacity: 0.61 },
+                      ]}
+                    >
                       <Text style={styles.categoryPillText}>{tag}</Text>
                     </View>
                   ))}
@@ -324,7 +313,7 @@ export default function ArtisanDashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 2x2 Metric Cards Grid */}
+        {/* 2x2 Metric Cards Grid (Figma 183x130, 7px radius) */}
         <View style={styles.kpiGrid}>
           {getKpiData().map((kpi) => (
             <View
@@ -338,9 +327,34 @@ export default function ArtisanDashboardScreen() {
               ]}
             >
               {/* Top Pill Badge */}
-              <View style={styles.kpiPillBadge}>
-                <Ionicons name={kpi.icon as any} size={11} color={theme.success} />
-                <Text style={[styles.kpiPillText, { color: theme.success }]}>
+              <View
+                style={[
+                  styles.kpiPillBadge,
+                  {
+                    backgroundColor: isDark
+                      ? 'rgba(10, 210, 79, 0.12)'
+                      : 'rgba(0, 157, 26, 0.08)',
+                  },
+                ]}
+              >
+                {kpi.type === 'revenue' && (
+                  <TrendingUpFigmaIcon size={6} color={isDark ? '#0AD24F' : '#009D1A'} />
+                )}
+                {kpi.type === 'orders' && (
+                  <PackageFigmaIcon size={12} color={isDark ? '#0AD24F' : '#009D1A'} />
+                )}
+                {kpi.type === 'requests' && (
+                  <IncomeFigmaIcon size={12} color={isDark ? '#0AD24F' : '#009D1A'} />
+                )}
+                {kpi.type === 'rating' && (
+                  <StarOutlineFigmaIcon size={11} color={isDark ? '#0AD24F' : '#009D1A'} />
+                )}
+                <Text
+                  style={[
+                    styles.kpiPillText,
+                    { color: isDark ? '#0AD24F' : '#009D1A' },
+                  ]}
+                >
                   {kpi.badge}
                 </Text>
               </View>
@@ -351,11 +365,10 @@ export default function ArtisanDashboardScreen() {
                   {kpi.value}
                 </Text>
                 {kpi.hasStar && (
-                  <Ionicons
-                    name="star"
-                    size={16}
+                  <StarFigmaIcon
+                    size={18}
                     color="#C46C27"
-                    style={{ marginLeft: 4, marginTop: 4 }}
+                    style={{ marginLeft: 5, marginBottom: 2 }}
                   />
                 )}
               </View>
@@ -366,7 +379,7 @@ export default function ArtisanDashboardScreen() {
           ))}
         </View>
 
-        {/* ─── 3. THREE QUICK ACTION CARDS ─────────────────────── */}
+        {/* ─── 3. THREE QUICK ACTION CARDS (FIGMA 130px HEIGHT, 32px ICONS) ─── */}
         <View style={styles.quickActionsRow}>
           {/* Action 1: Add a Product */}
           <TouchableOpacity
@@ -380,7 +393,7 @@ export default function ArtisanDashboardScreen() {
             onPress={() => handleNavigate('/(vendor)/catalog')}
             activeOpacity={0.8}
           >
-            <Ionicons name="add-circle-outline" size={24} color="#C46C27" />
+            <AddProductFigmaIcon size={32} color="#C46C27" />
             <Text style={[styles.quickActionLabel, { color: theme.textPrimary }]}>
               Add a Product
             </Text>
@@ -398,7 +411,7 @@ export default function ArtisanDashboardScreen() {
             onPress={() => handleNavigate('/(vendor)/catalog')}
             activeOpacity={0.8}
           >
-            <Ionicons name="eye" size={24} color="#D27451" />
+            <ViewProductsFigmaIcon size={32} color="#D27451" />
             <Text style={[styles.quickActionLabel, { color: theme.textPrimary }]}>
               View Products
             </Text>
@@ -416,14 +429,14 @@ export default function ArtisanDashboardScreen() {
             onPress={() => handleNavigate('/(vendor)/requests')}
             activeOpacity={0.8}
           >
-            <Ionicons name="brush-outline" size={24} color="#556B2F" />
+            <CustomBidsFigmaIcon size={32} color="#556B2F" />
             <Text style={[styles.quickActionLabel, { color: theme.textPrimary }]}>
               Custom Bids
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* ─── 4. STUDIO ORDERS SECTION ────────────────────────── */}
+        {/* ─── 4. STUDIO ORDERS SECTION (FIGMA FRAME 2454 & 2455) ─── */}
         <View style={styles.ordersHeaderRow}>
           <View style={styles.ordersTitleGroup}>
             <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
@@ -433,19 +446,10 @@ export default function ArtisanDashboardScreen() {
               <Text style={styles.orderCountBadgeText}>{recentOrders.length}</Text>
             </View>
           </View>
-
-          <TouchableOpacity
-            onPress={() => handleNavigate('/(vendor)/orders')}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.showAllLink, { color: theme.primaryLight }]}>
-              Show all →
-            </Text>
-          </TouchableOpacity>
         </View>
 
-        {/* Studio Orders Container Card (7px radius) */}
-        <View
+        {/* Studio Orders Container Card (170px height, 7px radius) */}
+        <TouchableOpacity
           style={[
             styles.ordersContainerBox,
             {
@@ -453,19 +457,19 @@ export default function ArtisanDashboardScreen() {
               borderColor: theme.border,
             },
           ]}
+          onPress={() => handleNavigate('/(vendor)/orders')}
+          activeOpacity={0.85}
         >
-          {recentOrders.map((order, index) => (
-            <TouchableOpacity
+          {recentOrders.slice(0, 2).map((order, index) => (
+            <View
               key={order.id}
               style={[
                 styles.orderItemRow,
-                index < recentOrders.length - 1 && {
+                index === 0 && {
                   borderBottomWidth: 1,
                   borderBottomColor: theme.borderSubtle,
                 },
               ]}
-              onPress={() => handleNavigate('/(vendor)/orders')}
-              activeOpacity={0.8}
             >
               <View style={styles.orderItemLeft}>
                 <View style={styles.orderIdStatusRow}>
@@ -510,9 +514,9 @@ export default function ArtisanDashboardScreen() {
                 size={16}
                 color={theme.textMuted}
               />
-            </TouchableOpacity>
+            </View>
           ))}
-        </View>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* ─── TIME RANGE PICKER MODAL ─────────────────────────── */}
@@ -723,64 +727,66 @@ const styles = StyleSheet.create({
   },
   kpiCard: {
     width: (SCREEN_WIDTH - Spacing.md * 2 - 10) / 2,
+    height: 130, // EXACT FIGMA HEIGHT
     borderRadius: Radius.md, // 7px
-    padding: Spacing.sm + 4,
+    padding: 12,
     borderWidth: 1,
+    justifyContent: 'space-between',
   },
   kpiPillBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255, 255, 255, 0.35)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
     borderRadius: 4,
-    gap: 4,
+    gap: 5,
   },
   kpiPillText: {
-    fontSize: 10,
+    fontSize: 10.5,
     fontFamily: FontFamily.headingBold,
   },
   kpiValueRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 2,
   },
   kpiValueText: {
-    fontSize: 22,
+    fontSize: 24, // EXACT FIGMA VALUE SIZE
     fontFamily: FontFamily.headingBold,
     letterSpacing: -0.4,
   },
   kpiSubtitleText: {
-    fontSize: 11.5,
-    fontFamily: FontFamily.headingBold,
+    fontSize: 12, // EXACT FIGMA SUBTITLE SIZE
+    fontFamily: FontFamily.bodyRegular,
     color: '#808080',
-    marginTop: 2,
+    marginTop: 1,
   },
 
-  // ─── 3. THREE QUICK ACTION CARDS ────────────────────────────
+  // ─── 3. THREE QUICK ACTION CARDS (FIGMA 130px HEIGHT) ────────
   quickActionsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
     marginBottom: Spacing.lg,
   },
   quickActionCard: {
     flex: 1,
+    height: 130, // EXACT FIGMA HEIGHT
     borderRadius: Radius.md, // 7px
     borderWidth: 1,
-    paddingVertical: 14,
     paddingHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },
   quickActionLabel: {
-    fontSize: 12,
+    fontSize: 14, // EXACT FIGMA 14px BOLD
     fontFamily: FontFamily.headingBold,
-    marginTop: 8,
+    marginTop: 12,
     textAlign: 'center',
+    lineHeight: 18,
   },
 
-  // ─── 4. STUDIO ORDERS SECTION ───────────────────────────────
+  // ─── 4. STUDIO ORDERS SECTION (FIGMA 170px HEIGHT) ───────────
   ordersHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -793,9 +799,9 @@ const styles = StyleSheet.create({
   },
   orderCountBadge: {
     backgroundColor: '#C46C27',
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 6,
@@ -805,14 +811,12 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.headingBold,
     color: '#FFFFFF',
   },
-  showAllLink: {
-    fontSize: 12,
-    fontFamily: FontFamily.headingBold,
-  },
   ordersContainerBox: {
+    height: 170, // EXACT FIGMA HEIGHT
     borderRadius: Radius.md, // 7px
     borderWidth: 1,
     padding: Spacing.sm,
+    justifyContent: 'space-around',
   },
   orderItemRow: {
     flexDirection: 'row',

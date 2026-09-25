@@ -96,11 +96,7 @@ function RootNavigation() {
   }, [isHydrated, fontsLoaded]);
 
   if (!isHydrated || !fontsLoaded) {
-    return (
-      <View style={{ flex: 1, backgroundColor: '#FAF6F0' }}>
-        <Stack screenOptions={{ headerShown: false }} />
-      </View>
-    );
+    return null;
   }
 
   return (

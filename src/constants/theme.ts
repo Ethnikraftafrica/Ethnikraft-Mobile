@@ -124,7 +124,7 @@ export const DarkTheme: ThemeColors = {
   navInactiveIcon: '#808080',
   headerBackground: '#17120F',
   headerText: '#FFFFFF',
-  drawerBackgroundGradient: ['#1E1916', '#17120F', '#120E0C'],
+  drawerBackgroundGradient: ['#17120F', '#17120F', '#17120F'],
   drawerBorder: 'rgba(255, 255, 255, 0.12)',
   success: '#0AD24F',
   danger: '#C92929',

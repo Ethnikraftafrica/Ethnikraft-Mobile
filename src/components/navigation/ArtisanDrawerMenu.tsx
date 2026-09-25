@@ -182,15 +182,15 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
                 style={[
                   styles.avatarCircle,
                   {
-                    backgroundColor: isDark ? '#361300' : '#FFFFFF',
-                    borderColor: theme.primary,
+                    backgroundColor: isDark ? '#191919' : '#FCF4E1',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : theme.primary,
                   },
                 ]}
               >
                 <Ionicons
                   name="storefront"
                   size={26}
-                  color={isDark ? '#FFD79E' : theme.primary}
+                  color={isDark ? '#FFFFFF' : theme.primary}
                 />
               </View>
               <View style={styles.verifiedBadge}>
@@ -211,21 +211,21 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
                 style={[
                   styles.tierPill,
                   {
-                    backgroundColor: isDark ? 'rgba(196, 108, 39, 0.25)' : '#FEF3C7',
-                    borderColor: theme.primary,
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#FEF3C7',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : theme.primary,
                   },
                 ]}
               >
                 <Ionicons
                   name="shield-checkmark"
                   size={11}
-                  color={isDark ? '#FFD79E' : theme.primary}
+                  color={isDark ? '#CBD2CF' : theme.primary}
                   style={{ marginRight: 4 }}
                 />
                 <Text
                   style={[
                     styles.tierPillText,
-                    { color: isDark ? '#FFD79E' : theme.primary },
+                    { color: isDark ? '#FFFFFF' : theme.primary },
                   ]}
                 >
                   {vendor?.status === 'APPROVED' ? 'MASTER ARTISAN' : 'VERIFIED ARTISAN'}
@@ -256,7 +256,7 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
                       styles.menuItemActive,
                       {
                         backgroundColor: isDark
-                          ? 'rgba(196, 108, 39, 0.18)'
+                          ? 'rgba(255, 255, 255, 0.08)'
                           : 'rgba(196, 108, 39, 0.12)',
                         borderColor: theme.borderSubtle,
                       },
@@ -270,12 +270,12 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
                       styles.menuIconCircle,
                       {
                         backgroundColor: isDark
-                          ? 'rgba(54, 19, 0, 0.5)'
+                          ? 'rgba(255, 255, 255, 0.06)'
                           : '#FFFFFF',
                         borderColor: theme.borderSubtle,
                       },
                       isSelected && {
-                        backgroundColor: isDark ? '#361300' : '#FEF3C7',
+                        backgroundColor: isDark ? '#191919' : '#FEF3C7',
                         borderColor: theme.primary,
                       },
                     ]}
@@ -319,7 +319,7 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
           {/* Theme Mode Selector Pill */}
           <View style={styles.themeSelectorRow}>
             <Text style={[styles.themeLabel, { color: theme.textMuted }]}>APPEARANCE</Text>
-            <View style={[styles.themePillContainer, { backgroundColor: isDark ? '#1F0E04' : '#EFE1C3' }]}>
+            <View style={[styles.themePillContainer, { backgroundColor: isDark ? '#191919' : '#EFE1C3' }]}>
               <TouchableOpacity
                 style={[styles.themeSegment, mode === 'light' && styles.themeSegmentActive]}
                 onPress={() => handleSelectTheme('light')}
@@ -385,7 +385,7 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
           {/* Currency Selector Pill */}
           <View style={[styles.themeSelectorRow, { marginTop: 8 }]}>
             <Text style={[styles.themeLabel, { color: theme.textMuted }]}>CURRENCY</Text>
-            <View style={[styles.themePillContainer, { backgroundColor: isDark ? '#1F0E04' : '#EFE1C3' }]}>
+            <View style={[styles.themePillContainer, { backgroundColor: isDark ? '#191919' : '#EFE1C3' }]}>
               {Object.values(SUPPORTED_CURRENCIES).map((c) => {
                 const isSelected = currentCurrency.code === c.code;
                 return (
