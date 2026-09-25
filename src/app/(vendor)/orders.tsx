@@ -834,6 +834,7 @@ export default function VendorOrdersScreen() {
         animationType="slide"
         presentationStyle="pageSheet"
         onRequestClose={() => setDetailModalVisible(false)}
+        statusBarTranslucent
       >
         <View style={[styles.modalBackdrop, { backgroundColor: theme.background }]}>
           {/* Header */}
@@ -1063,6 +1064,7 @@ export default function VendorOrdersScreen() {
         transparent
         animationType="slide"
         onRequestClose={() => setStatusModalVisible(false)}
+        statusBarTranslucent
       >
         <View style={styles.backdropDimBottom}>
           <View
@@ -1169,6 +1171,7 @@ export default function VendorOrdersScreen() {
         transparent
         animationType="fade"
         onRequestClose={() => setTrackingModalVisible(false)}
+        statusBarTranslucent
       >
         <View style={styles.backdropDim}>
           <View

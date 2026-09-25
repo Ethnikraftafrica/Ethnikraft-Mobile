@@ -936,6 +936,7 @@ export default function VendorCatalogScreen() {
         animationType="slide"
         presentationStyle="pageSheet"
         onRequestClose={() => setFormModalVisible(false)}
+        statusBarTranslucent
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -1439,6 +1440,7 @@ export default function VendorCatalogScreen() {
         transparent
         animationType="fade"
         onRequestClose={() => setStockModalVisible(false)}
+        statusBarTranslucent
       >
         <View style={styles.backdropDim}>
           <View style={[styles.stepperModalCard, { backgroundColor: isDark ? '#1F0E04' : '#FFFFFF', borderColor: theme.primary }]}>
@@ -1534,6 +1536,7 @@ export default function VendorCatalogScreen() {
         transparent
         animationType="fade"
         onRequestClose={() => setDeleteModalVisible(false)}
+        statusBarTranslucent
       >
         <View style={styles.backdropDim}>
           <View style={[styles.deleteModalCard, { backgroundColor: isDark ? '#1F0E04' : '#FFFFFF', borderColor: '#EF4444' }]}>
@@ -1571,6 +1574,7 @@ export default function VendorCatalogScreen() {
         transparent
         animationType="slide"
         onRequestClose={() => setFilterModalVisible(false)}
+        statusBarTranslucent
       >
         <View style={styles.backdropDimBottom}>
           <View style={[styles.filterSheetCard, { backgroundColor: isDark ? '#1F0E04' : '#FFFFFF' }]}>
@@ -1708,6 +1712,7 @@ export default function VendorCatalogScreen() {
         presentationStyle="pageSheet"
         animationType="slide"
         onRequestClose={() => setPreviewModalVisible(false)}
+        statusBarTranslucent
       >
         <View style={[styles.modalBackdrop, { backgroundColor: theme.background }]}>
           <View style={[styles.modalHeader, { borderBottomColor: theme.borderSubtle, backgroundColor: isDark ? '#1F0E04' : '#FFFFFF' }]}>

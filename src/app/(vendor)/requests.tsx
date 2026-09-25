@@ -784,6 +784,7 @@ export default function VendorRequestsScreen() {
         animationType="slide"
         presentationStyle="pageSheet"
         onRequestClose={() => setInspectModalVisible(false)}
+        statusBarTranslucent
       >
         <View style={[styles.modalBackdrop, { backgroundColor: theme.background }]}>
           {/* Header */}
@@ -962,6 +963,7 @@ export default function VendorRequestsScreen() {
         animationType="slide"
         presentationStyle="pageSheet"
         onRequestClose={() => setBidModalVisible(false)}
+        statusBarTranslucent
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -1235,6 +1237,7 @@ export default function VendorRequestsScreen() {
         transparent
         animationType="fade"
         onRequestClose={() => setRejectModalVisible(false)}
+        statusBarTranslucent
       >
         <View style={styles.backdropDim}>
           <View
@@ -1314,6 +1317,7 @@ export default function VendorRequestsScreen() {
         transparent
         animationType="fade"
         onRequestClose={() => setLightboxVisible(false)}
+        statusBarTranslucent
       >
         <View style={styles.lightboxBackdrop}>
           <TouchableOpacity
@@ -1333,7 +1337,7 @@ export default function VendorRequestsScreen() {
           CELEBRATION SPLASH MODAL
       ══════════════════════════════════════════════════════════════════════ */}
       {showCelebration && (
-        <Modal transparent animationType="fade" visible={showCelebration}>
+        <Modal transparent animationType="fade" visible={showCelebration} statusBarTranslucent>
           <View style={styles.celebrationBackdrop}>
             <View style={[styles.celebrationCard, { backgroundColor: isDark ? '#1F0E04' : '#FFFFFF' }]}>
               <View style={styles.celebrationIconBox}>

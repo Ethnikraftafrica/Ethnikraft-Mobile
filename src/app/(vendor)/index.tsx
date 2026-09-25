@@ -519,6 +519,7 @@ export default function ArtisanDashboardScreen() {
         transparent
         animationType="fade"
         onRequestClose={() => setRangeModalVisible(false)}
+        statusBarTranslucent
       >
         <TouchableOpacity
           style={styles.modalOverlay}
