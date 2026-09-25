@@ -7,9 +7,11 @@ import { Colors } from '@/constants/theme';
 export default function IndexGateway() {
   const router = useRouter();
   const auth = useAppSelector((state) => state.auth);
-  const { activeRole, isAuthenticated, vendor } = auth;
+  const { activeRole, isAuthenticated, vendor, isHydrated } = auth;
 
   useEffect(() => {
+    if (!isHydrated) return;
+
     const timer = setTimeout(() => {
       if (!isAuthenticated) {
         router.replace('/(user)');
@@ -50,7 +52,7 @@ export default function IndexGateway() {
     }, 10);
 
     return () => clearTimeout(timer);
-  }, [activeRole, isAuthenticated, vendor, router]);
+  }, [activeRole, isAuthenticated, vendor, isHydrated, router]);
 
   return (
     <View style={styles.container}>

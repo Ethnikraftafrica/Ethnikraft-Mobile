@@ -95,9 +95,6 @@ function RootNavigation() {
     }
   }, [isHydrated, fontsLoaded]);
 
-  if (!isHydrated || !fontsLoaded) {
-    return null;
-  }
 
   return (
     <>
@@ -122,7 +119,7 @@ function RootNavigation() {
           }}
         />
       </Stack>
-      <GlobalCartCheckoutModals />
+      {isHydrated && fontsLoaded && <GlobalCartCheckoutModals />}
     </>
   );
 }
