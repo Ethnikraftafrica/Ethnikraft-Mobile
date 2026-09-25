@@ -220,17 +220,7 @@ export default function ArtisanDashboardScreen() {
         }
       >
         {/* ─── 1. HERO SECTION (FIGMA AUTHENTIC TEXTILE BACKDROP) ─── */}
-        <View
-          style={[
-            styles.heroOuterWrap,
-            {
-              borderColor: isDark
-                ? 'rgba(255, 255, 255, 0.15)'
-                : 'rgba(54, 19, 0, 0.25)',
-              backgroundColor: '#1E140A',
-            },
-          ]}
-        >
+        <View style={styles.heroOuterWrap}>
           <ImageBackground
             source={isDark ? HERO_BG_DARK : HERO_BG_LIGHT}
             style={styles.heroCard}
@@ -245,14 +235,8 @@ export default function ArtisanDashboardScreen() {
                   {vendor?.businessName || "Greywolf's stiches"}
                 </Text>
                 <View style={styles.categoryPillsRow}>
-                  {['Wears', 'Accessories', 'Crafts'].map((tag, idx) => (
-                    <View
-                      key={tag}
-                      style={[
-                        styles.categoryPill,
-                        idx > 0 && { opacity: 0.61 },
-                      ]}
-                    >
+                  {['Wears', 'Accessories', 'Crafts'].map((tag) => (
+                    <View key={tag} style={styles.categoryPill}>
                       <Text style={styles.categoryPillText}>{tag}</Text>
                     </View>
                   ))}
@@ -613,17 +597,16 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: Spacing.lg,
     borderWidth: 1,
+    borderColor: 'rgba(54, 19, 0, 0.25)',
   },
   heroCard: {
-    width: '100%',
     padding: Spacing.md + 2,
     borderRadius: Radius.xl,
-    minHeight: 185,
+    minHeight: 180,
     justifyContent: 'space-between',
   },
   heroCardImage: {
     borderRadius: Radius.xl,
-    resizeMode: 'cover',
   },
   heroTopRow: {
     flexDirection: 'row',
