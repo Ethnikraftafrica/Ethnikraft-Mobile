@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   Image,
-  ImageBackground,
   Dimensions,
   Modal,
 } from 'react-native';
@@ -231,12 +230,12 @@ export default function ArtisanDashboardScreen() {
             },
           ]}
         >
-          <ImageBackground
+          <Image
             source={isDark ? HERO_BG_DARK : HERO_BG_LIGHT}
-            style={styles.heroCard}
-            imageStyle={styles.heroCardImage}
+            style={styles.heroBackgroundImage}
             resizeMode="cover"
-          >
+          />
+          <View style={styles.heroCard}>
             {/* Top Row: Avatar + Store Name + Category Pills */}
             <View style={styles.heroTopRow}>
               <Image source={AVATAR_DEFAULT} style={styles.artisanAvatar} />
@@ -256,7 +255,7 @@ export default function ArtisanDashboardScreen() {
 
             {/* Middle: Welcome Greeting & Quote */}
             <Text style={styles.heroGreetingText}>
-              Welcome back, {user?.firstName || 'Jackie'}!
+              Welcome back, {user?.firstName || 'Kwame'}!
             </Text>
             <Text style={styles.heroQuoteText}>
               &ldquo;Your hands don&rsquo;t just create - that inspire... Lets create something amazing today&rdquo;
@@ -279,7 +278,7 @@ export default function ArtisanDashboardScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
-          </ImageBackground>
+          </View>
         </View>
 
         {/* ─── 2. WORKSHOP PERFORMANCE HEADER & 2x2 METRICS GRID ─── */}
@@ -608,6 +607,18 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: Spacing.lg,
     borderWidth: 1,
+    position: 'relative',
+  },
+  heroBackgroundImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    borderRadius: Radius.xl,
+    resizeMode: 'cover',
   },
   heroCard: {
     width: '100%',
@@ -615,10 +626,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.xl,
     minHeight: 200,
     justifyContent: 'space-between',
-  },
-  heroCardImage: {
-    borderRadius: Radius.xl,
-    resizeMode: 'cover',
   },
   heroTopRow: {
     flexDirection: 'row',
