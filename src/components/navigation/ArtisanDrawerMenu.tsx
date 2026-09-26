@@ -162,7 +162,7 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
               transform: [{ translateX: slideAnim }],
               paddingTop: Math.max(insets.top, 24),
               paddingBottom: Math.max(insets.bottom, 16),
-              backgroundColor: isDark ? '#17120F' : theme.background,
+              backgroundColor: isDark ? theme.card : theme.background,
             },
           ]}
         >
@@ -190,15 +190,15 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
                 style={[
                   styles.avatarCircle,
                   {
-                    backgroundColor: isDark ? '#191919' : '#FCF4E1',
-                    borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : theme.primary,
+                    backgroundColor: isDark ? 'rgba(196, 108, 39, 0.18)' : '#FCF4E1',
+                    borderColor: isDark ? 'rgba(196, 108, 39, 0.45)' : theme.primary,
                   },
                 ]}
               >
                 <Ionicons
                   name="storefront"
                   size={26}
-                  color={isDark ? '#FFFFFF' : theme.primary}
+                  color={isDark ? '#D1995A' : theme.primary}
                 />
               </View>
               <View style={styles.verifiedBadge}>
@@ -283,7 +283,7 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
                         borderColor: theme.borderSubtle,
                       },
                       isSelected && {
-                        backgroundColor: isDark ? '#191919' : '#FEF3C7',
+                        backgroundColor: isDark ? 'rgba(196, 108, 39, 0.22)' : '#FEF3C7',
                         borderColor: theme.primary,
                       },
                     ]}
@@ -327,7 +327,16 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
           {/* Theme Mode Selector Pill */}
           <View style={styles.themeSelectorRow}>
             <Text style={[styles.themeLabel, { color: theme.textMuted }]}>APPEARANCE</Text>
-            <View style={[styles.themePillContainer, { backgroundColor: isDark ? '#191919' : '#EFE1C3' }]}>
+            <View
+              style={[
+                styles.themePillContainer,
+                {
+                  backgroundColor: isDark ? '#120E0C' : '#EFE1C3',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(54, 19, 0, 0.10)',
+                  borderWidth: 1,
+                },
+              ]}
+            >
               <TouchableOpacity
                 style={[styles.themeSegment, mode === 'light' && styles.themeSegmentActive]}
                 onPress={() => handleSelectTheme('light')}
@@ -393,7 +402,16 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
           {/* Currency Selector Pill */}
           <View style={[styles.themeSelectorRow, { marginTop: 8 }]}>
             <Text style={[styles.themeLabel, { color: theme.textMuted }]}>CURRENCY</Text>
-            <View style={[styles.themePillContainer, { backgroundColor: isDark ? '#191919' : '#EFE1C3' }]}>
+            <View
+              style={[
+                styles.themePillContainer,
+                {
+                  backgroundColor: isDark ? '#120E0C' : '#EFE1C3',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(54, 19, 0, 0.10)',
+                  borderWidth: 1,
+                },
+              ]}
+            >
               {Object.values(SUPPORTED_CURRENCIES).map((c) => {
                 const isSelected = currentCurrency.code === c.code;
                 return (
