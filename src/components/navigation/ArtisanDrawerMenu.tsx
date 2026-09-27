@@ -331,71 +331,63 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
               style={[
                 styles.themePillContainer,
                 {
-                  backgroundColor: isDark ? '#120E0C' : '#EFE1C3',
+                  backgroundColor: isDark ? '#14100E' : '#EFE1C3',
                   borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(54, 19, 0, 0.10)',
                   borderWidth: 1,
                 },
               ]}
             >
-              <TouchableOpacity
-                style={[styles.themeSegment, mode === 'light' && styles.themeSegmentActive]}
-                onPress={() => handleSelectTheme('light')}
-                activeOpacity={0.75}
-              >
-                <Ionicons
-                  name="sunny"
-                  size={14}
-                  color={mode === 'light' ? '#FFFFFF' : theme.textMuted}
-                />
-                <Text
-                  style={[
-                    styles.themeSegmentText,
-                    { color: mode === 'light' ? '#FFFFFF' : theme.textMuted },
-                  ]}
-                >
-                  Light
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.themeSegment, mode === 'dark' && styles.themeSegmentActive]}
-                onPress={() => handleSelectTheme('dark')}
-                activeOpacity={0.75}
-              >
-                <Ionicons
-                  name="moon"
-                  size={13}
-                  color={mode === 'dark' ? '#FFFFFF' : theme.textMuted}
-                />
-                <Text
-                  style={[
-                    styles.themeSegmentText,
-                    { color: mode === 'dark' ? '#FFFFFF' : theme.textMuted },
-                  ]}
-                >
-                  Dark
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.themeSegment, mode === 'system' && styles.themeSegmentActive]}
-                onPress={() => handleSelectTheme('system')}
-                activeOpacity={0.75}
-              >
-                <Ionicons
-                  name="phone-portrait-outline"
-                  size={13}
-                  color={mode === 'system' ? '#FFFFFF' : theme.textMuted}
-                />
-                <Text
-                  style={[
-                    styles.themeSegmentText,
-                    { color: mode === 'system' ? '#FFFFFF' : theme.textMuted },
-                  ]}
-                >
-                  Auto
-                </Text>
-              </TouchableOpacity>
+              {[
+                { key: 'light', label: 'Light', icon: 'sunny' },
+                { key: 'dark', label: 'Dark', icon: 'moon' },
+                { key: 'system', label: 'Auto', icon: 'phone-portrait-outline' },
+              ].map((seg) => {
+                const isActive = mode === seg.key;
+                return (
+                  <TouchableOpacity
+                    key={seg.key}
+                    style={[
+                      styles.themeSegment,
+                      isActive && [
+                        styles.themeSegmentActive,
+                        {
+                          backgroundColor: isDark ? '#2A201A' : '#FFFFFF',
+                          borderColor: isDark ? 'rgba(209, 153, 90, 0.35)' : 'rgba(54, 19, 0, 0.12)',
+                          borderWidth: 1,
+                        },
+                      ],
+                    ]}
+                    onPress={() => handleSelectTheme(seg.key as ThemeMode)}
+                    activeOpacity={0.75}
+                  >
+                    <Ionicons
+                      name={seg.icon as any}
+                      size={seg.key === 'light' ? 14 : 13}
+                      color={
+                        isActive
+                          ? isDark
+                            ? '#D1995A'
+                            : '#361300'
+                          : theme.textMuted
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.themeSegmentText,
+                        {
+                          color: isActive
+                            ? isDark
+                              ? '#FFD79E'
+                              : '#361300'
+                            : theme.textMuted,
+                        },
+                      ]}
+                    >
+                      {seg.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
 
@@ -406,7 +398,7 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
               style={[
                 styles.themePillContainer,
                 {
-                  backgroundColor: isDark ? '#120E0C' : '#EFE1C3',
+                  backgroundColor: isDark ? '#14100E' : '#EFE1C3',
                   borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(54, 19, 0, 0.10)',
                   borderWidth: 1,
                 },
@@ -419,7 +411,14 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
                     key={c.code}
                     style={[
                       styles.currencySegment,
-                      isSelected && styles.themeSegmentActive,
+                      isSelected && [
+                        styles.themeSegmentActive,
+                        {
+                          backgroundColor: isDark ? '#2A201A' : '#FFFFFF',
+                          borderColor: isDark ? 'rgba(209, 153, 90, 0.35)' : 'rgba(54, 19, 0, 0.12)',
+                          borderWidth: 1,
+                        },
+                      ],
                     ]}
                     onPress={() => {
                       Haptics.selectionAsync();
@@ -431,7 +430,13 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
                     <Text
                       style={[
                         styles.themeSegmentText,
-                        { color: isSelected ? '#FFFFFF' : theme.textMuted },
+                        {
+                          color: isSelected
+                            ? isDark
+                              ? '#FFD79E'
+                              : '#361300'
+                            : theme.textMuted,
+                        },
                       ]}
                     >
                       {c.code}
@@ -446,12 +451,31 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
           <View style={styles.footerActions}>
             {/* Switch to Customer Mode */}
             <TouchableOpacity
-              style={styles.customerSwitchBtn}
+              style={[
+                styles.customerSwitchBtn,
+                {
+                  backgroundColor: isDark ? '#241D17' : '#FCF4E1',
+                  borderColor: isDark ? 'rgba(209, 153, 90, 0.40)' : 'rgba(102, 37, 2, 0.25)',
+                  shadowColor: isDark ? '#000000' : 'rgba(54, 19, 0, 0.10)',
+                },
+              ]}
               onPress={handleSwitchToCustomerMode}
               activeOpacity={0.8}
             >
-              <Ionicons name="bag-handle-outline" size={17} color="#FFF3D6" style={{ marginRight: 8 }} />
-              <Text style={styles.customerSwitchText}>Switch to Customer Mode</Text>
+              <Ionicons
+                name="bag-handle-outline"
+                size={17}
+                color={isDark ? '#D1995A' : '#662502'}
+                style={{ marginRight: 8 }}
+              />
+              <Text
+                style={[
+                  styles.customerSwitchText,
+                  { color: isDark ? '#FFF3D6' : '#341B00' },
+                ]}
+              >
+                Switch to Customer Mode
+              </Text>
             </TouchableOpacity>
 
             {/* Logout */}
@@ -461,7 +485,14 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
               activeOpacity={0.7}
             >
               <Ionicons name="log-out-outline" size={17} color="#C92929" style={{ marginRight: 6 }} />
-              <Text style={styles.signOutText}>Logout</Text>
+              <Text
+                style={[
+                  styles.signOutText,
+                  { color: isDark ? '#E57373' : '#C92929' },
+                ]}
+              >
+                Logout
+              </Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -631,7 +662,11 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   themeSegmentActive: {
-    backgroundColor: '#C46C27',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
   },
   themeSegmentText: {
     fontSize: 11,
@@ -658,21 +693,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#C46C27',
     paddingVertical: 11,
     borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: 'rgba(255, 215, 158, 0.45)',
-    shadowColor: '#C46C27',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 3,
   },
   customerSwitchText: {
     fontSize: 12,
     fontFamily: FontFamily.poppinsBold,
-    color: '#FFF3D6',
   },
   signOutBtn: {
     flexDirection: 'row',
@@ -683,6 +714,5 @@ const styles = StyleSheet.create({
   signOutText: {
     fontSize: 11,
     fontFamily: FontFamily.poppinsMedium,
-    color: '#C92929',
   },
 });
