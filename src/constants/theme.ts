@@ -54,7 +54,10 @@ export interface ThemeColors {
   vendorBadgeText: string;
 }
 
-export const LightTheme: ThemeColors = {
+export type VendorPalettePreset = 'warm_obsidian' | 'midnight_gold' | 'sahara_slate' | 'baseline';
+
+// ─── 0. BASELINE PRESET (Current Original Theme — 100% Reversible) ───────────
+export const BaselineLightTheme: ThemeColors = {
   background: '#FFFCF4',
   backgroundSecondary: '#FCF4E1',
   card: '#FCF4E1',
@@ -95,7 +98,7 @@ export const LightTheme: ThemeColors = {
   vendorBadgeText: '#556B2F',
 };
 
-export const DarkTheme: ThemeColors = {
+export const BaselineDarkTheme: ThemeColors = {
   background: '#17120F',
   backgroundSecondary: '#120E0C',
   card: '#191919',
@@ -135,6 +138,208 @@ export const DarkTheme: ThemeColors = {
   vendorBadgeBg: '#1C2612',
   vendorBadgeText: '#A3D963',
 };
+
+// ─── OPTION 1: WARM OBSIDIAN & EARTHEN TERRACOTTA (Authentic Warm Artisan) ────
+export const WarmObsidianLightTheme: ThemeColors = {
+  ...BaselineLightTheme,
+  background: '#FAF7F2',
+  backgroundSecondary: '#F4EFE6',
+  card: '#FFFFFF',
+  cardElevated: '#FFFFFF',
+  cardMuted: '#F4EFE6',
+  border: 'rgba(54, 19, 0, 0.14)',
+  borderSubtle: 'rgba(54, 19, 0, 0.08)',
+  borderAccent: '#8E3E0B',
+  textPrimary: '#2A1608',
+  textSecondary: '#57534E',
+  textMuted: '#72665B',
+  primary: '#8E3E0B',
+  primaryDark: '#421A03',
+  primaryLight: '#B85D19',
+  accentGold: '#D1995A',
+  navBackgroundGradient: ['#FAF7F2', '#F4EFE6', '#EDE5D8'],
+  headerBackground: '#FAF7F2',
+  headerText: '#2A1608',
+  drawerBackgroundGradient: ['#FAF7F2', '#F4EFE6', '#EDE5D8'],
+  drawerBorder: 'rgba(54, 19, 0, 0.12)',
+};
+
+export const WarmObsidianDarkTheme: ThemeColors = {
+  ...BaselineDarkTheme,
+  background: '#120E0B',
+  backgroundSecondary: '#18120E',
+  card: '#1B1511',
+  cardElevated: '#241C16',
+  cardMuted: '#15100C',
+  border: 'rgba(209, 153, 90, 0.18)',
+  borderSubtle: 'rgba(255, 255, 255, 0.08)',
+  borderAccent: '#D1995A',
+  textPrimary: '#FFF6ED',
+  textSecondary: '#CBD2CF',
+  textMuted: '#8D8074',
+  textGold: '#FFD79E',
+  textAccent: '#B85D19',
+  primary: '#B85D19',
+  primaryDark: '#5C2807',
+  primaryLight: '#D1995A',
+  accentGold: '#D1995A',
+  navBackgroundGradient: ['#1E1612', '#15100C', '#100C09'],
+  navBorder: 'rgba(209, 153, 90, 0.16)',
+  headerBackground: '#120E0B',
+  headerText: '#FFF6ED',
+  drawerBackgroundGradient: ['#17120E', '#140F0C', '#100C0A'],
+  drawerBorder: 'rgba(209, 153, 90, 0.20)',
+  danger: '#E05252',
+};
+
+// ─── OPTION 2: MIDNIGHT ESPRESSO & ROYAL GOLD (High-End African Gallery) ─────
+export const MidnightGoldLightTheme: ThemeColors = {
+  ...BaselineLightTheme,
+  background: '#F9F7F4',
+  backgroundSecondary: '#F2ECE1',
+  card: '#FFFFFF',
+  cardElevated: '#FFFFFF',
+  cardMuted: '#F2ECE1',
+  border: 'rgba(80, 50, 20, 0.14)',
+  borderSubtle: 'rgba(80, 50, 20, 0.08)',
+  borderAccent: '#9C7026',
+  textPrimary: '#1C1309',
+  textSecondary: '#595147',
+  textMuted: '#696056',
+  primary: '#9C7026',
+  primaryDark: '#5C4113',
+  primaryLight: '#C2913A',
+  accentGold: '#D4A359',
+  navBackgroundGradient: ['#F9F7F4', '#F2ECE1', '#E8E0D2'],
+  headerBackground: '#F9F7F4',
+  headerText: '#1C1309',
+  drawerBackgroundGradient: ['#F9F7F4', '#F2ECE1', '#E8E0D2'],
+  drawerBorder: 'rgba(80, 50, 20, 0.12)',
+};
+
+export const MidnightGoldDarkTheme: ThemeColors = {
+  ...BaselineDarkTheme,
+  background: '#0F0D0C',
+  backgroundSecondary: '#151210',
+  card: '#171412',
+  cardElevated: '#211C19',
+  cardMuted: '#120F0D',
+  border: 'rgba(226, 186, 118, 0.22)',
+  borderSubtle: 'rgba(255, 255, 255, 0.07)',
+  borderAccent: '#D4A359',
+  textPrimary: '#FFFFFF',
+  textSecondary: '#D4CEC7',
+  textMuted: '#968D84',
+  textGold: '#FFDDA6',
+  textAccent: '#D4A359',
+  primary: '#D4A359',
+  primaryDark: '#7A5820',
+  primaryLight: '#E8C88B',
+  accentGold: '#E8C88B',
+  navBackgroundGradient: ['#181412', '#120F0D', '#0D0B0A'],
+  navBorder: 'rgba(226, 186, 118, 0.20)',
+  headerBackground: '#0F0D0C',
+  headerText: '#FFFFFF',
+  drawerBackgroundGradient: ['#171412', '#120F0D', '#0F0D0C'],
+  drawerBorder: 'rgba(226, 186, 118, 0.22)',
+  danger: '#E05252',
+};
+
+// ─── OPTION 3: SAHARA SLATE & TERRACOTTA SILK (Modern Minimalist Studio) ─────
+export const SaharaSlateLightTheme: ThemeColors = {
+  ...BaselineLightTheme,
+  background: '#F5F5F5',
+  backgroundSecondary: '#EBEBEB',
+  card: '#FFFFFF',
+  cardElevated: '#FFFFFF',
+  cardMuted: '#EBEBEB',
+  border: 'rgba(0, 0, 0, 0.10)',
+  borderSubtle: 'rgba(0, 0, 0, 0.05)',
+  borderAccent: '#A34F1B',
+  textPrimary: '#1A1A1A',
+  textSecondary: '#555555',
+  textMuted: '#666666',
+  primary: '#A34F1B',
+  primaryDark: '#572507',
+  primaryLight: '#C06830',
+  accentGold: '#C9975E',
+  navBackgroundGradient: ['#F5F5F5', '#EBEBEB', '#E0E0E0'],
+  headerBackground: '#F5F5F5',
+  headerText: '#1A1A1A',
+  drawerBackgroundGradient: ['#F5F5F5', '#EBEBEB', '#E0E0E0'],
+  drawerBorder: 'rgba(0, 0, 0, 0.08)',
+};
+
+export const SaharaSlateDarkTheme: ThemeColors = {
+  ...BaselineDarkTheme,
+  background: '#111111',
+  backgroundSecondary: '#161616',
+  card: '#181818',
+  cardElevated: '#222222',
+  cardMuted: '#141414',
+  border: 'rgba(255, 255, 255, 0.10)',
+  borderSubtle: 'rgba(255, 255, 255, 0.06)',
+  borderAccent: '#C06830',
+  textPrimary: '#F5F5F5',
+  textSecondary: '#CCCCCC',
+  textMuted: '#888888',
+  textGold: '#E0AA70',
+  textAccent: '#C06830',
+  primary: '#C06830',
+  primaryDark: '#6E3715',
+  primaryLight: '#D98852',
+  accentGold: '#C9975E',
+  navBackgroundGradient: ['#181818', '#141414', '#101010'],
+  navBorder: 'rgba(255, 255, 255, 0.10)',
+  headerBackground: '#111111',
+  headerText: '#F5F5F5',
+  drawerBackgroundGradient: ['#181818', '#141414', '#111111'],
+  drawerBorder: 'rgba(255, 255, 255, 0.10)',
+  danger: '#E05252',
+};
+
+// ─── PRESET REGISTRY & RESOLUTION ───────────────────────────────────────────
+export const PALETTE_PRESETS: Record<
+  VendorPalettePreset,
+  { name: string; label: string; light: ThemeColors; dark: ThemeColors }
+> = {
+  warm_obsidian: {
+    name: 'warm_obsidian',
+    label: 'Obsidian',
+    light: WarmObsidianLightTheme,
+    dark: WarmObsidianDarkTheme,
+  },
+  midnight_gold: {
+    name: 'midnight_gold',
+    label: 'Gold',
+    light: MidnightGoldLightTheme,
+    dark: MidnightGoldDarkTheme,
+  },
+  sahara_slate: {
+    name: 'sahara_slate',
+    label: 'Slate',
+    light: SaharaSlateLightTheme,
+    dark: SaharaSlateDarkTheme,
+  },
+  baseline: {
+    name: 'baseline',
+    label: 'Original',
+    light: BaselineLightTheme,
+    dark: BaselineDarkTheme,
+  },
+};
+
+export function getVendorPalette(
+  isDark: boolean,
+  preset: VendorPalettePreset = 'baseline'
+): ThemeColors {
+  const chosen = PALETTE_PRESETS[preset] || PALETTE_PRESETS.baseline;
+  return isDark ? chosen.dark : chosen.light;
+}
+
+// Active default themes locked to Baseline (Option 4)
+export const LightTheme: ThemeColors = BaselineLightTheme;
+export const DarkTheme: ThemeColors = BaselineDarkTheme;
 
 // Backwards-compatible default Colors alias (defaults to Light Theme)
 export const Colors = {

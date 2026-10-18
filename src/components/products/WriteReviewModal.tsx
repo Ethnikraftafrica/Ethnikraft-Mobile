@@ -159,6 +159,7 @@ export const WriteReviewModal: React.FC<WriteReviewModalProps> = ({
       animationType="slide"
       presentationStyle="pageSheet"
       onRequestClose={handleResetAndClose}
+      statusBarTranslucent
     >
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <KeyboardAvoidingView

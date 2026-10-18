@@ -12,6 +12,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isHydrated: boolean;
   hasVendorAccount: boolean;
+  sessionExpired: boolean;
 }
 
 const initialState: AuthState = {
@@ -22,7 +23,9 @@ const initialState: AuthState = {
   isAuthenticated: false,
   isHydrated: false,
   hasVendorAccount: false,
+  sessionExpired: false,
 };
+
 
 export const authSlice = createSlice({
   name: 'auth',
@@ -49,6 +52,7 @@ export const authSlice = createSlice({
       state.vendor = vendor || null;
       state.isAuthenticated = true;
       state.hasVendorAccount = user.role === 'VENDOR' || !!vendor;
+      state.sessionExpired = false;
 
       if (state.hasVendorAccount && !state.activeRole) {
         state.activeRole = 'vendor';
@@ -95,6 +99,9 @@ export const authSlice = createSlice({
       if (action.payload.activeRole) {
         state.activeRole = action.payload.activeRole;
       }
+      if (action.payload.token) {
+        state.sessionExpired = false;
+      }
       state.isHydrated = true;
     },
     logout: (state) => {
@@ -104,9 +111,24 @@ export const authSlice = createSlice({
       state.isAuthenticated = false;
       state.hasVendorAccount = false;
       state.activeRole = 'user';
+      state.sessionExpired = false;
       StorageService.clearAll().catch((e) =>
         console.warn('Failed to clear storage on logout', e)
       );
+    },
+    triggerSessionExpired: (state) => {
+      // Set sessionExpired flag once; atomic guard against multiple concurrent 401s
+      if (!state.sessionExpired) {
+        state.sessionExpired = true;
+      }
+      state.accessToken = null;
+      state.isAuthenticated = false;
+      StorageService.clearTokens().catch((e) =>
+        console.warn('Failed to clear tokens on session expiration', e)
+      );
+    },
+    clearSessionExpired: (state) => {
+      state.sessionExpired = false;
     },
   },
 });
@@ -118,5 +140,8 @@ export const {
   updateTokens,
   hydrateSession,
   logout,
+  triggerSessionExpired,
+  clearSessionExpired,
 } = authSlice.actions;
 export default authSlice.reducer;
+

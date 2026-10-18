@@ -1,16 +1,24 @@
 import React from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 
 export default function VendorPayoutsScreen() {
+  const insets = useSafeAreaInsets();
   const history = [
     { id: 'PAY-8821', date: 'Sep 1, 2026', amount: '₦450,000', status: 'Completed', bank: 'GTBank •••• 4120' },
     { id: 'PAY-8750', date: 'Aug 15, 2026', amount: '₦320,000', status: 'Completed', bank: 'GTBank •••• 4120' },
   ];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: Math.max(insets.bottom, 16) + 120 },
+      ]}
+    >
       {/* Balance Card */}
       <View style={styles.balanceCard}>
         <Text style={styles.balanceLabel}>Available for Payout</Text>

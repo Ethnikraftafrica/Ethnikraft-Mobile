@@ -81,15 +81,15 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
   // Exact 11 navigation links from Ethnikraft-Vendor web portal (sidenav.tsx & desktopSideNav.tsx)
   const menuLinks = [
     { label: 'Dashboard',  route: '/(vendor)',          icon: 'stats-chart-outline',        activeIcon: 'stats-chart' },
-    { label: 'Products',   route: '/(vendor)/catalog',  icon: 'cube-outline',               activeIcon: 'cube' },
+    { label: 'Products',   route: '/(vendor)/products', icon: 'cube-outline',               activeIcon: 'cube' },
     { label: 'Orders',     route: '/(vendor)/orders',   icon: 'receipt-outline',            activeIcon: 'receipt' },
     { label: 'Profile',    route: '/(vendor)/profile',  icon: 'person-outline',             activeIcon: 'person' },
     { label: 'Studio',     route: '/(vendor)/studio',   icon: 'color-palette-outline',      activeIcon: 'color-palette' },
-    { label: 'Customers',  route: '/(vendor)/orders',   icon: 'people-outline',             activeIcon: 'people' },
+    { label: 'Customers',  route: '/(vendor)/customers', icon: 'people-outline',             activeIcon: 'people' },
     { label: 'Catalog',    route: '/(vendor)/catalog',  icon: 'grid-outline',               activeIcon: 'grid' },
-    { label: 'Statistics', route: '/(vendor)',          icon: 'bar-chart-outline',          activeIcon: 'bar-chart' },
+    { label: 'Statistics', route: '/(vendor)/statistics', icon: 'bar-chart-outline',        activeIcon: 'bar-chart' },
     { label: 'Settings',   route: '/(vendor)/settings', icon: 'settings-outline',           activeIcon: 'settings' },
-    { label: 'Messenger',  route: '/(vendor)/requests', icon: 'chatbubbles-outline',        activeIcon: 'chatbubbles' },
+    { label: 'Messenger',  route: '/(vendor)/messenger', icon: 'chatbubbles-outline',        activeIcon: 'chatbubbles' },
     { label: 'Requests',   route: '/(vendor)/requests', icon: 'hammer-outline',             activeIcon: 'hammer' },
   ];
 
@@ -279,7 +279,7 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
                       {
                         backgroundColor: isDark
                           ? 'rgba(255, 255, 255, 0.06)'
-                          : '#FFFFFF',
+                          : theme.backgroundSecondary,
                         borderColor: theme.borderSubtle,
                       },
                       isSelected && {
@@ -296,7 +296,9 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
                           ? isDark
                             ? '#FFF3D6'
                             : theme.primary
-                          : theme.textMuted
+                          : isDark
+                            ? theme.textMuted
+                            : theme.primary
                       }
                     />
                   </View>
@@ -331,8 +333,8 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
               style={[
                 styles.themePillContainer,
                 {
-                  backgroundColor: isDark ? '#14100E' : '#EFE1C3',
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(54, 19, 0, 0.10)',
+                  backgroundColor: theme.backgroundSecondary,
+                  borderColor: theme.borderSubtle,
                   borderWidth: 1,
                 },
               ]}
@@ -351,8 +353,8 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
                       isActive && [
                         styles.themeSegmentActive,
                         {
-                          backgroundColor: isDark ? '#2A201A' : '#FFFFFF',
-                          borderColor: isDark ? 'rgba(209, 153, 90, 0.35)' : 'rgba(54, 19, 0, 0.12)',
+                          backgroundColor: isDark ? theme.cardElevated : '#FFFFFF',
+                          borderColor: isDark ? theme.borderAccent : 'rgba(54, 19, 0, 0.12)',
                           borderWidth: 1,
                         },
                       ],
@@ -366,8 +368,8 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
                       color={
                         isActive
                           ? isDark
-                            ? '#D1995A'
-                            : '#361300'
+                            ? theme.textGold
+                            : theme.primary
                           : theme.textMuted
                       }
                     />
@@ -377,8 +379,8 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
                         {
                           color: isActive
                             ? isDark
-                              ? '#FFD79E'
-                              : '#361300'
+                              ? theme.textGold
+                              : theme.primary
                             : theme.textMuted,
                         },
                       ]}
@@ -391,6 +393,7 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
             </View>
           </View>
 
+
           {/* Currency Selector Pill */}
           <View style={[styles.themeSelectorRow, { marginTop: 8 }]}>
             <Text style={[styles.themeLabel, { color: theme.textMuted }]}>CURRENCY</Text>
@@ -398,8 +401,8 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
               style={[
                 styles.themePillContainer,
                 {
-                  backgroundColor: isDark ? '#14100E' : '#EFE1C3',
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(54, 19, 0, 0.10)',
+                  backgroundColor: theme.backgroundSecondary,
+                  borderColor: theme.borderSubtle,
                   borderWidth: 1,
                 },
               ]}
@@ -414,8 +417,8 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
                       isSelected && [
                         styles.themeSegmentActive,
                         {
-                          backgroundColor: isDark ? '#2A201A' : '#FFFFFF',
-                          borderColor: isDark ? 'rgba(209, 153, 90, 0.35)' : 'rgba(54, 19, 0, 0.12)',
+                          backgroundColor: isDark ? theme.cardElevated : '#FFFFFF',
+                          borderColor: isDark ? theme.borderAccent : 'rgba(54, 19, 0, 0.12)',
                           borderWidth: 1,
                         },
                       ],
@@ -433,8 +436,8 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
                         {
                           color: isSelected
                             ? isDark
-                              ? '#FFD79E'
-                              : '#361300'
+                              ? theme.textGold
+                              : theme.primary
                             : theme.textMuted,
                         },
                       ]}
@@ -454,8 +457,8 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
               style={[
                 styles.customerSwitchBtn,
                 {
-                  backgroundColor: isDark ? '#241D17' : '#FCF4E1',
-                  borderColor: isDark ? 'rgba(209, 153, 90, 0.40)' : 'rgba(102, 37, 2, 0.25)',
+                  backgroundColor: isDark ? theme.cardElevated : '#FCF4E1',
+                  borderColor: isDark ? theme.borderAccent : 'rgba(102, 37, 2, 0.25)',
                   shadowColor: isDark ? '#000000' : 'rgba(54, 19, 0, 0.10)',
                 },
               ]}
@@ -465,13 +468,13 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
               <Ionicons
                 name="bag-handle-outline"
                 size={17}
-                color={isDark ? '#D1995A' : '#662502'}
+                color={isDark ? theme.primaryLight : theme.primary}
                 style={{ marginRight: 8 }}
               />
               <Text
                 style={[
                   styles.customerSwitchText,
-                  { color: isDark ? '#FFF3D6' : '#341B00' },
+                  { color: isDark ? theme.textPrimary : theme.primaryDark },
                 ]}
               >
                 Switch to Customer Mode
@@ -484,11 +487,11 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
               onPress={handleSignOut}
               activeOpacity={0.7}
             >
-              <Ionicons name="log-out-outline" size={17} color="#C92929" style={{ marginRight: 6 }} />
+              <Ionicons name="log-out-outline" size={17} color={theme.danger} style={{ marginRight: 6 }} />
               <Text
                 style={[
                   styles.signOutText,
-                  { color: isDark ? '#E57373' : '#C92929' },
+                  { color: isDark ? '#E57373' : theme.danger },
                 ]}
               >
                 Logout

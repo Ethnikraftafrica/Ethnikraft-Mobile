@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -9,15 +9,28 @@ import {
   Image,
   Dimensions,
   Modal,
+  Clipboard,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { FontFamily, Radius, Spacing } from '@/constants/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { useAppSelector } from '@/store';
-import { formatPrice } from '@/utils/price';
+import { formatPrice, formatAbbreviatedPrice } from '@/utils/price';
+import { SUPPORTED_CURRENCIES } from '@/store/slices/currencySlice';
 import {
+  VendorKpiGridSkeleton,
+  VendorOrdersSkeleton,
+} from '@/components/common/Skeletons';
+import {
+  useGetVendorOverviewQuery,
+  useGetVendorOrdersQuery,
+} from '@/store/api/vendorApi';
+import {
+
   AddProductFigmaIcon,
   ViewProductsFigmaIcon,
   CustomBidsFigmaIcon,
@@ -38,6 +51,7 @@ type RangePeriod = 'all_time' | 'this_week' | 'this_month' | 'today';
 
 export default function ArtisanDashboardScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { theme, isDark } = useAppTheme();
   const auth = useAppSelector((state) => state.auth);
   const { user, vendor } = auth;
@@ -46,25 +60,85 @@ export default function ArtisanDashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedRange, setSelectedRange] = useState<RangePeriod>('all_time');
   const [rangeModalVisible, setRangeModalVisible] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(false);
+  const [revenueModalVisible, setRevenueModalVisible] = useState(false);
 
-  const onRefresh = () => {
+  // RTK Query: fetch live vendor overview data based on selectedRange
+  const {
+    data: overviewData,
+    isLoading: isOverviewLoading,
+    isFetching: isOverviewFetching,
+    refetch: refetchOverview,
+  } = useGetVendorOverviewQuery(selectedRange);
+
+  // RTK Query: fetch recent vendor orders
+  const {
+    data: vendorOrdersData,
+    isLoading: isOrdersLoading,
+    isFetching: isOrdersFetching,
+    refetch: refetchOrders,
+  } = useGetVendorOrdersQuery({ limit: 5 });
+
+  const onRefresh = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setRefreshing(true);
-    setTimeout(() => {
+    try {
+      await Promise.allSettled([refetchOverview(), refetchOrders()]);
+    } finally {
       setRefreshing(false);
-    }, 750);
+    }
   };
 
+  const [selectedRevenueData, setSelectedRevenueData] = useState<{
+    title: string;
+    display: string;
+    full: string;
+    badge: string;
+    isAbbreviated: boolean;
+  } | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedAmount, setCopiedAmount] = useState(false);
+
   const handleCopyStoreLink = () => {
+    const storeId = overviewData?.vendor?.id || vendor?.id || '';
+    const storeSlug = overviewData?.vendor?.businessName || vendor?.businessName || '';
+    const link = storeId
+      ? `https://ethnikraft.com/store/${storeId}`
+      : `https://ethnikraft.com/vendor/${encodeURIComponent(storeSlug.toLowerCase().replace(/\s+/g, '-'))}`;
+
+    Clipboard.setString(link);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2500);
   };
 
-  const handleNavigate = (route: string) => {
+  const handleOpenRevenueModal = (kpi: any) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setSelectedRevenueData({
+      title: kpi.title,
+      display: kpi.value,
+      full: kpi.fullValue || kpi.value,
+      badge: kpi.badge,
+      isAbbreviated: !!kpi.isAbbreviated,
+    });
+    setRevenueModalVisible(true);
+  };
+
+  const handleCopyAmount = () => {
+    if (selectedRevenueData?.full) {
+      Clipboard.setString(selectedRevenueData.full);
+    }
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setCopiedAmount(true);
+    setTimeout(() => setCopiedAmount(false), 2500);
+  };
+
+  const handleNavigate = (route: string, params?: Record<string, any>) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push(route as any);
+    if (params) {
+      router.push({ pathname: route as any, params });
+    } else {
+      router.push(route as any);
+    }
   };
 
   const getRangeLabel = () => {
@@ -80,134 +154,183 @@ export default function ArtisanDashboardScreen() {
     }
   };
 
-  // Performance metrics corresponding directly to Figma 7274:15088 specs
-  const getKpiData = () => {
-    switch (selectedRange) {
-      case 'today':
-        return [
-          {
-            title: "Today's Revenue",
-            value: formatPrice(85000, currencyCode, exchangeRate),
-            badge: '+12.5% vs yesterday',
-            type: 'revenue' as const,
-          },
-          {
-            title: 'Orders in Studio',
-            value: '2 Orders',
-            badge: '1 ready to ship',
-            type: 'orders' as const,
-          },
-          {
-            title: 'Custom Requests',
-            value: '2 Inquiries',
-            badge: '1 new quote',
-            type: 'requests' as const,
-          },
-          {
-            title: 'Your rating',
-            value: '4.98',
-            hasStar: true,
-            badge: '18 Reviews',
-            type: 'rating' as const,
-          },
-        ];
-      case 'this_month':
-        return [
-          {
-            title: 'Monthly Revenue',
-            value: formatPrice(2850000, currencyCode, exchangeRate),
-            badge: '+24.2% vs last month',
-            type: 'revenue' as const,
-          },
-          {
-            title: 'Orders in Studio',
-            value: '24 Orders',
-            badge: '8 due this week',
-            type: 'orders' as const,
-          },
-          {
-            title: 'Custom Requests',
-            value: '14 Inquiries',
-            badge: '6 pending quotes',
-            type: 'requests' as const,
-          },
-          {
-            title: 'Your rating',
-            value: '4.95',
-            hasStar: true,
-            badge: '380 Reviews',
-            type: 'rating' as const,
-          },
-        ];
-      case 'this_week':
-      case 'all_time':
-      default:
-        return [
-          {
-            title: 'Weekly Revenue',
-            value: currencyCode === 'GBP' ? '£ 698.95' : formatPrice(698.95 * 1800, currencyCode, exchangeRate),
-            badge: '+18.4% vs last week',
-            type: 'revenue' as const,
-          },
-          {
-            title: 'Orders in Studio',
-            value: '6 Orders',
-            badge: '3 due for shipping',
-            type: 'orders' as const,
-          },
-          {
-            title: 'Custom Requests',
-            value: '5 Inquiries',
-            badge: '3 pending quotes',
-            type: 'requests' as const,
-          },
-          {
-            title: 'Your rating',
-            value: '4.96',
-            hasStar: true,
-            badge: '142 Reviews',
-            type: 'rating' as const,
-          },
-        ];
-    }
-  };
+  // Memoized Performance Metrics: merges live backend overview data with currency conversion & fallback
+  const kpiData = useMemo(() => {
+    const metrics = overviewData?.metrics;
+    const orders = overviewData?.orders;
 
-  // Recent in-studio orders
-  const recentOrders = [
-    {
-      id: 'ORD-8942',
-      customer: 'Chief Adebayo O.',
-      item: 'Royal Hand-Carved Benin Leopard Bronze',
-      amount: formatPrice(320000, currencyCode, exchangeRate),
-      status: 'In Progress',
-      statusColor: '#C46C27',
-      edd: 'Sep 28, 2026',
-    },
-    {
-      id: 'ORD-8938',
-      customer: 'Dr. Folake B.',
-      item: 'Vintage Indigo-Dyed Yoruba Adire Kaftan',
-      amount: formatPrice(85000, currencyCode, exchangeRate),
-      status: 'Due for shipping',
-      statusColor: theme.success,
-      edd: 'Tomorrow',
-    },
-    {
-      id: 'ORD-8931',
-      customer: 'Kofi Mensah',
-      item: 'Custom Handwoven Ashanti Kente Sash',
-      amount: formatPrice(145000, currencyCode, exchangeRate),
-      status: 'Design Review',
-      statusColor: '#556B2F',
-      edd: 'Oct 02, 2026',
-    },
-  ];
+    // 1. Calculate Revenue & Growth
+    let rawRevenue = 0;
+    let growthBadge = '0% vs last period';
+
+    if (metrics?.trendData && metrics.trendData.length > 0) {
+      const trend = metrics.trendData;
+      const current = trend[trend.length - 1];
+      rawRevenue = current?.revenue ?? metrics.totalRevenue ?? 0;
+      if (trend.length > 1) {
+        const prev = trend[trend.length - 2];
+        if (prev.revenue > 0) {
+          const pct = Math.round(((current.revenue - prev.revenue) / prev.revenue) * 100);
+          growthBadge = `${pct >= 0 ? '+' : ''}${pct}% vs last period`;
+        } else if (current.revenue > 0) {
+          growthBadge = '+100% vs last period';
+        }
+      }
+    } else if (typeof metrics?.totalRevenue === 'number') {
+      rawRevenue = metrics.totalRevenue;
+      growthBadge = rawRevenue > 0 ? '+100% vs last period' : '0% vs last period';
+    }
+
+    const rev = formatAbbreviatedPrice(
+      rawRevenue,
+      currencyCode,
+      currencyCode === 'GBP' && rawRevenue < 10000 ? 1 : exchangeRate
+    );
+
+    const revenueTitle =
+      selectedRange === 'today'
+        ? "Today's Revenue"
+        : selectedRange === 'this_month'
+        ? 'Monthly Revenue'
+        : selectedRange === 'this_week'
+        ? 'Weekly Revenue'
+        : 'Total Revenue';
+
+    // 2. Orders in Studio
+    const pendingOrders = orders?.pending ?? 0;
+    const processingOrders = orders?.processing ?? 0;
+    const activeStudioOrders = pendingOrders + processingOrders;
+    const ordersBadge = pendingOrders > 0 ? `${pendingOrders} due for shipping` : 'All caught up';
+
+    // 3. Custom Requests / Inquiries
+    const totalBids = metrics?.totalBids ?? 0;
+    const acceptedBids = metrics?.acceptedBids ?? 0;
+    const requestsBadge = `${acceptedBids} pending quotes`;
+
+    // 4. Rating & Reviews (faithfully derived from live vendor data)
+    const rawRating =
+      typeof overviewData?.vendor?.rating === 'number' && overviewData.vendor.rating > 0
+        ? overviewData.vendor.rating
+        : typeof metrics?.rating === 'number' && metrics.rating > 0
+        ? metrics.rating
+        : 0;
+
+    const reviewCount =
+      typeof overviewData?.vendor?.reviewCount === 'number'
+        ? overviewData.vendor.reviewCount
+        : typeof metrics?.reviewCount === 'number'
+        ? metrics.reviewCount
+        : 0;
+
+    const hasReviews = reviewCount > 0 && rawRating > 0;
+    const ratingValue = hasReviews ? rawRating.toFixed(2) : '—';
+    const ratingBadge = hasReviews
+      ? `${reviewCount} ${reviewCount === 1 ? 'Review' : 'Reviews'}`
+      : 'No reviews yet';
+
+    return [
+      {
+        title: revenueTitle,
+        value: rev.display,
+        fullValue: rev.full,
+        isAbbreviated: rev.isAbbreviated,
+        badge: growthBadge,
+        type: 'revenue' as const,
+      },
+      {
+        title: 'Orders in Studio',
+        value: `${activeStudioOrders} Orders`,
+        badge: ordersBadge,
+        type: 'orders' as const,
+      },
+      {
+        title: 'Custom Requests',
+        value: `${totalBids} Inquiries`,
+        badge: requestsBadge,
+        type: 'requests' as const,
+      },
+      {
+        title: 'Your rating',
+        value: ratingValue,
+        hasStar: hasReviews,
+        badge: ratingBadge,
+        type: 'rating' as const,
+      },
+    ];
+  }, [overviewData, selectedRange, currencyCode, exchangeRate]);
+
+  // Memoized Recent Studio Orders: formats live order data faithfully
+  const recentOrders = useMemo(() => {
+    if (vendorOrdersData && vendorOrdersData.length > 0) {
+      return vendorOrdersData.slice(0, 3).map((order) => {
+        const orderCode = `#${order.id.slice(-6).toUpperCase()}`;
+        const customerName = order.user
+          ? `${order.user.firstName || ''} ${order.user.lastName || ''}`.trim() || 'Valued Customer'
+          : 'Valued Customer';
+        const itemName =
+          order.customRequest?.title ||
+          order.orderItems?.[0]?.product?.name ||
+          'Custom Bespoke Creation';
+        const rawAmount = order.total || order.agreedPrice || 0;
+        const formattedAmount = formatPrice(rawAmount, currencyCode, exchangeRate);
+
+        let statusText = 'In Progress';
+        let statusColor = '#C46C27';
+        switch (order.status) {
+          case 'DELIVERED':
+          case 'COMPLETED':
+            statusText = 'Completed';
+            statusColor = theme.success;
+            break;
+          case 'SHIPPED':
+          case 'OUT_FOR_DELIVERY':
+            statusText = 'Due for shipping';
+            statusColor = theme.success;
+            break;
+          case 'PROCESSING':
+          case 'CONFIRMED':
+            statusText = 'In Progress';
+            statusColor = '#C46C27';
+            break;
+          case 'PENDING':
+          case 'PAYMENT_PENDING':
+          default:
+            statusText = 'Design Review';
+            statusColor = '#556B2F';
+            break;
+        }
+
+        const edd = order.proposedTimeline
+          ? new Date(order.proposedTimeline).toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+            })
+          : 'Pending schedule';
+
+        return {
+          id: orderCode,
+          customer: customerName,
+          item: itemName,
+          amount: formattedAmount,
+          status: statusText,
+          statusColor,
+          edd,
+        };
+      });
+    }
+
+    return [];
+  }, [vendorOrdersData, currencyCode, exchangeRate, theme]);
+
 
   return (
     <View style={[styles.mainWrapper, { backgroundColor: theme.background }]}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 16) + 120 },
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -226,7 +349,7 @@ export default function ArtisanDashboardScreen() {
               borderColor: isDark
                 ? 'rgba(255, 255, 255, 0.15)'
                 : 'rgba(54, 19, 0, 0.25)',
-              backgroundColor: isDark ? '#191919' : '#1E140A',
+              backgroundColor: isDark ? theme.card : '#1E140A',
             },
           ]}
         >
@@ -238,13 +361,23 @@ export default function ArtisanDashboardScreen() {
           <View style={styles.heroCard}>
             {/* Top Row: Avatar + Store Name + Category Pills */}
             <View style={styles.heroTopRow}>
-              <Image source={AVATAR_DEFAULT} style={styles.artisanAvatar} />
+              <Image
+                source={
+                  overviewData?.vendor?.businessLogo
+                    ? { uri: overviewData.vendor.businessLogo }
+                    : AVATAR_DEFAULT
+                }
+                style={styles.artisanAvatar}
+              />
               <View style={styles.heroHeaderInfo}>
                 <Text style={styles.storeNameText} numberOfLines={1}>
-                  {vendor?.businessName || "Greywolf's stiches"}
+                  {overviewData?.vendor?.businessName || vendor?.businessName || vendor?.storeName || (user ? `${user.firstName}'s Studio` : 'My Artisan Studio')}
                 </Text>
                 <View style={styles.categoryPillsRow}>
-                  {['Wears', 'Accessories', 'Crafts'].map((tag) => (
+                  {((overviewData?.vendor?.categories && overviewData.vendor.categories.length > 0)
+                    ? overviewData.vendor.categories.map((c) => c.name)
+                    : ['Artisan', 'Bespoke']
+                  ).map((tag) => (
                     <View key={tag} style={styles.categoryPill}>
                       <Text style={styles.categoryPillText}>{tag}</Text>
                     </View>
@@ -255,7 +388,7 @@ export default function ArtisanDashboardScreen() {
 
             {/* Middle: Welcome Greeting & Quote */}
             <Text style={styles.heroGreetingText}>
-              Welcome back, {user?.firstName || 'Kwame'}!
+              Welcome back, {overviewData?.vendor?.user?.firstName || user?.firstName || 'Artisan'}!
             </Text>
             <Text style={styles.heroQuoteText}>
               &ldquo;Your hands don&rsquo;t just create - that inspire... Lets create something amazing today&rdquo;
@@ -298,79 +431,119 @@ export default function ArtisanDashboardScreen() {
             ]}
             onPress={() => setRangeModalVisible(true)}
             activeOpacity={0.8}
+            disabled={isOverviewFetching && !refreshing}
           >
-            <Text style={[styles.rangePillText, { color: theme.textPrimary }]}>
-              {getRangeLabel()}
-            </Text>
-            <Ionicons name="chevron-down" size={13} color={theme.textPrimary} />
+            {isOverviewFetching && !refreshing ? (
+              <ActivityIndicator size="small" color={theme.primary} style={{ transform: [{ scale: 0.7 }] }} />
+            ) : (
+              <>
+                <Text style={[styles.rangePillText, { color: theme.textPrimary }]}>
+                  {getRangeLabel()}
+                </Text>
+                <Ionicons name="chevron-down" size={13} color={theme.textPrimary} />
+              </>
+            )}
           </TouchableOpacity>
         </View>
 
         {/* 2x2 Metric Cards Grid (Figma 183x130, 7px radius) */}
-        <View style={styles.kpiGrid}>
-          {getKpiData().map((kpi) => (
-            <View
-              key={kpi.title}
-              style={[
-                styles.kpiCard,
-                {
-                  backgroundColor: theme.card,
-                  borderColor: theme.border,
-                },
-              ]}
-            >
-              {/* Top Pill Badge */}
-              <View
+        {isOverviewLoading && !overviewData ? (
+          <VendorKpiGridSkeleton />
+        ) : (
+          <View style={[styles.kpiGrid, isOverviewFetching && !refreshing && { opacity: 0.65 }]}>
+            {kpiData.map((kpi) => {
+              const isRevenue = kpi.type === 'revenue';
+              const CardComponent = isRevenue ? TouchableOpacity : View;
+              const cardProps = isRevenue
+                ? {
+                    onPress: () => handleOpenRevenueModal(kpi),
+                    onLongPress: () => handleOpenRevenueModal(kpi),
+                    delayLongPress: 300,
+                    activeOpacity: 0.75,
+                  }
+                : {};
+
+              return (
+              <CardComponent
+                key={kpi.title}
+                {...(cardProps as any)}
                 style={[
-                  styles.kpiPillBadge,
+                  styles.kpiCard,
                   {
-                    backgroundColor: isDark
-                      ? 'rgba(10, 210, 79, 0.12)'
-                      : 'rgba(0, 157, 26, 0.08)',
+                    backgroundColor: theme.card,
+                    borderColor: theme.border,
                   },
                 ]}
               >
-                {kpi.type === 'revenue' && (
-                  <TrendingUpFigmaIcon size={6} color={isDark ? '#0AD24F' : '#009D1A'} />
-                )}
-                {kpi.type === 'orders' && (
-                  <PackageFigmaIcon size={12} color={isDark ? '#0AD24F' : '#009D1A'} />
-                )}
-                {kpi.type === 'requests' && (
-                  <IncomeFigmaIcon size={12} color={isDark ? '#0AD24F' : '#009D1A'} />
-                )}
-                {kpi.type === 'rating' && (
-                  <StarOutlineFigmaIcon size={11} color={isDark ? '#0AD24F' : '#009D1A'} />
-                )}
-                <Text
+                {/* Top Pill Badge */}
+                <View
                   style={[
-                    styles.kpiPillText,
-                    { color: isDark ? '#0AD24F' : '#009D1A' },
+                    styles.kpiPillBadge,
+                    {
+                      backgroundColor: isDark
+                        ? 'rgba(10, 210, 79, 0.12)'
+                        : 'rgba(0, 157, 26, 0.08)',
+                    },
                   ]}
                 >
-                  {kpi.badge}
-                </Text>
-              </View>
+                  {kpi.type === 'revenue' && (
+                    <TrendingUpFigmaIcon size={6} color={isDark ? '#0AD24F' : '#009D1A'} />
+                  )}
+                  {kpi.type === 'orders' && (
+                    <PackageFigmaIcon size={12} color={isDark ? '#0AD24F' : '#009D1A'} />
+                  )}
+                  {kpi.type === 'requests' && (
+                    <IncomeFigmaIcon size={12} color={isDark ? '#0AD24F' : '#009D1A'} />
+                  )}
+                  {kpi.type === 'rating' && (
+                    <StarOutlineFigmaIcon size={11} color={isDark ? '#0AD24F' : '#009D1A'} />
+                  )}
+                  <Text
+                    style={[
+                      styles.kpiPillText,
+                      { color: isDark ? '#0AD24F' : '#009D1A' },
+                    ]}
+                  >
+                    {kpi.badge}
+                  </Text>
+                </View>
 
-              {/* Metric Main Value */}
-              <View style={styles.kpiValueRow}>
-                <Text style={[styles.kpiValueText, { color: theme.textPrimary }]}>
-                  {kpi.value}
-                </Text>
-                {kpi.hasStar && (
-                  <StarFigmaIcon
-                    size={18}
-                    color="#C46C27"
-                    style={{ marginLeft: 5, marginBottom: 2 }}
-                  />
-                )}
-              </View>
+                {/* Metric Main Value */}
+                <View style={styles.kpiValueRow}>
+                  <Text
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.8}
+                    style={[styles.kpiValueText, { color: theme.textPrimary }]}
+                  >
+                    {kpi.value}
+                  </Text>
+                  {kpi.hasStar && (
+                    <StarFigmaIcon
+                      size={18}
+                      color="#C46C27"
+                      style={{ marginLeft: 5, marginBottom: 2 }}
+                    />
+                  )}
+                </View>
 
-              {/* Subtitle */}
-              <Text style={styles.kpiSubtitleText}>{kpi.title}</Text>
-            </View>
-          ))}
+                {/* Subtitle */}
+                <View style={styles.kpiSubtitleRow}>
+                  <Text style={styles.kpiSubtitleText}>{kpi.title}</Text>
+                  {kpi.isAbbreviated && (
+                    <Ionicons
+                      name="expand-outline"
+                      size={11}
+                      color={theme.textMuted}
+                      style={{ opacity: 0.65 }}
+                    />
+                  )}
+                </View>
+              </CardComponent>
+            );
+          })}
         </View>
+        )}
 
         {/* ─── 3. THREE QUICK ACTION CARDS (FIGMA 130px HEIGHT, 32px ICONS) ─── */}
         <View style={styles.quickActionsRow}>
@@ -383,7 +556,7 @@ export default function ArtisanDashboardScreen() {
                 borderColor: theme.border,
               },
             ]}
-            onPress={() => handleNavigate('/(vendor)/catalog')}
+            onPress={() => handleNavigate('/(vendor)/products', { action: 'create' })}
             activeOpacity={0.8}
           >
             <AddProductFigmaIcon size={32} color="#C46C27" />
@@ -401,7 +574,7 @@ export default function ArtisanDashboardScreen() {
                 borderColor: theme.border,
               },
             ]}
-            onPress={() => handleNavigate('/(vendor)/catalog')}
+            onPress={() => handleNavigate('/(vendor)/products')}
             activeOpacity={0.8}
           >
             <ViewProductsFigmaIcon size={32} color="#D27451" />
@@ -436,80 +609,103 @@ export default function ArtisanDashboardScreen() {
               Studio Orders
             </Text>
             <View style={styles.orderCountBadge}>
-              <Text style={styles.orderCountBadgeText}>{recentOrders.length}</Text>
+              {isOrdersFetching && !refreshing ? (
+                <ActivityIndicator size="small" color="#FFFFFF" style={{ transform: [{ scale: 0.6 }] }} />
+              ) : (
+                <Text style={styles.orderCountBadgeText}>
+                  {(overviewData?.orders?.pending ?? 0) + (overviewData?.orders?.processing ?? 0) || recentOrders.length}
+                </Text>
+              )}
             </View>
           </View>
         </View>
 
         {/* Studio Orders Container Card (170px height, 7px radius) */}
-        <TouchableOpacity
-          style={[
-            styles.ordersContainerBox,
-            {
-              backgroundColor: theme.card,
-              borderColor: theme.border,
-            },
-          ]}
-          onPress={() => handleNavigate('/(vendor)/orders')}
-          activeOpacity={0.85}
-        >
-          {recentOrders.slice(0, 2).map((order, index) => (
-            <View
-              key={order.id}
-              style={[
-                styles.orderItemRow,
-                index === 0 && {
-                  borderBottomWidth: 1,
-                  borderBottomColor: theme.borderSubtle,
-                },
-              ]}
-            >
-              <View style={styles.orderItemLeft}>
-                <View style={styles.orderIdStatusRow}>
-                  <Text style={[styles.orderItemCode, { color: theme.primary }]}>
-                    {order.id}
-                  </Text>
-                  <View
-                    style={[
-                      styles.orderItemStatusPill,
-                      {
-                        backgroundColor: isDark
-                          ? 'rgba(255, 255, 255, 0.08)'
-                          : 'rgba(255, 255, 255, 0.65)',
-                      },
-                    ]}
-                  >
-                    <Text
+        {isOrdersLoading && !vendorOrdersData ? (
+          <VendorOrdersSkeleton />
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.ordersContainerBox,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+              },
+              isOrdersFetching && !refreshing && { opacity: 0.7 },
+            ]}
+            onPress={() => handleNavigate('/(vendor)/orders')}
+            activeOpacity={0.85}
+          >
+          {recentOrders.length > 0 ? (
+            recentOrders.slice(0, 2).map((order, index) => (
+              <View
+                key={order.id}
+                style={[
+                  styles.orderItemRow,
+                  index === 0 && {
+                    borderBottomWidth: 1,
+                    borderBottomColor: theme.borderSubtle,
+                  },
+                ]}
+              >
+                <View style={styles.orderItemLeft}>
+                  <View style={styles.orderIdStatusRow}>
+                    <Text style={[styles.orderItemCode, { color: theme.primary }]}>
+                      {order.id}
+                    </Text>
+                    <View
                       style={[
-                        styles.orderItemStatusText,
-                        { color: order.statusColor },
+                        styles.orderItemStatusPill,
+                        {
+                          backgroundColor: isDark
+                            ? 'rgba(255, 255, 255, 0.08)'
+                            : 'rgba(255, 255, 255, 0.65)',
+                        },
                       ]}
                     >
-                      {order.status}
-                    </Text>
+                      <Text
+                        style={[
+                          styles.orderItemStatusText,
+                          { color: order.statusColor },
+                        ]}
+                      >
+                        {order.status}
+                      </Text>
+                    </View>
                   </View>
+
+                  <Text
+                    style={[styles.orderItemTitle, { color: theme.textPrimary }]}
+                    numberOfLines={1}
+                  >
+                    {order.item}
+                  </Text>
+
+                  <Text style={styles.orderItemCustomer}>
+                    {order.customer} • <Text style={{ color: theme.textPrimary, fontFamily: FontFamily.headingBold }}>{order.amount}</Text>
+                  </Text>
                 </View>
 
-                <Text
-                  style={[styles.orderItemTitle, { color: theme.textPrimary }]}
-                  numberOfLines={1}
-                >
-                  {order.item}
-                </Text>
-
-                <Text style={styles.orderItemCustomer}>
-                  {order.customer} • <Text style={{ color: theme.textPrimary, fontFamily: FontFamily.headingBold }}>{order.amount}</Text>
-                </Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={16}
+                  color={theme.textMuted}
+                />
               </View>
-
-              <Ionicons
-                name="chevron-forward"
-                size={16}
-                color={theme.textMuted}
-              />
+            ))
+          ) : (
+            <View style={styles.emptyOrdersContainer}>
+              <PackageFigmaIcon size={28} color={theme.textMuted} />
+              <Text style={[styles.emptyOrdersTitle, { color: theme.textPrimary }]}>
+                No Active Studio Orders
+              </Text>
+              <Text style={[styles.emptyOrdersSubtitle, { color: theme.textMuted }]}>
+                New customer commissions and store orders will appear here.
+              </Text>
             </View>
-          ))}
+          )}
         </TouchableOpacity>
+        )}
       </ScrollView>
 
       {/* ─── TIME RANGE PICKER MODAL ─────────────────────────── */}
@@ -529,7 +725,7 @@ export default function ArtisanDashboardScreen() {
             style={[
               styles.rangeModalCard,
               {
-                backgroundColor: isDark ? '#191919' : '#FCF4E1',
+                backgroundColor: theme.card,
                 borderColor: theme.border,
               },
             ]}
@@ -583,6 +779,114 @@ export default function ArtisanDashboardScreen() {
               );
             })}
           </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ─── REVENUE FULL AMOUNT BREAKDOWN MODAL ─────────────── */}
+      <Modal
+        visible={revenueModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRevenueModalVisible(false)}
+        statusBarTranslucent
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setRevenueModalVisible(false)}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            style={[
+              styles.revenueModalCard,
+              {
+                backgroundColor: isDark ? theme.card : '#FFFDF9',
+                borderColor: theme.border,
+              },
+            ]}
+          >
+            {/* Header: Title + Close Button */}
+            <View style={styles.revenueModalHeader}>
+              <Text style={[styles.revenueModalHeading, { color: theme.textPrimary }]}>
+                {selectedRevenueData?.title || 'Revenue Settlement'}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setRevenueModalVisible(false)}
+                style={styles.modalCloseBtn}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="close" size={20} color={theme.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Simple, Crisp Settlement Amount */}
+            <View style={styles.simpleAmountContainer}>
+              <Text
+                selectable
+                style={[styles.simpleAmountHeroText, { color: theme.textPrimary }]}
+              >
+                {selectedRevenueData?.full}
+              </Text>
+              {selectedRevenueData?.badge && (
+                <View style={styles.simpleBadgeRow}>
+                  <TrendingUpFigmaIcon
+                    size={10}
+                    color={isDark ? '#0AD24F' : '#009D1A'}
+                  />
+                  <Text
+                    style={[
+                      styles.simpleBadgeText,
+                      { color: isDark ? '#0AD24F' : '#009D1A' },
+                    ]}
+                  >
+                    {selectedRevenueData?.badge}
+                  </Text>
+                  <Text style={[styles.simpleTimeframeText, { color: theme.textMuted }]}>
+                    • {getRangeLabel()} Period
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Simple Action Buttons */}
+            <View style={styles.modalActionButtonsRow}>
+              <TouchableOpacity
+                style={[
+                  styles.modalCopyBtn,
+                  {
+                    backgroundColor: copiedAmount ? '#009D1A' : theme.primary,
+                  },
+                ]}
+                onPress={handleCopyAmount}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name={copiedAmount ? 'checkmark-circle' : 'copy-outline'}
+                  size={15}
+                  color="#FFFFFF"
+                />
+                <Text style={styles.modalCopyBtnText}>
+                  {copiedAmount ? 'Copied' : 'Copy'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.modalDismissBtn,
+                  {
+                    borderColor: theme.border,
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#F9F6EE',
+                  },
+                ]}
+                onPress={() => setRevenueModalVisible(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.modalDismissBtnText, { color: theme.textPrimary }]}>
+                  Close
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
     </View>
@@ -766,6 +1070,12 @@ const styles = StyleSheet.create({
     color: '#808080',
     marginTop: 1,
   },
+  kpiSubtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 1,
+  },
 
   // ─── 3. THREE QUICK ACTION CARDS (FIGMA 130px HEIGHT) ────────
   quickActionsRow: {
@@ -862,6 +1172,23 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.bodyRegular,
     color: '#808080',
   },
+  emptyOrdersContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.md,
+    gap: 4,
+  },
+  emptyOrdersTitle: {
+    fontSize: 13,
+    fontFamily: FontFamily.headingBold,
+    marginTop: 4,
+  },
+  emptyOrdersSubtitle: {
+    fontSize: 11,
+    fontFamily: FontFamily.bodyRegular,
+    textAlign: 'center',
+  },
 
   // ─── MODAL STYLES ───────────────────────────────────────────
   modalOverlay: {
@@ -895,5 +1222,82 @@ const styles = StyleSheet.create({
   },
   modalOptionText: {
     fontSize: 13,
+  },
+
+  // ─── REVENUE BREAKDOWN MODAL STYLES ──────────────────────────
+  revenueModalCard: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: Radius.md, // 7px - strictly adhering to the flat Hub card styling
+    borderWidth: 1,
+    padding: Spacing.md + 2,
+  },
+  revenueModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.xs,
+  },
+  revenueModalHeading: {
+    fontSize: 15,
+    fontFamily: FontFamily.headingBold,
+  },
+  modalCloseBtn: {
+    padding: 2,
+  },
+  simpleAmountContainer: {
+    alignItems: 'center',
+    paddingVertical: Spacing.md + 2,
+  },
+  simpleAmountHeroText: {
+    fontSize: 26,
+    fontFamily: FontFamily.headingBold,
+    letterSpacing: -0.4,
+    textAlign: 'center',
+  },
+  simpleBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+  },
+  simpleBadgeText: {
+    fontSize: 11,
+    fontFamily: FontFamily.headingBold,
+  },
+  simpleTimeframeText: {
+    fontSize: 11,
+    fontFamily: FontFamily.bodyRegular,
+  },
+  modalActionButtonsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: Spacing.xs,
+  },
+  modalCopyBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: Radius.md,
+  },
+  modalCopyBtnText: {
+    fontSize: 13,
+    fontFamily: FontFamily.headingBold,
+    color: '#FFFFFF',
+  },
+  modalDismissBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+  },
+  modalDismissBtnText: {
+    fontSize: 13,
+    fontFamily: FontFamily.headingBold,
   },
 });

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { FontFamily, Radius } from '@/constants/theme';
@@ -26,17 +27,17 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
   state,
   descriptors,
   navigation,
-  unreadRequestsCount = 2,
-  pendingOrdersCount = 3,
+  unreadRequestsCount = 0,
+  pendingOrdersCount = 0,
 }) => {
   const insets = useSafeAreaInsets();
   const { theme, isDark } = useAppTheme();
   const bottomInset = insets.bottom > 0 ? insets.bottom : 8;
   const barHeight = 62 + bottomInset;
 
-  // 5 primary tabs in exact order: Hub, Products, Studio (Center Docked), Requests, Orders
-  const hubRoute = state?.routes?.find((r: any) => r.name === 'index');
-  const productsRoute = state?.routes?.find((r: any) => r.name === 'catalog');
+  // 5 primary tabs in exact order: Dashboard, Products, Studio (Center Docked), Requests, Orders
+  const dashboardRoute = state?.routes?.find((r: any) => r.name === 'index');
+  const productsRoute = state?.routes?.find((r: any) => r.name === 'products');
   const studioRoute = state?.routes?.find((r: any) => r.name === 'studio');
   const requestsRoute = state?.routes?.find((r: any) => r.name === 'requests');
   const ordersRoute = state?.routes?.find((r: any) => r.name === 'orders');
@@ -161,8 +162,8 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
       >
         {/* 5 Equal 20% Columns with Centered Symmetry */}
         <View style={styles.segmentsRow}>
-          {/* 1. Hub */}
-          {renderSegmentItem(hubRoute, 'Hub', 'stats-chart', 'stats-chart-outline')}
+          {/* 1. Dashboard */}
+          {renderSegmentItem(dashboardRoute, 'Dashboard', 'stats-chart', 'stats-chart-outline')}
 
           {/* 2. Products */}
           {renderSegmentItem(productsRoute, 'Products', 'book', 'book-outline')}
@@ -201,16 +202,10 @@ export const ArtisanCommandTabBar: React.FC<ArtisanCommandTabBarProps> = ({
                   end={{ x: 0, y: 1 }}
                   style={styles.medallionInnerDisc}
                 >
-                  <Ionicons
-                    name={isStudioActive ? 'color-palette' : 'color-palette-outline'}
-                    size={24}
-                    color={
-                      isStudioActive
-                        ? '#FFF3D6'
-                        : isDark
-                        ? '#FFD79E'
-                        : '#C46C27'
-                    }
+                  <Image
+                    source={require('../../../assets/revamp/studio.png')}
+                    style={styles.studioIconImage}
+                    contentFit="cover"
                   />
                 </LinearGradient>
               </LinearGradient>
@@ -384,6 +379,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255, 215, 158, 0.45)',
+    overflow: 'hidden',
+  },
+  studioIconImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
   studioLabel: {
     fontSize: 10,

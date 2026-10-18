@@ -116,13 +116,23 @@ export const CurrencyPickerModal: React.FC<CurrencyPickerModalProps> = ({
           style={[
             styles.bottomSheet,
             {
-              backgroundColor: isDark ? '#1F0E04' : '#FFFFFF',
+              backgroundColor: isDark ? theme.card : '#FFFFFF',
+              borderColor: theme.borderSubtle,
               transform: [{ translateY: slideAnim }],
             },
           ]}
         >
           {/* Drag Handle */}
-          <View style={[styles.dragHandle, { backgroundColor: isDark ? 'rgba(209, 153, 90, 0.4)' : '#E5E0D8' }]} />
+          <View
+            style={[
+              styles.dragHandle,
+              {
+                backgroundColor: isDark
+                  ? 'rgba(255, 255, 255, 0.20)'
+                  : 'rgba(54, 19, 0, 0.20)',
+              },
+            ]}
+          />
 
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: theme.borderSubtle }]}>
@@ -133,11 +143,18 @@ export const CurrencyPickerModal: React.FC<CurrencyPickerModalProps> = ({
               </Text>
             </View>
             <TouchableOpacity
-              style={[styles.closeBtn, { backgroundColor: isDark ? '#361300' : '#F7F3EE' }]}
+              style={[
+                styles.closeBtn,
+                {
+                  backgroundColor: isDark
+                    ? 'rgba(255, 255, 255, 0.08)'
+                    : 'rgba(54, 19, 0, 0.06)',
+                },
+              ]}
               onPress={() => handleDismiss()}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons name="close" size={20} color={theme.textPrimary} />
+              <Ionicons name="close" size={18} color={theme.textPrimary} />
             </TouchableOpacity>
           </View>
 
@@ -153,14 +170,17 @@ export const CurrencyPickerModal: React.FC<CurrencyPickerModalProps> = ({
                     {
                       backgroundColor: isSelected
                         ? isDark
-                          ? '#361300'
-                          : '#FFF8F2'
+                          ? 'rgba(196, 108, 39, 0.16)'
+                          : '#FEF3C7'
                         : isDark
-                        ? '#160902'
-                        : '#FAF6F0',
+                        ? theme.backgroundSecondary
+                        : '#FFFFFF',
                       borderColor: isSelected
-                        ? theme.primary
+                        ? isDark
+                          ? '#D1995A'
+                          : theme.primary
                         : theme.borderSubtle,
+                      borderWidth: isSelected ? 1.5 : 1,
                     },
                   ]}
                   onPress={() => handleSelectCurrency(curr.code)}
@@ -171,8 +191,30 @@ export const CurrencyPickerModal: React.FC<CurrencyPickerModalProps> = ({
                     <View style={styles.currencyTextCol}>
                       <View style={styles.currencyCodeRow}>
                         <Text style={[styles.currencyCode, { color: theme.textPrimary }]}>{curr.code}</Text>
-                        <View style={[styles.currencySymbolBadge, { backgroundColor: isDark ? '#1F0E04' : '#EFEAE2' }]}>
-                          <Text style={[styles.currencySymbol, { color: theme.primary }]}>{curr.symbol}</Text>
+                        <View
+                          style={[
+                            styles.currencySymbolBadge,
+                            {
+                              backgroundColor: isDark
+                                ? 'rgba(255, 255, 255, 0.08)'
+                                : 'rgba(54, 19, 0, 0.06)',
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.currencySymbol,
+                              {
+                                color: isSelected
+                                  ? isDark
+                                    ? '#D1995A'
+                                    : theme.primary
+                                  : theme.textSecondary,
+                              },
+                            ]}
+                          >
+                            {curr.symbol}
+                          </Text>
                         </View>
                       </View>
                       <Text style={[styles.currencyName, { color: theme.textSecondary }]}>{curr.name}</Text>
@@ -181,8 +223,19 @@ export const CurrencyPickerModal: React.FC<CurrencyPickerModalProps> = ({
 
                   <View style={styles.currencyRight}>
                     {isSelected ? (
-                      <View style={[styles.checkIconBadge, { backgroundColor: theme.primary }]}>
-                        <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                      <View
+                        style={[
+                          styles.checkIconBadge,
+                          {
+                            backgroundColor: isDark ? '#D1995A' : theme.primary,
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name="checkmark"
+                          size={15}
+                          color={isDark ? '#17120F' : '#FFFFFF'}
+                        />
                       </View>
                     ) : (
                       <Ionicons
@@ -213,18 +266,19 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.55)',
   },
   bottomSheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
     paddingTop: Spacing.sm,
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xl + 20,
+    paddingBottom: Spacing.xl + 24,
     ...Shadows.lg,
   },
   dragHandle: {
-    width: 36,
+    width: 40,
     height: 4,
-    backgroundColor: '#E5E0D8',
     borderRadius: Radius.full,
     alignSelf: 'center',
     marginVertical: Spacing.xs,
@@ -233,49 +287,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: Spacing.md,
+    paddingTop: Spacing.xs,
     paddingBottom: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0EBE1',
   },
   title: {
-    fontSize: 20,
+    fontSize: 22,
     fontFamily: FontFamily.cormorantBold,
-    color: '#1C0D05',
+    letterSpacing: -0.2,
   },
   subtitle: {
     fontSize: 12,
-    fontFamily: FontFamily.poppinsRegular,
-    color: '#8C7765',
+    fontFamily: FontFamily.latoRegular,
     marginTop: 2,
   },
   closeBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#F7F3EE',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: Spacing.sm,
   },
   currencyList: {
-    paddingTop: Spacing.sm,
-    gap: Spacing.xs,
+    paddingTop: Spacing.md,
+    gap: 8,
   },
   currencyItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.md,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    backgroundColor: '#FAF6F0',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
   },
   currencyItemSelected: {
-    backgroundColor: '#FFF8F2',
-    borderColor: '#C46C27',
+    borderWidth: 1.5,
   },
   currencyLeft: {
     flexDirection: 'row',
@@ -283,7 +330,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   currencyFlag: {
-    fontSize: 28,
+    fontSize: 26,
   },
   currencyTextCol: {
     gap: 2,
@@ -295,24 +342,20 @@ const styles = StyleSheet.create({
   },
   currencyCode: {
     fontSize: 15,
-    fontFamily: FontFamily.poppinsBold,
-    color: '#1C0D05',
+    fontFamily: FontFamily.headingBold,
   },
   currencySymbolBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     borderRadius: Radius.sm,
-    backgroundColor: '#EFEAE2',
   },
   currencySymbol: {
     fontSize: 11,
-    fontFamily: FontFamily.poppinsMedium,
-    color: '#8C7765',
+    fontFamily: FontFamily.poppinsSemiBold,
   },
   currencyName: {
     fontSize: 12,
-    fontFamily: FontFamily.poppinsRegular,
-    color: '#8C7765',
+    fontFamily: FontFamily.latoRegular,
   },
   currencyRight: {
     alignItems: 'center',
@@ -322,7 +365,6 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#C46C27',
     alignItems: 'center',
     justifyContent: 'center',
   },

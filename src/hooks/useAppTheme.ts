@@ -6,22 +6,30 @@ import {
   setThemeMode as setModeAction,
   saveThemeMode,
   loadStoredTheme,
+  setPalettePreset as setPaletteAction,
+  savePalettePreset,
 } from '@/store/slices/themeSlice';
-import { LightTheme, DarkTheme, ThemeColors } from '@/constants/theme';
+import {
+  ThemeColors,
+  VendorPalettePreset,
+  getVendorPalette,
+} from '@/constants/theme';
 import * as Haptics from 'expo-haptics';
 
 export interface UseAppThemeReturn {
   theme: ThemeColors;
   isDark: boolean;
   mode: ThemeMode;
+  palettePreset: VendorPalettePreset;
   setThemeMode: (mode: ThemeMode) => void;
+  setPalettePreset: (preset: VendorPalettePreset) => void;
   toggleTheme: () => void;
 }
 
 export const useAppTheme = (): UseAppThemeReturn => {
   const dispatch = useAppDispatch();
   const systemColorScheme = useColorScheme();
-  const { mode, isLoaded } = useAppSelector((state) => state.theme);
+  const { mode, isLoaded, palettePreset = 'warm_obsidian' } = useAppSelector((state) => state.theme);
 
   useEffect(() => {
     if (!isLoaded) {
@@ -36,14 +44,23 @@ export const useAppTheme = (): UseAppThemeReturn => {
   }, [mode, systemColorScheme]);
 
   const theme: ThemeColors = useMemo(() => {
-    return isDark ? DarkTheme : LightTheme;
-  }, [isDark]);
+    return getVendorPalette(isDark, palettePreset);
+  }, [isDark, palettePreset]);
 
   const setThemeMode = useCallback(
     (newMode: ThemeMode) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       dispatch(setModeAction(newMode));
       dispatch(saveThemeMode(newMode));
+    },
+    [dispatch]
+  );
+
+  const setPalettePreset = useCallback(
+    (newPreset: VendorPalettePreset) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      dispatch(setPaletteAction(newPreset));
+      dispatch(savePalettePreset(newPreset));
     },
     [dispatch]
   );
@@ -57,7 +74,9 @@ export const useAppTheme = (): UseAppThemeReturn => {
     theme,
     isDark,
     mode,
+    palettePreset,
     setThemeMode,
+    setPalettePreset,
     toggleTheme,
   };
 };

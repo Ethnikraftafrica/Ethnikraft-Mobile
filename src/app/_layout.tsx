@@ -11,6 +11,7 @@ import { hydrateCurrency } from '@/store/slices/currencySlice';
 import { StorageService } from '@/services/storage.service';
 import { Colors } from '@/constants/theme';
 import { GlobalCartCheckoutModals } from '@/components/cart';
+import { GlobalSessionExpiredModal } from '@/components/common/GlobalSessionExpiredModal';
 import {
   useFonts,
   CormorantGaramond_600SemiBold,
@@ -119,7 +120,12 @@ function RootNavigation() {
           }}
         />
       </Stack>
-      {isHydrated && fontsLoaded && <GlobalCartCheckoutModals />}
+      {isHydrated && fontsLoaded && (
+        <>
+          <GlobalCartCheckoutModals />
+          <GlobalSessionExpiredModal />
+        </>
+      )}
     </>
   );
 }

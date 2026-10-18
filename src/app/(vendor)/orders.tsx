@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -12,15 +12,28 @@ import {
   RefreshControl,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { FontFamily, Radius, Shadows, Spacing } from '@/constants/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { useAppSelector } from '@/store';
 import { formatPrice } from '@/utils/price';
+import { VendorOrderCardsSkeleton } from '@/components/common/Skeletons';
+import {
+  useGetVendorOrdersQuery,
+  useUpdateOrderStatusMutation,
+  VendorOrder,
+} from '@/store/api/vendorApi';
+import {
+  TrendingUpFigmaIcon,
+  PackageFigmaIcon,
+  CustomBidsFigmaIcon,
+  StarOutlineFigmaIcon,
+} from '@/components/vendor/DashboardFigmaIcons';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -84,203 +97,8 @@ export interface VendorOrderRecord {
   notes?: string;
 }
 
-// ─── Mock Dataset matching Ethnikraft-BE & Ethnikraft-Vendor ───────────────────
-const INITIAL_ORDERS: VendorOrderRecord[] = [
-  {
-    id: 'ord-9201',
-    orderNumber: '#VORD-9201',
-    createdAt: '2026-09-21T14:30:00.000Z',
-    updatedAt: '2026-09-22T09:15:00.000Z',
-    status: 'SHIPPED',
-    totalAmount: 104000,
-    itemsSubtotal: 96000,
-    shippingCost: 8000,
-    shippingProvider: 'DHL Express Nigeria',
-    shippingCostPaid: true,
-    shippingTrackingNumber: 'DHL-NG-98421045',
-    shippingBookingId: 'BOOK-DHL-77019',
-    estimatedDeliveryDate: '2026-09-24',
-    customer: {
-      id: 'usr-101',
-      name: 'Chukwuma Obi',
-      email: 'c.obi@lagosart.org',
-      phone: '+234 802 334 5566',
-      deliveryAddress: 'Plot 14, Admiralty Way, Lekki Phase 1',
-      city: 'Lagos',
-      country: 'Nigeria',
-    },
-    orderItems: [
-      {
-        id: 'item-01',
-        productId: 'prod-001',
-        name: 'Handwoven Royal Indigo Aso-Oke Fila & Stole',
-        mainImage: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&auto=format&fit=crop&q=80',
-        category: 'WEARS',
-        quantity: 2,
-        unitPrice: 48000,
-        variantSnapshot: {
-          size: 'Large (58cm)',
-          color: 'Royal Indigo & Silver Lurex',
-          material: 'Hand-spun Cotton',
-        },
-      },
-    ],
-    notes: 'Please pack in ceremonial gift box for wedding presentation.',
-  },
-  {
-    id: 'ord-9195',
-    orderNumber: '#VORD-9195',
-    createdAt: '2026-09-20T11:20:00.000Z',
-    updatedAt: '2026-09-21T16:00:00.000Z',
-    status: 'IN_PRODUCTION',
-    totalAmount: 335000,
-    itemsSubtotal: 320000,
-    shippingCost: 15000,
-    shippingProvider: 'Red Star Express',
-    shippingCostPaid: true,
-    shippingTrackingNumber: 'RSE-LAG-55201',
-    shippingBookingId: 'BOOK-RSE-88310',
-    estimatedDeliveryDate: '2026-09-28',
-    customer: {
-      id: 'usr-102',
-      name: 'Amara Nwosu',
-      email: 'amara.nwosu@heritage.ng',
-      phone: '+234 803 778 9900',
-      deliveryAddress: '55 Gana Street, Maitama District',
-      city: 'Abuja',
-      country: 'Nigeria',
-    },
-    orderItems: [
-      {
-        id: 'item-02',
-        productId: 'prod-002',
-        name: 'Royal Benin Leopard Bronze Sculpture',
-        mainImage: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=800&auto=format&fit=crop&q=80',
-        category: 'CRAFTS',
-        quantity: 1,
-        unitPrice: 320000,
-        variantSnapshot: {
-          material: 'Solid Lost-Wax Bronze Cast',
-        },
-      },
-    ],
-    isCustomCommission: true,
-    customRequestTitle: 'Lost-Wax Bronze Leopard with Custom Patina',
-    notes: 'Client requested extra protective foam packing for fine-art courier transport.',
-  },
-  {
-    id: 'ord-9188',
-    orderNumber: '#VORD-9188',
-    createdAt: '2026-09-19T08:45:00.000Z',
-    updatedAt: '2026-09-19T10:00:00.000Z',
-    status: 'PENDING',
-    totalAmount: 150000,
-    itemsSubtotal: 145000,
-    shippingCost: 5000,
-    shippingProvider: 'GIG Logistics',
-    shippingCostPaid: true,
-    estimatedDeliveryDate: '2026-09-26',
-    customer: {
-      id: 'usr-103',
-      name: 'Dr. Folake Balogun',
-      email: 'f.balogun@unilag.edu.ng',
-      phone: '+234 805 112 2334',
-      deliveryAddress: '12 Parkview Estate, Ikoyi',
-      city: 'Lagos',
-      country: 'Nigeria',
-    },
-    orderItems: [
-      {
-        id: 'item-03',
-        productId: 'prod-003',
-        name: 'Yoruba Ceremonial Beaded Coral Crown (Ade)',
-        mainImage: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=800&auto=format&fit=crop&q=80',
-        category: 'ACCESSORIES',
-        quantity: 1,
-        unitPrice: 145000,
-        variantSnapshot: {
-          color: 'Imperial Coral Red',
-          material: 'Natural Coral & Czech Micro-Glass',
-        },
-      },
-    ],
-    notes: 'Order confirmed and awaiting artisan workshop preparation.',
-  },
-  {
-    id: 'ord-9174',
-    orderNumber: '#VORD-9174',
-    createdAt: '2026-09-15T16:10:00.000Z',
-    updatedAt: '2026-09-18T12:30:00.000Z',
-    status: 'DELIVERED',
-    totalAmount: 98000,
-    itemsSubtotal: 92000,
-    shippingCost: 6000,
-    shippingProvider: 'DHL Express Nigeria',
-    shippingCostPaid: true,
-    shippingTrackingNumber: 'DHL-NG-88392110',
-    shippingBookingId: 'BOOK-DHL-66190',
-    estimatedDeliveryDate: '2026-09-18',
-    customer: {
-      id: 'usr-104',
-      name: 'Kofi Mensah',
-      email: 'kofi.m@accra-atelier.gh',
-      phone: '+233 24 123 4567',
-      deliveryAddress: '7 Independence Avenue, Airport Residential',
-      city: 'Accra',
-      country: 'Ghana',
-    },
-    orderItems: [
-      {
-        id: 'item-04',
-        productId: 'prod-004',
-        name: 'Fulani Hand-Tooled Leather Weekend Satchel',
-        mainImage: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800&auto=format&fit=crop&q=80',
-        category: 'BAGS',
-        quantity: 1,
-        unitPrice: 92000,
-        variantSnapshot: {
-          color: 'Cognac Saddle Brown',
-          material: 'Vegetable-Tanned Hide',
-        },
-      },
-    ],
-    notes: 'Package signed and received by security concierge.',
-  },
-  {
-    id: 'ord-9160',
-    orderNumber: '#VORD-9160',
-    createdAt: '2026-09-12T10:00:00.000Z',
-    updatedAt: '2026-09-14T15:45:00.000Z',
-    status: 'COMPLETED',
-    totalAmount: 248000,
-    itemsSubtotal: 240000,
-    shippingCost: 8000,
-    shippingProvider: 'GIG Logistics',
-    shippingCostPaid: true,
-    shippingTrackingNumber: 'GIG-5591024',
-    customer: {
-      id: 'usr-105',
-      name: 'Lady Brenda Thornton',
-      email: 'brenda.thornton@london-arts.co.uk',
-      phone: '+44 20 7946 0991',
-      deliveryAddress: '24 Kensington Church Street',
-      city: 'London',
-      country: 'United Kingdom',
-    },
-    orderItems: [
-      {
-        id: 'item-05',
-        productId: 'prod-005',
-        name: 'Sacred Oshogbo Grove Spirits — Oil on Canvas',
-        mainImage: 'https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?w=800&auto=format&fit=crop&q=80',
-        category: 'PAINTINGS',
-        quantity: 1,
-        unitPrice: 240000,
-      },
-    ],
-    notes: 'Funds settled to artisan wallet and escrow released.',
-  },
-];
+// ─── Initial Dataset (Default to empty array; live backend data synced via RTK Query) ────
+const INITIAL_ORDERS: VendorOrderRecord[] = [];
 
 const STATUS_TABS: { id: OrderStatusType; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { id: 'ALL', label: 'All Orders', icon: 'layers-outline' },
@@ -370,17 +188,105 @@ const STATUS_BADGE_CONFIG: Record<
 
 export default function VendorOrdersScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { theme, isDark } = useAppTheme();
   const { code: currencyCode, rate: exchangeRate } = useAppSelector((state) => state.currency);
 
-  // ── State Management ─────────────────────────────────────────────────────────
+  // ── RTK Query API Integration ─────────────────────────────
+  const {
+    data: ordersResponse,
+    isLoading: isOrdersLoading,
+    isFetching: isOrdersFetching,
+    refetch: refetchOrders,
+  } = useGetVendorOrdersQuery();
+
+  const [updateOrderStatusMutation, { isLoading: isUpdatingStatus }] = useUpdateOrderStatusMutation();
+
+  // ── State Management ───────────────────────────────────────
   const [orders, setOrders] = useState<VendorOrderRecord[]>(INITIAL_ORDERS);
-  const [selectedStatusTab, setSelectedStatusTab] = useState<OrderStatusType>('ALL');
+  const [selectedStatuses, setSelectedStatuses] = useState<OrderStatusType[]>(['ALL']);
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // ── Modals State ─────────────────────────────────────────────────────────────
+  // ── Sync Server Data with Local State ──────────────────────
+  useEffect(() => {
+    if (ordersResponse && Array.isArray(ordersResponse)) {
+      const mapped: VendorOrderRecord[] = ordersResponse.map((item: VendorOrder) => {
+        const firstItem = item.orderItems?.[0];
+        const customerName = item.user
+          ? `${item.user.firstName || ''} ${item.user.lastName || ''}`.trim() || 'Atelier Patron'
+          : 'Atelier Patron';
+
+        return {
+          id: item.id,
+          orderNumber: item.orderNumber || `#VORD-${item.id.slice(-4).toUpperCase()}`,
+          createdAt: item.createdAt || new Date().toISOString(),
+          updatedAt: item.updatedAt || item.createdAt || new Date().toISOString(),
+          status: (item.status as OrderStatusType) || 'PENDING',
+          totalAmount: Number(item.total ?? item.agreedPrice ?? 0),
+          itemsSubtotal: Number(item.itemsSubtotal ?? item.total ?? 0),
+          shippingCost: Number(item.shippingCost ?? 0),
+          shippingProvider: item.shippingProvider || 'Courier Express',
+          shippingCostPaid: item.shippingCostPaid ?? true,
+          shippingTrackingNumber: item.shippingTrackingNumber,
+          shippingBookingId: item.shippingBookingId,
+          estimatedDeliveryDate: item.estimatedDeliveryDate,
+          customer: {
+            id: item.user?.id || 'cust-anon',
+            name: customerName,
+            email: item.user?.email || 'patron@ethnikraft.com',
+            phone: item.user?.phone || '—',
+            avatar: item.user?.profileImage,
+            deliveryAddress: item.user?.deliveryAddress || 'Atelier Vault / Local Fulfillment',
+            city: item.user?.city || 'Regional Hub',
+            country: item.user?.country || 'Nigeria',
+          },
+          orderItems: (item.orderItems || []).map((it) => ({
+            id: it.id,
+            productId: it.productId || it.product?.id || '',
+            name: it.product?.name || item.customRequest?.title || 'Heritage Piece',
+            mainImage: it.product?.mainImage || 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=800&auto=format&fit=crop&q=80',
+            category: it.product?.productCategory || 'CRAFTS',
+            quantity: it.quantity || 1,
+            unitPrice: it.unitPrice || 0,
+            variantSnapshot: it.variantSnapshot,
+          })),
+          isCustomCommission: Boolean(item.customRequest || item.customBid),
+          customRequestTitle: item.customRequest?.title,
+          notes: item.notes || item.customBid?.notes,
+        };
+      });
+
+      setOrders(mapped);
+    }
+  }, [ordersResponse]);
+
+  // ── Multi-Select Toggle Helper ────────────────────────────
+  const toggleStatus = (st: OrderStatusType) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (st === 'ALL') {
+      setSelectedStatuses(['ALL']);
+      return;
+    }
+    setSelectedStatuses((prev) => {
+      const withoutAll = prev.filter((s) => s !== 'ALL');
+      if (withoutAll.includes(st)) {
+        const remaining = withoutAll.filter((s) => s !== st);
+        return remaining.length === 0 ? ['ALL'] : remaining;
+      } else {
+        return [...withoutAll, st];
+      }
+    });
+  };
+
+  const handleClearAllFilters = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedStatuses(['ALL']);
+    setSearchQuery('');
+  };
+
+  // ── Modals State ──────────────────────────────────────────────────────────
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [statusModalVisible, setStatusModalVisible] = useState(false);
   const [trackingModalVisible, setTrackingModalVisible] = useState(false);
@@ -389,37 +295,43 @@ export default function VendorOrdersScreen() {
   const [activeOrder, setActiveOrder] = useState<VendorOrderRecord | null>(null);
   const [newSelectedStatus, setNewSelectedStatus] = useState<OrderStatusType>('PENDING');
 
-  // ── Toast Helper ─────────────────────────────────────────────────────────────
+  // ── Toast Helper ──────────────────────────────────────────────────────────
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 2800);
   };
 
-  // ── Refresh Handler ──────────────────────────────────────────────────────────
-  const onRefresh = () => {
+  // ── Refresh Handler ───────────────────────────────────────────────────────
+  const onRefresh = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
+    try {
+      await refetchOrders().unwrap();
       showToast('Orders & logistics synchronized with courier gateway');
-    }, 800);
+    } catch {
+      // Handled by global error interceptor
+    } finally {
+      setRefreshing(false);
+    }
   };
 
-  // ── Currency Formatter Helper ────────────────────────────────────────────────
+  // ── Currency Formatter Helper ─────────────────────────────────────────────
   const formatPriceValue = (val: number) => {
     return formatPrice(val, currencyCode, exchangeRate);
   };
 
-  // ── Filtered Orders Dataset ──────────────────────────────────────────────────
+  // ── Filtered Orders Dataset (Multi-Select Supported) ──────────────────────
+  const isStatusFiltered = !selectedStatuses.includes('ALL') && selectedStatuses.length > 0;
+
   const filteredOrders = useMemo(() => {
     return orders.filter((ord) => {
-      // Tab filter
-      if (selectedStatusTab !== 'ALL') {
-        if (selectedStatusTab === 'IN_PRODUCTION') {
-          if (!['IN_PRODUCTION', 'IN_PROGRESS', 'PRODUCTION_PENDING'].includes(ord.status)) return false;
-        } else if (ord.status !== selectedStatusTab) {
-          return false;
-        }
+      // Multi-select status filter
+      if (isStatusFiltered) {
+        const matchInProd =
+          selectedStatuses.includes('IN_PRODUCTION') &&
+          ['IN_PRODUCTION', 'IN_PROGRESS', 'PRODUCTION_PENDING'].includes(ord.status);
+        const matchOther = selectedStatuses.includes(ord.status);
+        if (!matchInProd && !matchOther) return false;
       }
 
       // Search filter
@@ -435,9 +347,9 @@ export default function VendorOrdersScreen() {
 
       return true;
     });
-  }, [orders, selectedStatusTab, searchQuery]);
+  }, [orders, selectedStatuses, searchQuery, isStatusFiltered]);
 
-  // ── Aggregate Metrics ────────────────────────────────────────────────────────
+  // ── Aggregate Metrics ──────────────────────────────────────
   const totalOrdersCount = orders.length;
   const inFulfillmentCount = useMemo(() => {
     return orders.filter((o) => ['PENDING', 'IN_PROGRESS', 'IN_PRODUCTION', 'SHIPPED'].includes(o.status)).length;
@@ -447,8 +359,11 @@ export default function VendorOrdersScreen() {
       .filter((o) => o.status !== 'CANCELLED' && o.status !== 'REFUNDED')
       .reduce((sum, o) => sum + o.totalAmount, 0);
   }, [orders]);
+  const completedOrdersCount = useMemo(() => {
+    return orders.filter((o) => o.status === 'COMPLETED' || o.status === 'DELIVERED').length;
+  }, [orders]);
 
-  // ── Handlers: Modals & Status Updates ────────────────────────────────────────
+  // ── Handlers: Modals & Status Updates ───────────────────────
   const handleOpenDetailModal = (ord: VendorOrderRecord) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setActiveOrder(ord);
@@ -468,10 +383,13 @@ export default function VendorOrdersScreen() {
     setTrackingModalVisible(true);
   };
 
-  const handleSaveStatusUpdate = () => {
+  const handleSaveStatusUpdate = async () => {
     if (!activeOrder) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
+    const prevStatus = activeOrder.status;
+
+    // Optimistically update local view
     setOrders((prev) =>
       prev.map((o) =>
         o.id === activeOrder.id
@@ -484,10 +402,29 @@ export default function VendorOrdersScreen() {
       )
     );
 
-    const statusLabel = STATUS_BADGE_CONFIG[newSelectedStatus]?.label || newSelectedStatus;
-    setStatusModalVisible(false);
-    showToast(`${activeOrder.orderNumber} transitioned to "${statusLabel}"`);
-    setActiveOrder(null);
+    try {
+      await updateOrderStatusMutation({
+        orderId: activeOrder.id,
+        status: newSelectedStatus,
+      }).unwrap();
+
+      const statusLabel = STATUS_BADGE_CONFIG[newSelectedStatus]?.label || newSelectedStatus;
+      setStatusModalVisible(false);
+      showToast(`${activeOrder.orderNumber} transitioned to "${statusLabel}"`);
+      setActiveOrder(null);
+    } catch {
+      // Revert optimistic update on backend error
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === activeOrder.id
+            ? {
+                ...o,
+                status: prevStatus,
+              }
+            : o
+        )
+      );
+    }
   };
 
   return (
@@ -497,11 +434,11 @@ export default function VendorOrdersScreen() {
         <View
           style={[
             styles.toastContainer,
-            { backgroundColor: isDark ? '#1F0E04' : '#101213', borderColor: theme.primary },
+            { backgroundColor: theme.card, borderColor: theme.primary },
           ]}
         >
           <Ionicons name="checkmark-circle" size={18} color="#10B981" style={{ marginRight: 8 }} />
-          <Text style={[styles.toastText, { color: '#FFF3D6' }]}>{toastMessage}</Text>
+          <Text style={[styles.toastText, { color: theme.textPrimary }]}>{toastMessage}</Text>
         </View>
       )}
 
@@ -519,62 +456,198 @@ export default function VendorOrdersScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* ── 1. Orders Command Banner ────────────────────────────────────── */}
-        <LinearGradient
-          colors={isDark ? ['#361300', '#1F0E04', '#120701'] : ['#5A2002', '#7D2E04', '#451700']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.heroCard}
-        >
-          <View style={styles.heroHeaderRow}>
-            <View style={styles.heroAvatarBox}>
-              <Ionicons name="cube" size={28} color="#FFD79E" />
-            </View>
-            <View style={styles.heroInfoCol}>
-              <View style={styles.badgeRow}>
-                <View style={styles.heroBadge}>
-                  <Ionicons name="sparkles" size={10} color="#FFD79E" />
-                  <Text style={styles.heroBadgeText}>FULFILLMENT ATELIER</Text>
-                </View>
-                <View style={[styles.heroBadge, { backgroundColor: 'rgba(16, 185, 129, 0.25)', borderColor: '#10B981' }]}>
-                  <View style={styles.onlineDot} />
-                  <Text style={[styles.heroBadgeText, { color: '#A7F3D0' }]}>COURIER GATEWAY ONLINE</Text>
-                </View>
-              </View>
-              <Text style={styles.heroTitle}>Orders & Dispatch</Text>
-              <Text style={styles.heroSubtitle}>
-                Manage active client shipments, track waybills, and update packaging milestones.
+        {/* ── 1. Executive Header & Counter Badge ──────────────────── */}
+        <View style={styles.headerRow}>
+          <View style={styles.headerTitleGroup}>
+            <Text style={[styles.pageTitle, { color: theme.textPrimary }]}>
+              Orders & Dispatch
+            </Text>
+            <View style={[styles.countBadge, { backgroundColor: isDark ? 'rgba(209, 153, 90, 0.16)' : 'rgba(196, 108, 39, 0.12)' }]}>
+              <Text style={[styles.countBadgeText, { color: isDark ? '#D1995A' : theme.primary }]}>
+                {filteredOrders.length} {filteredOrders.length === 1 ? 'Order' : 'Orders'}
               </Text>
             </View>
+            {isOrdersFetching && !isOrdersLoading && (
+              <ActivityIndicator size="small" color={theme.primary} style={{ marginLeft: 6 }} />
+            )}
+          </View>
+        </View>
+
+        {/* ── 2. Option A: 2x2 Metric Cards Grid (Figma Standard 183x125) ───── */}
+        <View style={styles.kpiGrid}>
+          {/* 1. Gross Revenue */}
+          <View
+            style={[
+              styles.kpiCard,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.kpiPillBadge,
+                {
+                  backgroundColor: isDark
+                    ? 'rgba(10, 210, 79, 0.12)'
+                    : 'rgba(0, 157, 26, 0.08)',
+                },
+              ]}
+            >
+              <TrendingUpFigmaIcon size={6} color={isDark ? '#0AD24F' : '#009D1A'} />
+              <Text
+                style={[
+                  styles.kpiPillText,
+                  { color: isDark ? '#0AD24F' : '#009D1A' },
+                ]}
+              >
+                Gross Revenue
+              </Text>
+            </View>
+
+            <View style={styles.kpiValueRow}>
+              <Text
+                style={[styles.kpiValueText, { color: theme.textPrimary }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
+                {formatPriceValue(totalOrderRevenue)}
+              </Text>
+            </View>
+
+            <Text style={styles.kpiSubtitleText}>Settled & In-Flight</Text>
           </View>
 
-          {/* Micro Metrics Strip */}
-          <View style={styles.kpiRibbon}>
-            <View style={styles.kpiRibbonItem}>
-              <Text style={styles.kpiRibbonNum}>{totalOrdersCount}</Text>
-              <Text style={styles.kpiRibbonLabel}>Total Orders</Text>
+          {/* 2. Order Volume */}
+          <View
+            style={[
+              styles.kpiCard,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.kpiPillBadge,
+                {
+                  backgroundColor: isDark
+                    ? 'rgba(196, 108, 39, 0.16)'
+                    : 'rgba(196, 108, 39, 0.10)',
+                },
+              ]}
+            >
+              <PackageFigmaIcon size={12} color={isDark ? '#D1995A' : theme.primary} />
+              <Text
+                style={[
+                  styles.kpiPillText,
+                  { color: isDark ? '#D1995A' : theme.primary },
+                ]}
+              >
+                Order Volume
+              </Text>
             </View>
-            <View style={styles.kpiRibbonDivider} />
-            <View style={styles.kpiRibbonItem}>
-              <Text style={[styles.kpiRibbonNum, { color: '#FFD79E' }]}>{inFulfillmentCount}</Text>
-              <Text style={styles.kpiRibbonLabel}>In Fulfillment</Text>
-            </View>
-            <View style={styles.kpiRibbonDivider} />
-            <View style={styles.kpiRibbonItem}>
-              <Text style={styles.kpiRibbonNum}>{formatPriceValue(totalOrderRevenue)}</Text>
-              <Text style={styles.kpiRibbonLabel}>Total Revenue</Text>
-            </View>
-          </View>
-        </LinearGradient>
 
-        {/* ── 2. Search Bar ────────────────────────────────────────────────── */}
+            <View style={styles.kpiValueRow}>
+              <Text style={[styles.kpiValueText, { color: theme.textPrimary }]}>
+                {totalOrdersCount} Placed
+              </Text>
+            </View>
+
+            <Text style={styles.kpiSubtitleText}>Total Client Orders</Text>
+          </View>
+
+          {/* 3. In Fulfillment */}
+          <View
+            style={[
+              styles.kpiCard,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.kpiPillBadge,
+                {
+                  backgroundColor: isDark
+                    ? 'rgba(209, 153, 90, 0.16)'
+                    : 'rgba(85, 107, 47, 0.10)',
+                },
+              ]}
+            >
+              <CustomBidsFigmaIcon size={12} color={isDark ? '#D1995A' : '#556B2F'} />
+              <Text
+                style={[
+                  styles.kpiPillText,
+                  { color: isDark ? '#D1995A' : '#556B2F' },
+                ]}
+              >
+                In Fulfillment
+              </Text>
+            </View>
+
+            <View style={styles.kpiValueRow}>
+              <Text style={[styles.kpiValueText, { color: theme.textPrimary }]}>
+                {inFulfillmentCount} Active
+              </Text>
+            </View>
+
+            <Text style={styles.kpiSubtitleText}>Processing & Transit</Text>
+          </View>
+
+          {/* 4. Fulfilled & Settled */}
+          <View
+            style={[
+              styles.kpiCard,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.kpiPillBadge,
+                {
+                  backgroundColor: isDark
+                    ? 'rgba(10, 210, 79, 0.12)'
+                    : 'rgba(0, 157, 26, 0.08)',
+                },
+              ]}
+            >
+              <StarOutlineFigmaIcon size={11} color={isDark ? '#0AD24F' : '#009D1A'} />
+              <Text
+                style={[
+                  styles.kpiPillText,
+                  { color: isDark ? '#0AD24F' : '#009D1A' },
+                ]}
+              >
+                Fulfilled
+              </Text>
+            </View>
+
+            <View style={styles.kpiValueRow}>
+              <Text style={[styles.kpiValueText, { color: theme.textPrimary }]}>
+                {completedOrdersCount} Delivered
+              </Text>
+            </View>
+
+            <Text style={styles.kpiSubtitleText}>Successful Delivery</Text>
+          </View>
+        </View>
+
+        {/* ── 3. Search Bar ────────────────────────────────────────────────── */}
         <View style={styles.searchSection}>
           <View
             style={[
               styles.searchBarWrap,
               {
-                backgroundColor: isDark ? '#1F0E04' : '#FFFFFF',
-                borderColor: isDark ? 'rgba(209, 153, 90, 0.25)' : 'rgba(196, 108, 39, 0.18)',
+                backgroundColor: theme.card,
+                borderColor: theme.border,
               },
             ]}
           >
@@ -595,50 +668,52 @@ export default function VendorOrdersScreen() {
           </View>
         </View>
 
-        {/* ── 3. Horizontal Status Filter Tabs Carousel ────────────────────── */}
+        {/* ── 4. Horizontal Status Filter Tabs Carousel (Multi-Select) ── */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.statusCarousel}
         >
           {STATUS_TABS.map((tab) => {
-            const isSelected = selectedStatusTab === tab.id;
+            const isSelected = selectedStatuses.includes(tab.id);
             return (
               <TouchableOpacity
                 key={tab.id}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setSelectedStatusTab(tab.id);
-                }}
+                onPress={() => toggleStatus(tab.id)}
                 style={[
                   styles.statusPill,
                   {
                     backgroundColor: isSelected
                       ? theme.primary
-                      : isDark
-                      ? '#1F0E04'
-                      : '#FFFFFF',
+                      : theme.card,
                     borderColor: isSelected
                       ? theme.primary
-                      : isDark
-                      ? 'rgba(209, 153, 90, 0.22)'
-                      : 'rgba(196, 108, 39, 0.15)',
+                      : theme.border,
                   },
                 ]}
                 activeOpacity={0.8}
               >
-                <Ionicons
-                  name={tab.icon}
-                  size={13}
-                  color={isSelected ? '#FFFFFF' : isDark ? '#FFD79E' : theme.primary}
-                  style={{ marginRight: 6 }}
-                />
+                {isSelected && tab.id !== 'ALL' ? (
+                  <Ionicons
+                    name="checkmark"
+                    size={13}
+                    color="#FFFFFF"
+                    style={{ marginRight: 5 }}
+                  />
+                ) : (
+                  <Ionicons
+                    name={tab.icon}
+                    size={13}
+                    color={isSelected ? '#FFFFFF' : isDark ? theme.textGold : theme.primary}
+                    style={{ marginRight: 6 }}
+                  />
+                )}
                 <Text
                   style={[
                     styles.statusPillText,
                     {
                       color: isSelected ? '#FFFFFF' : theme.textPrimary,
-                      fontFamily: isSelected ? FontFamily.poppinsBold : FontFamily.poppinsMedium,
+                      fontFamily: isSelected ? FontFamily.headingBold : FontFamily.bodyRegular,
                     },
                   ]}
                 >
@@ -649,13 +724,59 @@ export default function VendorOrdersScreen() {
           })}
         </ScrollView>
 
-        {/* ── 4. Order Cards Listing ───────────────────────────────────────── */}
+        {/* ── 4b. Active Status Filter Chips Bar ── */}
+        {isStatusFiltered && (
+          <View style={styles.activeChipsContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.activeChipsScroll}
+            >
+              <Text style={[styles.activeChipsLeadLabel, { color: theme.textMuted }]}>
+                Active:
+              </Text>
+              {selectedStatuses.map((stKey) => {
+                const label = STATUS_TABS.find((t) => t.id === stKey)?.label || stKey;
+                return (
+                  <TouchableOpacity
+                    key={`st-${stKey}`}
+                    style={[
+                      styles.activeChipPill,
+                      {
+                        backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#FAF6EE',
+                        borderColor: theme.border,
+                      },
+                    ]}
+                    onPress={() => toggleStatus(stKey)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.activeChipText, { color: theme.textPrimary }]}>
+                      {label}
+                    </Text>
+                    <Ionicons name="close-circle" size={14} color={theme.textMuted} style={{ marginLeft: 4 }} />
+                  </TouchableOpacity>
+                );
+              })}
+              <TouchableOpacity
+                style={[styles.clearAllChip, { borderColor: theme.border }]}
+                onPress={handleClearAllFilters}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.clearAllChipText, { color: theme.textMuted }]}>Clear all</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        )}
+
+        {/* ── 5. Order Cards Listing ── */}
         <View style={styles.ordersListContainer}>
-          {filteredOrders.length === 0 ? (
+          {isOrdersLoading && orders.length === 0 ? (
+            <VendorOrderCardsSkeleton count={3} />
+          ) : filteredOrders.length === 0 ? (
             <View
               style={[
                 styles.emptyStateCard,
-                { backgroundColor: isDark ? '#1F0E04' : '#FFFFFF', borderColor: theme.borderSubtle },
+                { backgroundColor: theme.card, borderColor: theme.borderSubtle },
               ]}
             >
               <Ionicons name="cube-outline" size={38} color={theme.primary} />
@@ -663,6 +784,16 @@ export default function VendorOrdersScreen() {
               <Text style={[styles.emptyStateSub, { color: theme.textSecondary }]}>
                 No orders match your active search or status filter criteria.
               </Text>
+              {(searchQuery.trim().length > 0 || isStatusFiltered) && (
+                <TouchableOpacity
+                  onPress={handleClearAllFilters}
+                  style={[styles.emptyResetBtn, { borderColor: theme.border }]}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="refresh-outline" size={14} color={theme.textPrimary} style={{ marginRight: 4 }} />
+                  <Text style={[styles.emptyResetBtnText, { color: theme.textPrimary }]}>Clear Filters</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ) : (
             filteredOrders.map((ord) => {
@@ -676,15 +807,17 @@ export default function VendorOrdersScreen() {
                   style={[
                     styles.orderCard,
                     {
-                      backgroundColor: isDark ? '#1F0E04' : '#FFFFFF',
-                      borderColor: isDark ? 'rgba(209, 153, 90, 0.22)' : 'rgba(196, 108, 39, 0.14)',
+                      backgroundColor: theme.card,
+                      borderColor: theme.border,
                     },
                   ]}
                 >
                   {/* Header Row: Order Number, Date, Status Badge */}
                   <View style={styles.cardHeaderRow}>
                     <View>
-                      <Text style={[styles.orderNumberText, { color: theme.primary }]}>{ord.orderNumber}</Text>
+                      <Text style={[styles.orderNumberText, { color: isDark ? theme.textGold : theme.primary }]}>
+                        {ord.orderNumber}
+                      </Text>
                       <Text style={[styles.orderDateText, { color: theme.textMuted }]}>
                         {new Date(ord.createdAt).toLocaleDateString('en-GB', {
                           day: 'numeric',
@@ -710,10 +843,10 @@ export default function VendorOrdersScreen() {
                     <View
                       style={[
                         styles.clientAvatarCircle,
-                        { backgroundColor: isDark ? '#361300' : '#FFEDD5' },
+                        { backgroundColor: theme.backgroundSecondary },
                       ]}
                     >
-                      <Text style={[styles.clientAvatarText, { color: theme.primary }]}>
+                      <Text style={[styles.clientAvatarText, { color: isDark ? theme.textGold : theme.primary }]}>
                         {ord.customer.name.charAt(0).toUpperCase()}
                       </Text>
                     </View>
@@ -734,7 +867,7 @@ export default function VendorOrdersScreen() {
                       style={[
                         styles.itemPreviewBox,
                         {
-                          backgroundColor: isDark ? '#160902' : '#FAF6F0',
+                          backgroundColor: theme.backgroundSecondary,
                           borderColor: theme.borderSubtle,
                         },
                       ]}
@@ -749,7 +882,7 @@ export default function VendorOrdersScreen() {
                           {mainItem.variantSnapshot?.size ? ` • ${mainItem.variantSnapshot.size}` : ''}
                         </Text>
                         {extraCount > 0 && (
-                          <Text style={[styles.extraItemsText, { color: theme.primary }]}>
+                          <Text style={[styles.extraItemsText, { color: isDark ? '#D1995A' : theme.primary }]}>
                             +{extraCount} more piece{extraCount > 1 ? 's' : ''} in package
                           </Text>
                         )}
@@ -771,7 +904,7 @@ export default function VendorOrdersScreen() {
                         style={styles.trackingNumberLink}
                         activeOpacity={0.75}
                       >
-                        <Text style={[styles.trackingNumberLinkText, { color: theme.primary }]}>
+                        <Text style={[styles.trackingNumberLinkText, { color: isDark ? '#D1995A' : theme.primary }]}>
                           #{ord.shippingTrackingNumber} ↗
                         </Text>
                       </TouchableOpacity>
@@ -787,7 +920,7 @@ export default function VendorOrdersScreen() {
                   <View style={styles.cardFooterRow}>
                     <View>
                       <Text style={[styles.totalLabelText, { color: theme.textMuted }]}>ORDER TOTAL</Text>
-                      <Text style={[styles.totalAmountText, { color: theme.primary }]}>
+                      <Text style={[styles.totalAmountText, { color: isDark ? '#D1995A' : theme.primary }]}>
                         {formatPriceValue(ord.totalAmount)}
                       </Text>
                     </View>
@@ -798,14 +931,14 @@ export default function VendorOrdersScreen() {
                         style={[
                           styles.updateStatusBtn,
                           {
-                            backgroundColor: isDark ? '#361300' : '#FFEDD5',
-                            borderColor: theme.borderSubtle,
+                            backgroundColor: theme.card,
+                            borderColor: theme.border,
                           },
                         ]}
                         activeOpacity={0.8}
                       >
-                        <Ionicons name="pencil" size={13} color={theme.primary} style={{ marginRight: 4 }} />
-                        <Text style={[styles.updateStatusBtnText, { color: theme.primary }]}>Status</Text>
+                        <Ionicons name="pencil" size={13} color={theme.textPrimary} style={{ marginRight: 4 }} />
+                        <Text style={[styles.updateStatusBtnText, { color: theme.textPrimary }]}>Status</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
@@ -823,7 +956,7 @@ export default function VendorOrdersScreen() {
           )}
         </View>
 
-        <View style={{ height: 120 }} />
+        <View style={{ height: Math.max(insets.bottom, 16) + 120 }} />
       </ScrollView>
 
       {/* ══════════════════════════════════════════════════════════════════════
@@ -831,228 +964,247 @@ export default function VendorOrdersScreen() {
       ══════════════════════════════════════════════════════════════════════ */}
       <Modal
         visible={detailModalVisible}
+        transparent
         animationType="slide"
-        presentationStyle="pageSheet"
         onRequestClose={() => setDetailModalVisible(false)}
         statusBarTranslucent
       >
-        <View style={[styles.modalBackdrop, { backgroundColor: theme.background }]}>
-          {/* Header */}
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalBackdropDismiss}
+            activeOpacity={1}
+            onPress={() => setDetailModalVisible(false)}
+          />
           <View
             style={[
-              styles.modalHeader,
+              styles.modalSheet,
               {
-                borderBottomColor: theme.borderSubtle,
-                backgroundColor: isDark ? '#1F0E04' : '#FFFFFF',
+                backgroundColor: theme.card,
+                borderColor: theme.border,
               },
             ]}
           >
-            <TouchableOpacity onPress={() => setDetailModalVisible(false)} style={styles.modalCloseBtn}>
-              <Ionicons name="close" size={22} color={theme.textPrimary} />
-            </TouchableOpacity>
-            <View style={{ alignItems: 'center' }}>
-              <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>Order Breakdown</Text>
-              <Text style={[styles.modalSubtitle, { color: theme.primary }]}>
-                {activeOrder?.orderNumber}
-              </Text>
+            {/* Sheet Handle */}
+            <View style={styles.sheetHandleWrap}>
+              <View style={[styles.sheetHandle, { backgroundColor: theme.border }]} />
             </View>
-            <TouchableOpacity
-              onPress={() => {
-                if (activeOrder) {
-                  setDetailModalVisible(false);
-                  handleOpenStatusModal(activeOrder);
-                }
-              }}
-              style={styles.modalHeaderAction}
-            >
-              <Ionicons name="pencil" size={18} color={theme.primary} />
-            </TouchableOpacity>
-          </View>
 
-          {activeOrder && (
-            <ScrollView
-              style={styles.modalBody}
-              contentContainerStyle={{ padding: Spacing.lg, paddingBottom: 110 }}
-              showsVerticalScrollIndicator={false}
-            >
-              {/* Customer & Destination Card */}
-              <View
-                style={[
-                  styles.modalSectionCard,
-                  { backgroundColor: isDark ? '#1F0E04' : '#FFFFFF', borderColor: theme.borderSubtle },
-                ]}
-              >
-                <View style={styles.sectionHeaderRow}>
-                  <Ionicons name="person-outline" size={16} color={theme.primary} style={{ marginRight: 6 }} />
-                  <Text style={[styles.modalSectionHeading, { color: theme.textPrimary }]}>Customer & Destination</Text>
-                </View>
-                <Text style={[styles.modalClientName, { color: theme.textPrimary }]}>{activeOrder.customer.name}</Text>
-                <Text style={[styles.modalClientSub, { color: theme.textSecondary }]}>
-                  {activeOrder.customer.email} • {activeOrder.customer.phone}
-                </Text>
-                <View style={[styles.addressPill, { backgroundColor: isDark ? '#160902' : '#F9F5EE' }]}>
-                  <Ionicons name="location-outline" size={14} color={theme.primary} style={{ marginRight: 6 }} />
-                  <Text style={[styles.addressText, { color: theme.textPrimary }]}>
-                    {activeOrder.customer.deliveryAddress}, {activeOrder.customer.city}, {activeOrder.customer.country}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Line Items List */}
-              <View
-                style={[
-                  styles.modalSectionCard,
-                  { backgroundColor: isDark ? '#1F0E04' : '#FFFFFF', borderColor: theme.borderSubtle },
-                ]}
-              >
-                <View style={styles.sectionHeaderRow}>
-                  <Ionicons name="cube-outline" size={16} color={theme.primary} style={{ marginRight: 6 }} />
-                  <Text style={[styles.modalSectionHeading, { color: theme.textPrimary }]}>
-                    Ordered Items ({activeOrder.orderItems.length})
-                  </Text>
-                </View>
-
-                {activeOrder.orderItems.map((item, idx) => (
-                  <View key={item.id || idx} style={styles.modalItemRow}>
-                    <Image source={{ uri: item.mainImage }} style={styles.modalItemImg} />
-                    <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={[styles.modalItemName, { color: theme.textPrimary }]}>{item.name}</Text>
-                      <Text style={[styles.modalItemSub, { color: theme.textSecondary }]}>
-                        Qty: {item.quantity} • Unit: {formatPriceValue(item.unitPrice)}
-                      </Text>
-                      {item.variantSnapshot && (
-                        <View style={styles.variantChipsWrap}>
-                          {item.variantSnapshot.size && (
-                            <View style={[styles.variantChip, { backgroundColor: isDark ? '#361300' : '#FFEDD5' }]}>
-                              <Text style={[styles.variantChipText, { color: theme.primary }]}>
-                                {item.variantSnapshot.size}
-                              </Text>
-                            </View>
-                          )}
-                          {item.variantSnapshot.color && (
-                            <View style={[styles.variantChip, { backgroundColor: isDark ? '#361300' : '#FFEDD5' }]}>
-                              <Text style={[styles.variantChipText, { color: theme.primary }]}>
-                                {item.variantSnapshot.color}
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-                      )}
-                    </View>
-                    <Text style={[styles.modalItemTotal, { color: theme.primary }]}>
-                      {formatPriceValue(item.unitPrice * item.quantity)}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-
-              {/* Shipping & Courier Section */}
-              <View
-                style={[
-                  styles.modalSectionCard,
-                  { backgroundColor: isDark ? '#1F0E04' : '#FFFFFF', borderColor: theme.borderSubtle },
-                ]}
-              >
-                <View style={styles.sectionHeaderRow}>
-                  <Ionicons name="airplane-outline" size={16} color={theme.primary} style={{ marginRight: 6 }} />
-                  <Text style={[styles.modalSectionHeading, { color: theme.textPrimary }]}>Logistics & Dispatch</Text>
-                </View>
-                <View style={styles.specGridRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.specLabel, { color: theme.textMuted }]}>Courier Provider</Text>
-                    <Text style={[styles.specValue, { color: theme.textPrimary }]}>{activeOrder.shippingProvider}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.specLabel, { color: theme.textMuted }]}>Shipping Cost</Text>
-                    <Text style={[styles.specValue, { color: theme.textPrimary }]}>
-                      {formatPriceValue(activeOrder.shippingCost)} (Paid)
-                    </Text>
-                  </View>
-                </View>
-
-                {activeOrder.shippingTrackingNumber && (
-                  <View style={{ marginTop: 10 }}>
-                    <Text style={[styles.specLabel, { color: theme.textMuted }]}>Waybill Tracking #</Text>
-                    <View
-                      style={[
-                        styles.trackingCopyBox,
-                        { backgroundColor: isDark ? '#160902' : '#F9F5EE', borderColor: theme.borderSubtle },
-                      ]}
-                    >
-                      <Text style={[styles.trackingCopyText, { color: theme.primary }]}>
-                        {activeOrder.shippingTrackingNumber}
-                      </Text>
-                      <TouchableOpacity
-                        onPress={() => {
-                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                          showToast(`Copied tracking code: ${activeOrder.shippingTrackingNumber}`);
-                        }}
-                        style={[styles.copyBtnPill, { backgroundColor: theme.primary }]}
-                      >
-                        <Ionicons name="copy-outline" size={12} color="#FFFFFF" style={{ marginRight: 4 }} />
-                        <Text style={styles.copyBtnText}>Copy</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                )}
-              </View>
-
-              {/* Payment Summary Box */}
-              <View
-                style={[
-                  styles.modalSectionCard,
-                  { backgroundColor: isDark ? '#1F0E04' : '#FFFFFF', borderColor: theme.borderSubtle },
-                ]}
-              >
-                <View style={styles.sectionHeaderRow}>
-                  <Ionicons name="wallet-outline" size={16} color={theme.primary} style={{ marginRight: 6 }} />
-                  <Text style={[styles.modalSectionHeading, { color: theme.textPrimary }]}>Settlement & Payment</Text>
-                </View>
-
-                <View style={styles.summaryRow}>
-                  <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Crafts Subtotal</Text>
-                  <Text style={[styles.summaryVal, { color: theme.textPrimary }]}>
-                    {formatPriceValue(activeOrder.itemsSubtotal)}
-                  </Text>
-                </View>
-                <View style={styles.summaryRow}>
-                  <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Courier Shipping Fee</Text>
-                  <Text style={[styles.summaryVal, { color: theme.textPrimary }]}>
-                    {formatPriceValue(activeOrder.shippingCost)}
-                  </Text>
-                </View>
-                <View style={[styles.summaryDivider, { backgroundColor: theme.borderSubtle }]} />
-                <View style={styles.summaryRow}>
-                  <Text style={[styles.summaryGrandLabel, { color: theme.textPrimary }]}>Total Grand Settlement</Text>
-                  <Text style={[styles.summaryGrandVal, { color: theme.primary }]}>
-                    {formatPriceValue(activeOrder.totalAmount)}
-                  </Text>
-                </View>
-              </View>
-            </ScrollView>
-          )}
-
-          {/* Bottom Action */}
-          {activeOrder && (
+            {/* Header */}
             <View
               style={[
-                styles.modalBottomBar,
-                { backgroundColor: isDark ? '#1F0E04' : '#FFFFFF', borderTopColor: theme.borderSubtle },
+                styles.modalHeader,
+                {
+                  borderBottomColor: theme.borderSubtle,
+                },
               ]}
             >
+              <TouchableOpacity onPress={() => setDetailModalVisible(false)} style={styles.modalCloseBtn}>
+                <Ionicons name="close" size={20} color={theme.textPrimary} />
+              </TouchableOpacity>
+              <View style={{ alignItems: 'center' }}>
+                <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>Order Breakdown</Text>
+                <Text style={[styles.modalSubtitle, { color: isDark ? '#D1995A' : theme.primary }]}>
+                  {activeOrder?.orderNumber}
+                </Text>
+              </View>
               <TouchableOpacity
                 onPress={() => {
-                  setDetailModalVisible(false);
-                  handleOpenStatusModal(activeOrder);
+                  if (activeOrder) {
+                    setDetailModalVisible(false);
+                    handleOpenStatusModal(activeOrder);
+                  }
                 }}
-                style={[styles.primaryActionBtn, { backgroundColor: theme.primary }]}
-                activeOpacity={0.85}
+                style={styles.modalHeaderAction}
               >
-                <Ionicons name="pencil" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-                <Text style={styles.primaryActionBtnText}>Update Fulfillment Status</Text>
+                <Ionicons name="pencil" size={18} color={isDark ? '#D1995A' : theme.primary} />
               </TouchableOpacity>
             </View>
-          )}
+
+            {activeOrder && (
+              <ScrollView
+                style={styles.modalBody}
+                contentContainerStyle={{ padding: Spacing.lg, paddingBottom: 110 }}
+                showsVerticalScrollIndicator={false}
+              >
+                {/* Customer & Destination Card */}
+                <View
+                  style={[
+                    styles.modalSectionCard,
+                    { backgroundColor: theme.backgroundSecondary, borderColor: theme.borderSubtle },
+                  ]}
+                >
+                  <View style={styles.sectionHeaderRow}>
+                    <Ionicons name="person-outline" size={16} color={isDark ? '#D1995A' : theme.primary} style={{ marginRight: 6 }} />
+                    <Text style={[styles.modalSectionHeading, { color: theme.textPrimary }]}>Customer & Destination</Text>
+                  </View>
+                  <Text style={[styles.modalClientName, { color: theme.textPrimary }]}>{activeOrder.customer.name}</Text>
+                  <Text style={[styles.modalClientSub, { color: theme.textSecondary }]}>
+                    {activeOrder.customer.email} • {activeOrder.customer.phone}
+                  </Text>
+                  <View style={[styles.addressPill, { backgroundColor: theme.card, borderColor: theme.borderSubtle, borderWidth: 1 }]}>
+                    <Ionicons name="location-outline" size={14} color={isDark ? '#D1995A' : theme.primary} style={{ marginRight: 6 }} />
+                    <Text style={[styles.addressText, { color: theme.textPrimary }]}>
+                      {activeOrder.customer.deliveryAddress}, {activeOrder.customer.city}, {activeOrder.customer.country}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Line Items List */}
+                <View
+                  style={[
+                    styles.modalSectionCard,
+                    { backgroundColor: theme.backgroundSecondary, borderColor: theme.borderSubtle },
+                  ]}
+                >
+                  <View style={styles.sectionHeaderRow}>
+                    <Ionicons name="cube-outline" size={16} color={isDark ? '#D1995A' : theme.primary} style={{ marginRight: 6 }} />
+                    <Text style={[styles.modalSectionHeading, { color: theme.textPrimary }]}>
+                      Ordered Items ({activeOrder.orderItems.length})
+                    </Text>
+                  </View>
+
+                  {activeOrder.orderItems.map((item, idx) => (
+                    <View key={item.id || idx} style={[styles.modalItemRow, { borderBottomColor: theme.borderSubtle }]}>
+                      <Image source={{ uri: item.mainImage }} style={styles.modalItemImg} />
+                      <View style={{ flex: 1, marginLeft: 10 }}>
+                        <Text style={[styles.modalItemName, { color: theme.textPrimary }]}>{item.name}</Text>
+                        <Text style={[styles.modalItemSub, { color: theme.textSecondary }]}>
+                          Qty: {item.quantity} • Unit: {formatPriceValue(item.unitPrice)}
+                        </Text>
+                        {item.variantSnapshot && (
+                          <View style={styles.variantChipsWrap}>
+                            {item.variantSnapshot.size && (
+                              <View style={[styles.variantChip, { backgroundColor: isDark ? 'rgba(209, 153, 90, 0.16)' : 'rgba(196, 108, 39, 0.10)' }]}>
+                                <Text style={[styles.variantChipText, { color: isDark ? '#D1995A' : theme.primary }]}>
+                                  {item.variantSnapshot.size}
+                                </Text>
+                              </View>
+                            )}
+                            {item.variantSnapshot.color && (
+                              <View style={[styles.variantChip, { backgroundColor: isDark ? 'rgba(209, 153, 90, 0.16)' : 'rgba(196, 108, 39, 0.10)' }]}>
+                                <Text style={[styles.variantChipText, { color: isDark ? '#D1995A' : theme.primary }]}>
+                                  {item.variantSnapshot.color}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        )}
+                      </View>
+                      <Text style={[styles.modalItemTotal, { color: isDark ? '#D1995A' : theme.primary }]}>
+                        {formatPriceValue(item.unitPrice * item.quantity)}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+
+                {/* Shipping & Courier Section */}
+                <View
+                  style={[
+                    styles.modalSectionCard,
+                    { backgroundColor: theme.backgroundSecondary, borderColor: theme.borderSubtle },
+                  ]}
+                >
+                  <View style={styles.sectionHeaderRow}>
+                    <Ionicons name="airplane-outline" size={16} color={isDark ? '#D1995A' : theme.primary} style={{ marginRight: 6 }} />
+                    <Text style={[styles.modalSectionHeading, { color: theme.textPrimary }]}>Logistics & Dispatch</Text>
+                  </View>
+                  <View style={styles.specGridRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.specLabel, { color: theme.textMuted }]}>Courier Provider</Text>
+                      <Text style={[styles.specValue, { color: theme.textPrimary }]}>{activeOrder.shippingProvider}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.specLabel, { color: theme.textMuted }]}>Shipping Cost</Text>
+                      <Text style={[styles.specValue, { color: theme.textPrimary }]}>
+                        {formatPriceValue(activeOrder.shippingCost)} (Paid)
+                      </Text>
+                    </View>
+                  </View>
+
+                  {activeOrder.shippingTrackingNumber && (
+                    <View style={{ marginTop: 10 }}>
+                      <Text style={[styles.specLabel, { color: theme.textMuted }]}>Waybill Tracking #</Text>
+                      <View
+                        style={[
+                          styles.trackingCopyBox,
+                          { backgroundColor: theme.card, borderColor: theme.borderSubtle },
+                        ]}
+                      >
+                        <Text style={[styles.trackingCopyText, { color: isDark ? '#D1995A' : theme.primary }]}>
+                          {activeOrder.shippingTrackingNumber}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => {
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                            showToast(`Copied tracking code: ${activeOrder.shippingTrackingNumber}`);
+                          }}
+                          style={[styles.copyBtnPill, { backgroundColor: theme.primary }]}
+                        >
+                          <Ionicons name="copy-outline" size={12} color="#FFFFFF" style={{ marginRight: 4 }} />
+                          <Text style={styles.copyBtnText}>Copy</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </View>
+
+                {/* Payment Summary Box */}
+                <View
+                  style={[
+                    styles.modalSectionCard,
+                    { backgroundColor: theme.backgroundSecondary, borderColor: theme.borderSubtle },
+                  ]}
+                >
+                  <View style={styles.sectionHeaderRow}>
+                    <Ionicons name="wallet-outline" size={16} color={isDark ? '#D1995A' : theme.primary} style={{ marginRight: 6 }} />
+                    <Text style={[styles.modalSectionHeading, { color: theme.textPrimary }]}>Settlement & Payment</Text>
+                  </View>
+
+                  <View style={styles.summaryRow}>
+                    <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Crafts Subtotal</Text>
+                    <Text style={[styles.summaryVal, { color: theme.textPrimary }]}>
+                      {formatPriceValue(activeOrder.itemsSubtotal)}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Courier Shipping Fee</Text>
+                    <Text style={[styles.summaryVal, { color: theme.textPrimary }]}>
+                      {formatPriceValue(activeOrder.shippingCost)}
+                    </Text>
+                  </View>
+                  <View style={[styles.summaryDivider, { backgroundColor: theme.borderSubtle }]} />
+                  <View style={styles.summaryRow}>
+                    <Text style={[styles.summaryGrandLabel, { color: theme.textPrimary }]}>Total Grand Settlement</Text>
+                    <Text style={[styles.summaryGrandVal, { color: isDark ? '#D1995A' : theme.primary }]}>
+                      {formatPriceValue(activeOrder.totalAmount)}
+                    </Text>
+                  </View>
+                </View>
+              </ScrollView>
+            )}
+
+            {/* Bottom Action */}
+            {activeOrder && (
+              <View
+                style={[
+                  styles.modalBottomBar,
+                  { backgroundColor: theme.card, borderTopColor: theme.borderSubtle },
+                ]}
+              >
+                <TouchableOpacity
+                  onPress={() => {
+                    setDetailModalVisible(false);
+                    handleOpenStatusModal(activeOrder);
+                  }}
+                  style={[styles.primaryActionBtn, { backgroundColor: theme.primary }]}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="pencil" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.primaryActionBtnText}>Update Fulfillment Status</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
         </View>
       </Modal>
 
@@ -1066,22 +1218,29 @@ export default function VendorOrdersScreen() {
         onRequestClose={() => setStatusModalVisible(false)}
         statusBarTranslucent
       >
-        <View style={styles.backdropDimBottom}>
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalBackdropDismiss}
+            activeOpacity={1}
+            onPress={() => setStatusModalVisible(false)}
+          />
           <View
             style={[
               styles.statusSheetCard,
-              { backgroundColor: isDark ? '#1F0E04' : '#FFFFFF' },
+              { backgroundColor: theme.card, borderColor: theme.border },
             ]}
           >
-            <View style={styles.sheetHandle} />
+            <View style={styles.sheetHandleWrap}>
+              <View style={[styles.sheetHandle, { backgroundColor: theme.border }]} />
+            </View>
 
             <View style={styles.sheetHeaderRow}>
               <View>
                 <Text style={[styles.sheetTitle, { color: theme.textPrimary }]}>Update Order Status</Text>
-                <Text style={[styles.sheetSubtitle, { color: theme.primary }]}>{activeOrder?.orderNumber}</Text>
+                <Text style={[styles.sheetSubtitle, { color: isDark ? '#D1995A' : theme.primary }]}>{activeOrder?.orderNumber}</Text>
               </View>
-              <TouchableOpacity onPress={() => setStatusModalVisible(false)}>
-                <Ionicons name="close" size={22} color={theme.textPrimary} />
+              <TouchableOpacity onPress={() => setStatusModalVisible(false)} style={styles.modalCloseBtn}>
+                <Ionicons name="close" size={20} color={theme.textPrimary} />
               </TouchableOpacity>
             </View>
 
@@ -1111,13 +1270,9 @@ export default function VendorOrdersScreen() {
                       styles.statusOptionRow,
                       {
                         backgroundColor: isSelected
-                          ? isDark
-                            ? '#361300'
-                            : '#FFEDD5'
-                          : isDark
-                          ? '#160902'
-                          : '#F9F5EE',
-                        borderColor: isSelected ? theme.primary : 'transparent',
+                          ? (isDark ? 'rgba(196, 108, 39, 0.16)' : 'rgba(196, 108, 39, 0.10)')
+                          : theme.backgroundSecondary,
+                        borderColor: isSelected ? theme.primary : theme.borderSubtle,
                       },
                     ]}
                     activeOpacity={0.8}
@@ -1148,15 +1303,30 @@ export default function VendorOrdersScreen() {
             <View style={styles.sheetActionsRow}>
               <TouchableOpacity
                 onPress={() => setStatusModalVisible(false)}
-                style={[styles.sheetCancelBtn, { borderColor: theme.borderSubtle }]}
+                disabled={isUpdatingStatus}
+                style={[styles.sheetCancelBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
               >
                 <Text style={[styles.sheetCancelText, { color: theme.textSecondary }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleSaveStatusUpdate}
-                style={[styles.sheetSaveBtn, { backgroundColor: theme.primary }]}
+                disabled={isUpdatingStatus}
+                style={[
+                  styles.sheetSaveBtn,
+                  {
+                    backgroundColor: theme.primary,
+                    opacity: isUpdatingStatus ? 0.75 : 1,
+                  },
+                ]}
               >
-                <Text style={styles.sheetSaveText}>Commit Status Update</Text>
+                {isUpdatingStatus ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                    <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
+                    <Text style={styles.sheetSaveText}>Updating...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.sheetSaveText}>Commit Status Update</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -1177,11 +1347,11 @@ export default function VendorOrdersScreen() {
           <View
             style={[
               styles.trackingCard,
-              { backgroundColor: isDark ? '#1F0E04' : '#FFFFFF', borderColor: theme.primary },
+              { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 },
             ]}
           >
             <View style={styles.trackingHeaderRow}>
-              <Ionicons name="airplane" size={24} color={theme.primary} />
+              <Ionicons name="airplane" size={24} color={isDark ? '#D1995A' : theme.primary} />
               <Text style={[styles.trackingModalTitle, { color: theme.textPrimary }]}>Courier Waybill Tracking</Text>
             </View>
 
@@ -1193,7 +1363,7 @@ export default function VendorOrdersScreen() {
                 </Text>
 
                 <Text style={[styles.specLabel, { color: theme.textMuted, marginTop: 10 }]}>Waybill Number</Text>
-                <Text style={[styles.specValue, { color: theme.primary, fontSize: 18, fontFamily: FontFamily.poppinsBold }]}>
+                <Text style={[styles.specValue, { color: isDark ? '#D1995A' : theme.primary, fontSize: 18, fontFamily: FontFamily.poppinsBold }]}>
                   {activeOrder.shippingTrackingNumber || 'Pending Assignment'}
                 </Text>
 
@@ -1217,7 +1387,7 @@ export default function VendorOrdersScreen() {
 
                 <TouchableOpacity
                   onPress={() => setTrackingModalVisible(false)}
-                  style={[styles.trackingDismissBtn, { borderColor: theme.borderSubtle }]}
+                  style={[styles.trackingDismissBtn, { backgroundColor: theme.backgroundSecondary, borderColor: theme.borderSubtle }]}
                 >
                   <Text style={[styles.trackingDismissText, { color: theme.textSecondary }]}>Close</Text>
                 </TouchableOpacity>
@@ -1254,9 +1424,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: Radius.lg,
-    borderWidth: 1.5,
-    ...Shadows.lg,
+    borderRadius: Radius.md,
+    borderWidth: 1,
   },
   toastText: {
     fontFamily: FontFamily.poppinsMedium,
@@ -1264,104 +1433,78 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // 1. Hero Card
-  heroCard: {
-    borderRadius: Radius.xl,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
-    overflow: 'hidden',
-    ...Shadows.md,
-  },
-  heroHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  heroAvatarBox: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(255, 215, 158, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 215, 158, 0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  heroInfoCol: {
-    flex: 1,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 4,
-  },
-  heroBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 215, 158, 0.2)',
-    borderWidth: 1,
-    borderColor: '#FFD79E',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: Radius.full,
-  },
-  onlineDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#10B981',
-    marginRight: 4,
-  },
-  heroBadgeText: {
-    fontFamily: FontFamily.poppinsBold,
-    fontSize: 9,
-    color: '#FFD79E',
-    letterSpacing: 0.5,
-    marginLeft: 3,
-  },
-  heroTitle: {
-    fontFamily: FontFamily.cormorantBold,
-    fontSize: 20,
-    color: '#FFFFFF',
-    lineHeight: 25,
-  },
-  heroSubtitle: {
-    fontFamily: FontFamily.poppinsRegular,
-    fontSize: 11,
-    color: '#E0D0C0',
-    marginTop: 2,
-  },
-  kpiRibbon: {
+  // 1. Executive Header
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
-    borderRadius: Radius.lg,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    marginBottom: Spacing.md,
   },
-  kpiRibbonItem: {
-    flex: 1,
+  headerTitleGroup: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
-  kpiRibbonNum: {
-    fontFamily: FontFamily.poppinsBold,
-    fontSize: 15,
-    color: '#FFFFFF',
+  pageTitle: {
+    fontSize: 22,
+    fontFamily: FontFamily.headingBold,
+    letterSpacing: -0.3,
   },
-  kpiRibbonLabel: {
-    fontFamily: FontFamily.poppinsRegular,
-    fontSize: 10,
-    color: '#C0B0A0',
-    marginTop: 1,
+  countBadge: {
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: Radius.full,
   },
-  kpiRibbonDivider: {
-    width: 1,
+  countBadgeText: {
+    fontSize: 11,
+    fontFamily: FontFamily.poppinsSemiBold,
+  },
+
+  // 2. Option A 2x2 Metric Grid (Figma Standard 183x125)
+  kpiGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: Spacing.md,
+  },
+  kpiCard: {
+    width: (SCREEN_WIDTH - Spacing.md * 2 - 10) / 2,
+    height: 125,
+    borderRadius: Radius.md, // 7px
+    paddingHorizontal: 13,
+    paddingVertical: 12,
+    borderWidth: 1,
+    justifyContent: 'space-between',
+  },
+  kpiPillBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
     height: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 4,
+    gap: 6,
+  },
+  kpiPillText: {
+    fontSize: 11,
+    fontFamily: FontFamily.headingBold,
+  },
+  kpiValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  kpiValueText: {
+    fontSize: 22,
+    fontFamily: FontFamily.headingBold,
+    letterSpacing: -0.3,
+  },
+  kpiSubtitleText: {
+    fontSize: 12,
+    fontFamily: FontFamily.headingBold,
+    color: '#808080',
+    marginTop: 1,
   },
 
   // 2. Search Section
@@ -1403,16 +1546,54 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 
+  // 3b. Active Status Filter Chips
+  activeChipsContainer: {
+    marginBottom: Spacing.sm,
+  },
+  activeChipsScroll: {
+    gap: 6,
+    alignItems: 'center',
+    paddingVertical: 2,
+  },
+  activeChipsLeadLabel: {
+    fontSize: 10.5,
+    fontFamily: FontFamily.poppinsBold,
+    letterSpacing: 0.4,
+    marginRight: 2,
+  },
+  activeChipPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 9,
+    paddingVertical: 4.5,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+  },
+  activeChipText: {
+    fontSize: 11,
+    fontFamily: FontFamily.poppinsRegular,
+  },
+  clearAllChip: {
+    paddingHorizontal: 9,
+    paddingVertical: 4.5,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  clearAllChipText: {
+    fontSize: 11,
+    fontFamily: FontFamily.poppinsRegular,
+  },
+
   // 4. Order Cards
   ordersListContainer: {
     gap: Spacing.md,
     marginTop: Spacing.xs,
   },
   orderCard: {
-    borderRadius: Radius.xl,
+    borderRadius: Radius.md,
     padding: Spacing.md,
     borderWidth: 1,
-    ...Shadows.sm,
   },
   cardHeaderRow: {
     flexDirection: 'row',
@@ -1563,7 +1744,7 @@ const styles = StyleSheet.create({
   // Empty state
   emptyStateCard: {
     padding: Spacing.xl,
-    borderRadius: Radius.xl,
+    borderRadius: Radius.md,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1580,33 +1761,69 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 4,
   },
+  emptyResetBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    marginTop: 14,
+  },
+  emptyResetBtnText: {
+    fontFamily: FontFamily.poppinsMedium,
+    fontSize: 12,
+  },
 
-  // Modal Details
-  modalBackdrop: {
+  // ── Modals / Bottom Sheets Standard ──────────────────────────────────────
+  modalOverlay: {
     flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBackdropDismiss: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0, 0, 0, 0.60)',
+  },
+  modalSheet: {
+    height: '84%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderTopWidth: 1,
+    overflow: 'hidden',
+  },
+  sheetHandleWrap: {
+    alignItems: 'center',
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
+    paddingVertical: 10,
     borderBottomWidth: 1,
   },
   modalCloseBtn: {
-    padding: 4,
+    padding: 6,
   },
   modalTitle: {
-    fontFamily: FontFamily.poppinsBold,
-    fontSize: 16,
+    fontSize: 18,
+    fontFamily: FontFamily.cormorantBold,
+    letterSpacing: -0.2,
   },
   modalSubtitle: {
+    fontSize: 11,
     fontFamily: FontFamily.poppinsBold,
-    fontSize: 10,
     letterSpacing: 0.5,
   },
   modalHeaderAction: {
-    padding: 4,
+    padding: 6,
   },
   modalBody: {
     flex: 1,
@@ -1776,23 +1993,13 @@ const styles = StyleSheet.create({
   },
 
   // Status Sheet Bottom Modal
-  backdropDimBottom: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-    justifyContent: 'flex-end',
-  },
   statusSheetCard: {
-    borderTopLeftRadius: Radius.xl,
-    borderTopRightRadius: Radius.xl,
-    padding: Spacing.lg,
-  },
-  sheetHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    alignSelf: 'center',
-    marginBottom: 12,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderTopWidth: 1,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.xs,
+    paddingBottom: Platform.OS === 'ios' ? 36 : Spacing.lg,
   },
   sheetHeaderRow: {
     flexDirection: 'row',
@@ -1866,10 +2073,9 @@ const styles = StyleSheet.create({
   },
   trackingCard: {
     width: '100%',
-    borderRadius: Radius.xl,
+    borderRadius: Radius.md,
     padding: Spacing.lg,
     borderWidth: 1.5,
-    ...Shadows.lg,
   },
   trackingHeaderRow: {
     flexDirection: 'row',

@@ -7,13 +7,15 @@ import {
 } from '@reduxjs/toolkit/query/react';
 import { API_BASE_URL, API_ENDPOINTS } from '@/constants/api';
 import { StorageService } from '@/services/storage.service';
-import { logout, updateTokens } from '../slices/authSlice';
+import { logout, updateTokens, triggerSessionExpired } from '../slices/authSlice';
 
 // Base fetch query with automatic Authorization header injection
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: API_BASE_URL,
-  prepareHeaders: async (headers, { endpoint }) => {
-    const token = await StorageService.getAccessToken();
+  prepareHeaders: async (headers, { endpoint, getState }) => {
+    // Prefer Redux state access token first, fallback to StorageService
+    const state = getState() as { auth?: { accessToken?: string | null } };
+    const token = state?.auth?.accessToken || (await StorageService.getAccessToken());
     if (token) {
       headers.set('Authorization', `Bearer ${token}`);
     }
@@ -49,6 +51,21 @@ const addRefreshSubscriber = (callback: (token: string | null) => void) => {
   refreshSubscribers.push(callback);
 };
 
+// Endpoints that are explicitly public or authentication-related where a 401 should NEVER trigger session expiration
+const isAuthOrPublicUrl = (url: string): boolean => {
+  return (
+    url.includes('/auth/login') ||
+    url.includes('/auth/google-login') ||
+    url.includes('/auth/initiate-registration') ||
+    url.includes('/auth/verify-otp') ||
+    url.includes('/auth/complete-registration') ||
+    url.includes('/auth/vendor/initiate-registration') ||
+    url.includes('/auth/vendor/verify-otp') ||
+    url.includes('/auth/vendor/complete-registration') ||
+    url.includes('/auth/password-reset')
+  );
+};
+
 // Custom base query with seamless automatic token refresh and transparent Expo terminal error logging
 export const baseQueryWithReauth: BaseQueryFn<
   string | FetchArgs,
@@ -65,7 +82,8 @@ export const baseQueryWithReauth: BaseQueryFn<
   // as a plain object, causing it to call JSON.stringify(formData) and force application/json.
   // We execute FormData uploads directly with native fetch to ensure OkHttp streams the binary multipart files.
   if (isFormData && typeof args !== 'string') {
-    const token = await StorageService.getAccessToken();
+    const state = api.getState() as { auth?: { accessToken?: string | null } };
+    const token = state?.auth?.accessToken || (await StorageService.getAccessToken());
     const url = args.url;
     const method = args.method || 'POST';
     const fullUrl = `${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
@@ -90,7 +108,7 @@ export const baseQueryWithReauth: BaseQueryFn<
       }
 
       if (!response.ok) {
-        if (response.status === 401) {
+        if (response.status === 401 && !isAuthOrPublicUrl(url)) {
           api.dispatch(logout());
         }
 
@@ -134,26 +152,32 @@ export const baseQueryWithReauth: BaseQueryFn<
 
   let result = await rawBaseQuery(args, api, extraOptions);
 
-  // If there's an error from the backend, print formatted details to the Expo terminal logs
-  if (result.error) {
-    const status = result.error.status;
-    const errorData = result.error.data;
-    console.error(
-      `\n======================================================\n` +
-      `🚨 [EXPO API ERROR] ${method} ${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}\n` +
-      `📊 HTTP Status: ${status}\n` +
-      (reqBody ? `📦 Request Body: ${JSON.stringify(reqBody, null, 2)}\n` : '') +
-      `❌ Error Response: ${errorData ? (typeof errorData === 'object' ? JSON.stringify(errorData, null, 2) : errorData) : ((result.error as any).error || 'Network or connection error')}\n` +
-      `======================================================\n`
-    );
-  }
-
-  // Handle 401 Unauthorized with automatic refresh token exchange
+  // Handle 401 Unauthorized with atomic refresh token exchange
   if (result.error && result.error.status === 401) {
+    // 1. If this is an auth credential endpoint (like /auth/login), do NOT trigger session expiration or refresh.
+    // Return the 401 as a standard rejection for the UI form error handler.
+    if (isAuthOrPublicUrl(url)) {
+      return result;
+    }
+
+    // 2. If this is the refresh endpoint itself failing with 401, session has definitely expired.
+    if (url.includes(API_ENDPOINTS.auth.refresh)) {
+      api.dispatch(triggerSessionExpired());
+      return result;
+    }
+
     const refreshToken = await StorageService.getRefreshToken();
+    const state = api.getState() as { auth?: { isAuthenticated?: boolean } };
+    const wasAuthenticated = !!state?.auth?.isAuthenticated;
 
     if (!refreshToken) {
-      api.dispatch(logout());
+      // Only pop session expired modal if the user was actually logged in previously
+      if (wasAuthenticated) {
+        api.dispatch(triggerSessionExpired());
+        if (!isRefreshing) {
+          console.warn(`[AUTH] Session expired for ${method} ${url}. Redirecting to login.`);
+        }
+      }
       return result;
     }
 
@@ -186,16 +210,20 @@ export const baseQueryWithReauth: BaseQueryFn<
           result = await rawBaseQuery(args, api, extraOptions);
         } else {
           onTokenRefreshed(null);
-          api.dispatch(logout());
+          if (wasAuthenticated) {
+            api.dispatch(triggerSessionExpired());
+          }
         }
       } catch (err) {
         onTokenRefreshed(null);
-        api.dispatch(logout());
+        if (wasAuthenticated) {
+          api.dispatch(triggerSessionExpired());
+        }
       } finally {
         isRefreshing = false;
       }
     } else {
-      // Wait for ongoing refresh to complete
+      // Another request is already refreshing tokens; queue this request and await the new token
       const retryPromise = new Promise<any>((resolve) => {
         addRefreshSubscriber((newToken) => {
           if (newToken) {
@@ -207,6 +235,18 @@ export const baseQueryWithReauth: BaseQueryFn<
       });
       return await retryPromise;
     }
+  } else if (result.error) {
+    // Only log non-401 errors or unrecoverable application errors to prevent terminal spam
+    const status = result.error.status;
+    const errorData = result.error.data;
+    console.error(
+      `\n======================================================\n` +
+      `🚨 [EXPO API ERROR] ${method} ${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}\n` +
+      `📊 HTTP Status: ${status}\n` +
+      (reqBody ? `📦 Request Body: ${JSON.stringify(reqBody, null, 2)}\n` : '') +
+      `❌ Error Response: ${errorData ? (typeof errorData === 'object' ? JSON.stringify(errorData, null, 2) : errorData) : ((result.error as any).error || 'Network or connection error')}\n` +
+      `======================================================\n`
+    );
   }
 
   return result;
@@ -228,12 +268,16 @@ export const baseApi = createApi({
     'Categories',
     'Orders',
     'VendorOrders',
+    'VendorOverview',
     'CustomRequests',
     'VendorBids',
     'Payouts',
     'Reviews',
     'Cart',
     'Payments',
+    'VendorCatalogs',
+    'Chats',
+    'VendorMessages',
   ],
   endpoints: () => ({}),
 });

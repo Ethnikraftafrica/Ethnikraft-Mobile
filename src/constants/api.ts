@@ -10,7 +10,7 @@ export const API_ENDPOINTS = {
     googleLogin: '/auth/google-login',
     logout: '/auth/logout',
     profile: '/auth/profile',
-    vendorProfile: '/auth/vendor/profile',
+    vendorProfile: '/vendor/profile',
     
     // Customer Registration Flow
     initiateRegister: '/auth/initiate-registration',
@@ -81,12 +81,26 @@ export const API_ENDPOINTS = {
     updateStatus: (id: string) => `/orders/${id}/status`,
   },
 
-  // Custom Studio
+  // Custom Studio & Workbench
   studio: {
     requests: '/custom-requests',
-    vendorRequests: '/vendors/product-requests',
+    marketplace: '/custom-requests/marketplace',
     details: (id: string) => `/custom-requests/${id}`,
     submitBid: (id: string) => `/custom-requests/${id}/bids`,
+    bids: '/custom-bids',
+    vendorBids: '/custom-bids/vendor',
+    vendorRequests: '/vendors/product-requests',
+    vendorRequestDetails: (id: string) => `/vendors/product-requests/${id}`,
+    startProduction: (id: string) => `/vendors/product-requests/${id}/start-production`,
+    updateProgress: (id: string) => `/vendors/product-requests/${id}/update-progress`,
+    markReady: (id: string) => `/vendors/product-requests/${id}/mark-ready`,
+  },
+
+  // Chats & Messaging
+  chats: {
+    get: (customRequestId: string) => `/chats/${customRequestId}`,
+    create: (customRequestId: string) => `/chats/create/${customRequestId}`,
+    sendMessage: (customRequestId: string) => `/chats/${customRequestId}/messages`,
   },
 
   // User Profile & Addresses
@@ -133,10 +147,30 @@ export const API_ENDPOINTS = {
 
   // Vendor Ops & Payouts
   vendor: {
+    overview: '/vendors/me/overview',
+    messages: '/vendors/me/messages',
+    messageStats: '/vendors/me/messages/stats',
+    orders: '/orders/vendor',
+    updateOrderStatus: (id: string) => `/orders/${id}/status`,
     myProducts: '/products/my-products',
     createProduct: '/products',
     updateProduct: (id: string) => `/products/${id}`,
+    deleteProduct: (id: string) => `/products/${id}`,
     payoutSummary: '/vendors/payouts/summary',
     requestPayout: '/vendors/payouts/request',
+    catalogs: '/vendor/profile/catalogs',
+    createCatalog: '/vendor/profile/catalogs',
+    updateCatalog: (id: string) => `/vendor/profile/catalogs/${id}`,
+    deleteCatalog: (id: string) => `/vendor/profile/catalogs/${id}`,
+    profile: '/vendor/profile',
+    profileSettings: '/vendor/profile/settings',
+    updateProfileSettings: '/vendor/profile/settings',
+    branding: '/vendor/profile/portfolio/branding',
+    addresses: '/vendor/profile/addresses',
+    createAddress: '/vendor/profile/addresses',
+    updateAddress: (id: string) => `/vendor/profile/addresses/${id}`,
+    deleteAddress: (id: string) => `/vendor/profile/addresses/${id}`,
+    setDefaultAddress: (id: string) => `/vendor/profile/addresses/${id}/default`,
   },
 } as const;
+
