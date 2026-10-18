@@ -380,22 +380,11 @@ export default function VendorOrdersScreen() {
     return filteredOrders.slice(startIndex, startIndex + pageSize);
   }, [filteredOrders, currentPage, pageSize]);
 
-  // ── Aggregate Metrics (Dedicated Backend Summary Endpoint + Local Fallback) ──
-  const totalOrdersCount = ordersSummaryData?.totalOrdersCount ?? orders.length;
-  const inFulfillmentCount = useMemo(() => {
-    if (ordersSummaryData) return ordersSummaryData.inFulfillmentCount ?? 0;
-    return orders.filter((o) => ['PENDING', 'IN_PROGRESS', 'IN_PRODUCTION', 'SHIPPED'].includes(o.status)).length;
-  }, [ordersSummaryData, orders]);
-  const totalOrderRevenue = useMemo(() => {
-    if (ordersSummaryData) return ordersSummaryData.totalOrderRevenue ?? 0;
-    return orders
-      .filter((o) => o.status !== 'CANCELLED' && o.status !== 'REFUNDED')
-      .reduce((sum, o) => sum + o.totalAmount, 0);
-  }, [ordersSummaryData, orders]);
-  const completedOrdersCount = useMemo(() => {
-    if (ordersSummaryData) return ordersSummaryData.completedOrdersCount ?? 0;
-    return orders.filter((o) => o.status === 'COMPLETED' || o.status === 'DELIVERED').length;
-  }, [ordersSummaryData, orders]);
+  // ── Aggregate Metrics (Exclusively from Dedicated Backend Summary Endpoint) ──
+  const totalOrdersCount = ordersSummaryData?.totalOrdersCount ?? 0;
+  const inFulfillmentCount = ordersSummaryData?.inFulfillmentCount ?? 0;
+  const totalOrderRevenue = ordersSummaryData?.totalOrderRevenue ?? 0;
+  const completedOrdersCount = ordersSummaryData?.completedOrdersCount ?? 0;
 
   // ── Handlers: Modals & Status Updates ───────────────────────
   const handleOpenDetailModal = (ord: VendorOrderRecord) => {

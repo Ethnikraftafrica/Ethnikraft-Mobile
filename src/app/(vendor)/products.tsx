@@ -487,26 +487,16 @@ export default function VendorProductsScreen() {
     setSortBy('NEWEST');
   };
 
-  // ── Inventory Metrics (Dedicated Backend Summary Endpoint + Local Fallback) ──
+  // ── Inventory Metrics (Exclusively from Dedicated Backend Summary Endpoint) ──
   const metrics = useMemo(() => {
-    if (productsSummaryData) {
-      return {
-        totalCount: productsSummaryData.totalCount ?? 0,
-        inStockCount: productsSummaryData.inStockCount ?? 0,
-        lowStockCount: productsSummaryData.lowStockCount ?? 0,
-        outStockCount: productsSummaryData.outStockCount ?? 0,
-        totalValuation: productsSummaryData.totalValuation ?? 0,
-      };
-    }
-
-    const totalCount = products.length;
-    const inStockCount = products.filter((p) => p.stockQuantity > 2).length;
-    const lowStockCount = products.filter((p) => p.stockQuantity > 0 && p.stockQuantity <= 2).length;
-    const outStockCount = products.filter((p) => p.stockQuantity === 0).length;
-    const totalValuation = products.reduce((acc, p) => acc + p.price * p.stockQuantity, 0);
-
-    return { totalCount, inStockCount, lowStockCount, outStockCount, totalValuation };
-  }, [productsSummaryData, products]);
+    return {
+      totalCount: productsSummaryData?.totalCount ?? 0,
+      inStockCount: productsSummaryData?.inStockCount ?? 0,
+      lowStockCount: productsSummaryData?.lowStockCount ?? 0,
+      outStockCount: productsSummaryData?.outStockCount ?? 0,
+      totalValuation: productsSummaryData?.totalValuation ?? 0,
+    };
+  }, [productsSummaryData]);
 
   // ── Handlers ───────────────────────────────────────────────
   const handleOpenAddProduct = () => {

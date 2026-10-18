@@ -317,25 +317,15 @@ export default function VendorProductRequestsScreen() {
     }
   };
 
-  // ─── KPI Metrics (Dedicated Backend Summary Endpoint + Local Fallback) ──────
+  // ─── KPI Metrics (Exclusively from Dedicated Backend Summary Endpoint) ──────
   const stats = useMemo(() => {
-    if (requestsSummaryData) {
-      return {
-        total: requestsSummaryData.total ?? 0,
-        inProd: requestsSummaryData.inProd ?? 0,
-        pending: requestsSummaryData.pending ?? 0,
-        completed: requestsSummaryData.completed ?? 0,
-      };
-    }
-
-    const total = requests.length;
-    const inProd = requests.filter(
-      (r) => r.status === 'IN_PRODUCTION' || r.status === 'PRODUCTION_DELAYED'
-    ).length;
-    const pending = requests.filter((r) => r.status === 'PRODUCTION_PENDING').length;
-    const completed = requests.filter((r) => r.status === 'COMPLETED').length;
-    return { total, inProd, pending, completed };
-  }, [requestsSummaryData, requests]);
+    return {
+      total: requestsSummaryData?.total ?? 0,
+      inProd: requestsSummaryData?.inProd ?? 0,
+      pending: requestsSummaryData?.pending ?? 0,
+      completed: requestsSummaryData?.completed ?? 0,
+    };
+  }, [requestsSummaryData]);
 
   // ─── Filtering & Search ──────────────────────────────────────────────────────
   const filteredRequests = useMemo(() => {

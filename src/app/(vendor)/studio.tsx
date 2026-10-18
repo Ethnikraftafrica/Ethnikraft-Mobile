@@ -579,24 +579,12 @@ export default function VendorStudioScreen() {
     return ['all', ...types];
   }, [requests]);
 
-  // Tab counts & Studio Pipeline KPIs (Dedicated Backend Summary Endpoint + Local Fallback)
-  const allRequestsCount = studioSummaryData?.openRequestsCount ?? requests.length;
-  const offeredRequestsCount = useMemo(() => {
-    if (studioSummaryData) return studioSummaryData.offeredRequestsCount ?? 0;
-    return requests.filter((r) => Boolean(r.myExistingBid)).length;
-  }, [studioSummaryData, requests]);
-  const activeWorkbenchCount = studioSummaryData?.activeWorkbenchCount ?? commissions.length;
-
-  const totalInStudioValue = useMemo(() => {
-    if (studioSummaryData) return studioSummaryData.totalPipelineValue ?? 0;
-    return commissions.reduce((sum, item) => sum + item.agreedPrice, 0) + requests.reduce((sum, r) => sum + r.budget, 0);
-  }, [studioSummaryData, commissions, requests]);
-
-  const avgProgress = useMemo(() => {
-    if (studioSummaryData) return studioSummaryData.avgWorkbenchProgress ?? 0;
-    if (commissions.length === 0) return 0;
-    return Math.round(commissions.reduce((s, c) => s + c.progressPercent, 0) / commissions.length);
-  }, [studioSummaryData, commissions]);
+  // Tab counts & Studio Pipeline KPIs (Exclusively from Dedicated Backend Summary Endpoint)
+  const allRequestsCount = studioSummaryData?.openRequestsCount ?? 0;
+  const offeredRequestsCount = studioSummaryData?.offeredRequestsCount ?? 0;
+  const activeWorkbenchCount = studioSummaryData?.activeWorkbenchCount ?? 0;
+  const totalInStudioValue = studioSummaryData?.totalPipelineValue ?? 0;
+  const avgProgress = studioSummaryData?.avgWorkbenchProgress ?? 0;
 
   // Derive multi-select active filter states
   const isCategoryFiltered = !selectedCategories.includes('ALL') && selectedCategories.length > 0;
