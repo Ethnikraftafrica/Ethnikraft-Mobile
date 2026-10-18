@@ -12,7 +12,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useDispatch } from 'react-redux';
-import { logout, setRole } from '@/store/slices/authSlice';
+import { logout } from '@/store/slices/authSlice';
 import { Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 
 export default function PendingApprovalScreen() {
@@ -23,12 +23,6 @@ export default function PendingApprovalScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     dispatch(logout());
     router.replace('/(auth)/login');
-  };
-
-  const handleExploreGuest = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    dispatch(setRole('user'));
-    router.replace('/(user)');
   };
 
   const handleContactSupport = () => {
@@ -118,20 +112,11 @@ export default function PendingApprovalScreen() {
         <View style={styles.actionContainer}>
           <TouchableOpacity
             style={[styles.btnGuest, Shadows.sm]}
-            onPress={handleExploreGuest}
+            onPress={handleSignOut}
             activeOpacity={0.85}
           >
-            <Ionicons name="compass-outline" size={18} color="#341B00" style={{ marginRight: 6 }} />
-            <Text style={styles.btnGuestText}>Explore Marketplace as Guest</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.btnSignOut}
-            onPress={handleSignOut}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="log-out-outline" size={18} color="#887B6C" style={{ marginRight: 6 }} />
-            <Text style={styles.btnSignOutText}>Sign Out & Return Later</Text>
+            <Ionicons name="log-out-outline" size={18} color="#341B00" style={{ marginRight: 6 }} />
+            <Text style={styles.btnGuestText}>Sign Out & Return Later</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

@@ -28,6 +28,7 @@ import { formatPrice } from '@/utils/price';
 import { VendorProductsSkeleton } from '@/components/common/Skeletons';
 import {
   useGetVendorProductsQuery,
+  useGetVendorProductsSummaryQuery,
   useCreateProductMutation,
   useUpdateProductMutation,
   useDeleteProductMutation,
@@ -195,12 +196,50 @@ export default function VendorProductsScreen() {
     refetch: refetchProducts,
   } = useGetVendorProductsQuery(serverQueryParams);
 
+  const {
+    data: productsSummaryData,
+    refetch: refetchProductsSummary,
+  } = useGetVendorProductsSummaryQuery();
+
   const [createProductMutation, { isLoading: isCreating }] = useCreateProductMutation();
   const [updateProductMutation, { isLoading: isUpdating }] = useUpdateProductMutation();
   const [deleteProductMutation, { isLoading: isDeleting }] = useDeleteProductMutation();
 
-  // ── Sync Server Data with Local State ──────────────────────
-  const [products, setProducts] = useState<CraftProductItem[]>([]);
+  // ── Sync Server Data with Local State (Zero-Flash Synchronous Derivation) ──
+  const liveProducts = useMemo<CraftProductItem[]>(() => {
+    if (!productsResponse?.products || !Array.isArray(productsResponse.products)) return [];
+    return productsResponse.products.map((item: VendorProductItem) => ({
+      id: item.id,
+      name: item.name,
+      productCategory: (item.productCategory?.toUpperCase() as ProductCategoryType) || 'CRAFTS',
+      price: item.price,
+      basePrice: item.basePrice,
+      stockQuantity: item.stockQuantity,
+      condition: (item.condition as ProductCondition) || 'new',
+      isRequestable: item.isRequestable,
+      estimatedProductionDays: item.estimatedProductionDays,
+      isCustomizable: item.isCustomizable,
+      mainImage: item.mainImage,
+      imageList: item.imageList,
+      description: item.description,
+      sku: item.sku || `ETH-${item.id.slice(-4).toUpperCase()}`,
+      rating: item.rating ?? 0,
+      reviewCount: item.reviewCount ?? 0,
+      salesCount: item.salesCount ?? 0,
+      material: item.material,
+      origin: item.origin,
+      era: item.era,
+      weight: item.weight,
+      weightUnit: item.weightUnit,
+      packageSizeEnum: item.packageSize,
+      createdAt: item.createdAt,
+    }));
+  }, [productsResponse]);
+
+  const [localProducts, setProducts] = useState<CraftProductItem[]>([]);
+  const [syncedLiveProducts, setSyncedLiveProducts] = useState<CraftProductItem[]>(liveProducts);
+  const products =
+    productsResponse?.products && liveProducts !== syncedLiveProducts ? liveProducts : localProducts;
 
   // ── Draft Filter State (Isolated within Filter Modal) ──────
   const [draftCategories, setDraftCategories] = useState<ProductCategoryType[]>(['ALL']);
@@ -346,41 +385,19 @@ export default function VendorProductsScreen() {
 
   useEffect(() => {
     if (productsResponse?.products) {
-      const mapped: CraftProductItem[] = productsResponse.products.map((item: VendorProductItem) => ({
-        id: item.id,
-        name: item.name,
-        productCategory: (item.productCategory?.toUpperCase() as ProductCategoryType) || 'CRAFTS',
-        price: item.price,
-        basePrice: item.basePrice,
-        stockQuantity: item.stockQuantity,
-        condition: (item.condition as ProductCondition) || 'new',
-        isRequestable: item.isRequestable,
-        estimatedProductionDays: item.estimatedProductionDays,
-        isCustomizable: item.isCustomizable,
-        mainImage: item.mainImage,
-        imageList: item.imageList,
-        description: item.description,
-        sku: item.sku || `ETH-${item.id.slice(-4).toUpperCase()}`,
-        rating: item.rating ?? 0,
-        reviewCount: item.reviewCount ?? 0,
-        salesCount: item.salesCount ?? 0,
-        material: item.material,
-        origin: item.origin,
-        era: item.era,
-        weight: item.weight,
-        weightUnit: item.weightUnit,
-        packageSizeEnum: item.packageSize,
-        createdAt: item.createdAt,
-      }));
-      setProducts(mapped);
+      setProducts(liveProducts);
+      setSyncedLiveProducts(liveProducts);
     }
-  }, [productsResponse]);
+  }, [productsResponse, liveProducts]);
 
   const onRefresh = async () => {
     setRefreshing(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
-      await refetchProducts().unwrap();
+      await Promise.all([
+        refetchProducts().unwrap(),
+        refetchProductsSummary(),
+      ]);
     } catch {
       // Handled by global baseApi error interceptor
     } finally {
@@ -470,8 +487,18 @@ export default function VendorProductsScreen() {
     setSortBy('NEWEST');
   };
 
-  // ── Inventory Metrics ──────────────────────────────────────
+  // ── Inventory Metrics (Dedicated Backend Summary Endpoint + Local Fallback) ──
   const metrics = useMemo(() => {
+    if (productsSummaryData) {
+      return {
+        totalCount: productsSummaryData.totalCount ?? 0,
+        inStockCount: productsSummaryData.inStockCount ?? 0,
+        lowStockCount: productsSummaryData.lowStockCount ?? 0,
+        outStockCount: productsSummaryData.outStockCount ?? 0,
+        totalValuation: productsSummaryData.totalValuation ?? 0,
+      };
+    }
+
     const totalCount = products.length;
     const inStockCount = products.filter((p) => p.stockQuantity > 2).length;
     const lowStockCount = products.filter((p) => p.stockQuantity > 0 && p.stockQuantity <= 2).length;
@@ -479,7 +506,7 @@ export default function VendorProductsScreen() {
     const totalValuation = products.reduce((acc, p) => acc + p.price * p.stockQuantity, 0);
 
     return { totalCount, inStockCount, lowStockCount, outStockCount, totalValuation };
-  }, [products]);
+  }, [productsSummaryData, products]);
 
   // ── Handlers ───────────────────────────────────────────────
   const handleOpenAddProduct = () => {
@@ -1129,7 +1156,7 @@ export default function VendorProductsScreen() {
 
   // ── FlatList Empty / Skeleton State Component ──────────────
   const renderListEmpty = useCallback(() => {
-    if (isProductsLoading && products.length === 0) {
+    if (isProductsLoading || (isProductsFetching && products.length === 0)) {
       return <VendorProductsSkeleton count={4} />;
     }
 
@@ -1176,6 +1203,7 @@ export default function VendorProductsScreen() {
     );
   }, [
     isProductsLoading,
+    isProductsFetching,
     products.length,
     theme,
     hasAnyFilterActive,

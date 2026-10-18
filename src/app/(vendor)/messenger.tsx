@@ -173,19 +173,23 @@ export default function ArtisanMessengerScreen() {
     if (!activeThreadId) return '';
     const match = conversations.find((c) => c.id === activeThreadId);
     const candidateId = match?.contextItem?.id || activeThreadId;
-    // Clean any route-specific prefix if present (e.g. req-1234)
-    const cleaned = candidateId.replace(/^req-/, '');
-    // If it's a patron profile reference or synthetic prefix, there is no custom request chat room on server
-    if (cleaned.startsWith('patron-') || cleaned.startsWith('conv-') || cleaned.startsWith('thread-')) {
+    // If it's a catalog product request (req-), patron profile reference, or synthetic prefix, there is no custom request chat room on server
+    if (
+      candidateId.startsWith('req-') ||
+      candidateId.startsWith('patron-') ||
+      candidateId.startsWith('conv-') ||
+      candidateId.startsWith('thread-')
+    ) {
       return '';
     }
-    return cleaned;
+    return candidateId;
   }, [activeThreadId, conversations]);
 
   // Query live chat room when a real custom request thread is active
   const {
     data: activeChatRoomData,
     isLoading: isChatRoomLoading,
+    error: chatRoomError,
     refetch: refetchChatRoom,
   } = useGetChatRoomQuery(activeCustomRequestId, {
     skip: !activeCustomRequestId,
@@ -1225,6 +1229,53 @@ export default function ArtisanMessengerScreen() {
             </View>
           )}
         </View>
+
+        {/* ── Chat Room Authorization / Fetch Error Banner ────────────────── */}
+        {chatRoomError && (
+          <View
+            style={{
+              marginHorizontal: Spacing.md,
+              marginTop: Spacing.sm,
+              padding: Spacing.sm,
+              borderRadius: Radius.md,
+              backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEF2F2',
+              borderColor: isDark ? 'rgba(239, 68, 68, 0.35)' : '#FCA5A5',
+              borderWidth: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
+              <Ionicons name="lock-closed-outline" size={18} color="#EF4444" style={{ marginRight: 8 }} />
+              <Text style={{ fontSize: 12, color: theme.textSecondary, flexShrink: 1 }}>
+                {(chatRoomError as any)?.status === 403
+                  ? 'Submit a custom bid first to join this client chat room.'
+                  : (chatRoomError as any)?.data?.message || 'Unable to load chat messages right now.'}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => {
+                if ((chatRoomError as any)?.status === 403) {
+                  setBidModalVisible(true);
+                } else {
+                  refetchChatRoom();
+                }
+              }}
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                borderRadius: Radius.sm,
+                backgroundColor: (chatRoomError as any)?.status === 403 ? theme.primary : '#EF4444',
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={{ color: '#FFFFFF', fontSize: 11, fontFamily: FontFamily.poppinsSemiBold }}>
+                {(chatRoomError as any)?.status === 403 ? 'Submit Bid' : 'Retry'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* ── Message Stream (FlatList) or Skeleton ───────────────────────── */}
         {isChatRoomLoading && (!activeThread.messages || activeThread.messages.length === 0) ? (

@@ -26,6 +26,7 @@ import { formatPrice } from '@/utils/price';
 import { VendorOrderCardsSkeleton } from '@/components/common/Skeletons';
 import {
   useGetVendorOrdersQuery,
+  useGetVendorOrdersSummaryQuery,
   useUpdateOrderStatusMutation,
   VendorOrder,
 } from '@/store/api/vendorApi';
@@ -201,10 +202,64 @@ export default function VendorOrdersScreen() {
     refetch: refetchOrders,
   } = useGetVendorOrdersQuery();
 
+  const {
+    data: ordersSummaryData,
+    refetch: refetchOrdersSummary,
+  } = useGetVendorOrdersSummaryQuery();
+
   const [updateOrderStatusMutation, { isLoading: isUpdatingStatus }] = useUpdateOrderStatusMutation();
 
-  // ── State Management ───────────────────────────────────────
-  const [orders, setOrders] = useState<VendorOrderRecord[]>(INITIAL_ORDERS);
+  // ── State Management (Zero-Flash Synchronous Derivation) ───
+  const liveOrders = useMemo<VendorOrderRecord[]>(() => {
+    if (!ordersResponse || !Array.isArray(ordersResponse)) return [];
+    return ordersResponse.map((item: VendorOrder) => {
+      const customerName = item.user
+        ? `${item.user.firstName || ''} ${item.user.lastName || ''}`.trim() || 'Atelier Patron'
+        : 'Atelier Patron';
+
+      return {
+        id: item.id,
+        orderNumber: item.orderNumber || `#VORD-${item.id.slice(-4).toUpperCase()}`,
+        createdAt: item.createdAt || new Date().toISOString(),
+        updatedAt: item.updatedAt || item.createdAt || new Date().toISOString(),
+        status: (item.status as OrderStatusType) || 'PENDING',
+        totalAmount: Number(item.total ?? item.agreedPrice ?? 0),
+        itemsSubtotal: Number(item.itemsSubtotal ?? item.total ?? 0),
+        shippingCost: Number(item.shippingCost ?? 0),
+        shippingProvider: item.shippingProvider || 'Courier Express',
+        shippingCostPaid: item.shippingCostPaid ?? true,
+        shippingTrackingNumber: item.shippingTrackingNumber,
+        shippingBookingId: item.shippingBookingId,
+        estimatedDeliveryDate: item.estimatedDeliveryDate,
+        customer: {
+          id: item.user?.id || 'cust-anon',
+          name: customerName,
+          email: item.user?.email || 'patron@ethnikraft.com',
+          phone: item.user?.phone || '—',
+          avatar: item.user?.profileImage,
+          deliveryAddress: item.user?.deliveryAddress || 'Atelier Vault / Local Fulfillment',
+          city: item.user?.city || 'Regional Hub',
+          country: item.user?.country || 'Nigeria',
+        },
+        orderItems: (item.orderItems || []).map((it) => ({
+          id: it.id,
+          productId: it.productId || it.product?.id || '',
+          name: it.product?.name || item.customRequest?.title || 'Heritage Piece',
+          mainImage: it.product?.mainImage || 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=800&auto=format&fit=crop&q=80',
+          category: it.product?.productCategory || 'CRAFTS',
+          quantity: it.quantity || 1,
+          unitPrice: it.unitPrice || 0,
+          variantSnapshot: it.variantSnapshot,
+        })),
+        isCustomCommission: Boolean(item.customRequest || item.customBid),
+        customRequestTitle: item.customRequest?.title,
+        notes: item.notes || item.customBid?.notes,
+      };
+    });
+  }, [ordersResponse]);
+
+  const [localOrders, setOrders] = useState<VendorOrderRecord[]>(INITIAL_ORDERS);
+  const [syncedLiveOrders, setSyncedLiveOrders] = useState<VendorOrderRecord[]>(liveOrders);
   const [selectedStatuses, setSelectedStatuses] = useState<OrderStatusType[]>(['ALL']);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -215,55 +270,13 @@ export default function VendorOrdersScreen() {
   // ── Sync Server Data with Local State ──────────────────────
   useEffect(() => {
     if (ordersResponse && Array.isArray(ordersResponse)) {
-      const mapped: VendorOrderRecord[] = ordersResponse.map((item: VendorOrder) => {
-        const firstItem = item.orderItems?.[0];
-        const customerName = item.user
-          ? `${item.user.firstName || ''} ${item.user.lastName || ''}`.trim() || 'Atelier Patron'
-          : 'Atelier Patron';
-
-        return {
-          id: item.id,
-          orderNumber: item.orderNumber || `#VORD-${item.id.slice(-4).toUpperCase()}`,
-          createdAt: item.createdAt || new Date().toISOString(),
-          updatedAt: item.updatedAt || item.createdAt || new Date().toISOString(),
-          status: (item.status as OrderStatusType) || 'PENDING',
-          totalAmount: Number(item.total ?? item.agreedPrice ?? 0),
-          itemsSubtotal: Number(item.itemsSubtotal ?? item.total ?? 0),
-          shippingCost: Number(item.shippingCost ?? 0),
-          shippingProvider: item.shippingProvider || 'Courier Express',
-          shippingCostPaid: item.shippingCostPaid ?? true,
-          shippingTrackingNumber: item.shippingTrackingNumber,
-          shippingBookingId: item.shippingBookingId,
-          estimatedDeliveryDate: item.estimatedDeliveryDate,
-          customer: {
-            id: item.user?.id || 'cust-anon',
-            name: customerName,
-            email: item.user?.email || 'patron@ethnikraft.com',
-            phone: item.user?.phone || '—',
-            avatar: item.user?.profileImage,
-            deliveryAddress: item.user?.deliveryAddress || 'Atelier Vault / Local Fulfillment',
-            city: item.user?.city || 'Regional Hub',
-            country: item.user?.country || 'Nigeria',
-          },
-          orderItems: (item.orderItems || []).map((it) => ({
-            id: it.id,
-            productId: it.productId || it.product?.id || '',
-            name: it.product?.name || item.customRequest?.title || 'Heritage Piece',
-            mainImage: it.product?.mainImage || 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=800&auto=format&fit=crop&q=80',
-            category: it.product?.productCategory || 'CRAFTS',
-            quantity: it.quantity || 1,
-            unitPrice: it.unitPrice || 0,
-            variantSnapshot: it.variantSnapshot,
-          })),
-          isCustomCommission: Boolean(item.customRequest || item.customBid),
-          customRequestTitle: item.customRequest?.title,
-          notes: item.notes || item.customBid?.notes,
-        };
-      });
-
-      setOrders(mapped);
+      setOrders(liveOrders);
+      setSyncedLiveOrders(liveOrders);
     }
-  }, [ordersResponse]);
+  }, [ordersResponse, liveOrders]);
+
+  const orders =
+    ordersResponse && liveOrders !== syncedLiveOrders ? liveOrders : localOrders;
 
   // ── Multi-Select Toggle Helper ────────────────────────────
   const toggleStatus = (st: OrderStatusType) => {
@@ -311,7 +324,10 @@ export default function VendorOrdersScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setRefreshing(true);
     try {
-      await refetchOrders().unwrap();
+      await Promise.all([
+        refetchOrders().unwrap(),
+        refetchOrdersSummary(),
+      ]);
       showToast('Orders & logistics synchronized with courier gateway');
     } catch {
       // Handled by global error interceptor
@@ -364,19 +380,22 @@ export default function VendorOrdersScreen() {
     return filteredOrders.slice(startIndex, startIndex + pageSize);
   }, [filteredOrders, currentPage, pageSize]);
 
-  // ── Aggregate Metrics ──────────────────────────────────────
-  const totalOrdersCount = orders.length;
+  // ── Aggregate Metrics (Dedicated Backend Summary Endpoint + Local Fallback) ──
+  const totalOrdersCount = ordersSummaryData?.totalOrdersCount ?? orders.length;
   const inFulfillmentCount = useMemo(() => {
+    if (ordersSummaryData) return ordersSummaryData.inFulfillmentCount ?? 0;
     return orders.filter((o) => ['PENDING', 'IN_PROGRESS', 'IN_PRODUCTION', 'SHIPPED'].includes(o.status)).length;
-  }, [orders]);
+  }, [ordersSummaryData, orders]);
   const totalOrderRevenue = useMemo(() => {
+    if (ordersSummaryData) return ordersSummaryData.totalOrderRevenue ?? 0;
     return orders
       .filter((o) => o.status !== 'CANCELLED' && o.status !== 'REFUNDED')
       .reduce((sum, o) => sum + o.totalAmount, 0);
-  }, [orders]);
+  }, [ordersSummaryData, orders]);
   const completedOrdersCount = useMemo(() => {
+    if (ordersSummaryData) return ordersSummaryData.completedOrdersCount ?? 0;
     return orders.filter((o) => o.status === 'COMPLETED' || o.status === 'DELIVERED').length;
-  }, [orders]);
+  }, [ordersSummaryData, orders]);
 
   // ── Handlers: Modals & Status Updates ───────────────────────
   const handleOpenDetailModal = (ord: VendorOrderRecord) => {
@@ -605,7 +624,7 @@ export default function VendorOrdersScreen() {
   const renderListEmpty = useCallback(
     () => (
       <View style={styles.ordersListContainer}>
-        {isOrdersLoading && orders.length === 0 ? (
+        {(isOrdersLoading || (isOrdersFetching && orders.length === 0)) ? (
           <VendorOrderCardsSkeleton count={3} />
         ) : (
           <View
@@ -633,7 +652,7 @@ export default function VendorOrdersScreen() {
         )}
       </View>
     ),
-    [isOrdersLoading, orders.length, theme, searchQuery, isStatusFiltered]
+    [isOrdersLoading, isOrdersFetching, orders.length, theme, searchQuery, isStatusFiltered]
   );
 
   const renderListFooter = useCallback(

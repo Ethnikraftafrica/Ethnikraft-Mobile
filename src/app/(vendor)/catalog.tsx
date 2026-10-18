@@ -91,17 +91,17 @@ export default function VendorCatalogScreen() {
   const [deleteCatalogMutation, { isLoading: isDeleting }] = useDeleteVendorCatalogMutation();
 
   // ── State ──────────────────────────────────────────────────
-  const [catalogs, setCatalogs] = useState<CatalogCollection[]>([]);
+  const [localCatalogs, setCatalogs] = useState<CatalogCollection[]>([]);
+  const [syncedLiveCatalogs, setSyncedLiveCatalogs] = useState<typeof liveCatalogs>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
   const [refreshing, setRefreshing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Synchronize live catalogs with local state
-  React.useEffect(() => {
+  const mappedLiveCatalogs = useMemo<CatalogCollection[]>(() => {
     if (liveCatalogs && Array.isArray(liveCatalogs)) {
-      const mapped: CatalogCollection[] = liveCatalogs.map((c) => ({
+      return liveCatalogs.map((c) => ({
         id: c.id,
         name: c.name,
         coverImage: c.image,
@@ -111,9 +111,22 @@ export default function VendorCatalogScreen() {
         productIds: c.productIds || [],
         createdAt: c.createdAt,
       }));
-      setCatalogs(mapped);
     }
+    return [];
   }, [liveCatalogs]);
+
+  // Synchronize live catalogs with local state
+  React.useEffect(() => {
+    if (liveCatalogs && Array.isArray(liveCatalogs)) {
+      setCatalogs(mappedLiveCatalogs);
+      setSyncedLiveCatalogs(liveCatalogs);
+    }
+  }, [liveCatalogs, mappedLiveCatalogs]);
+
+  const catalogs =
+    liveCatalogs && liveCatalogs !== syncedLiveCatalogs
+      ? mappedLiveCatalogs
+      : localCatalogs;
 
   // Derived available products from vendor inventory
   const availableProducts: CatalogProductSummary[] = useMemo(() => {

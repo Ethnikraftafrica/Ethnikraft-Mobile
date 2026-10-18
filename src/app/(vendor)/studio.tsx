@@ -14,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Linking,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,8 +33,10 @@ import {
   useGetMarketplaceRequestsQuery,
   useGetVendorBidsQuery,
   useGetVendorProductRequestsQuery,
+  useGetVendorStudioSummaryQuery,
   useCreateCustomBidMutation,
   useUpdateProductionProgressMutation,
+  useLazyGetChatRoomQuery,
 } from '@/store/api/vendorApi';
 import {
   VendorStudioRequestsSkeleton,
@@ -259,6 +262,8 @@ export default function VendorStudioScreen() {
   const [selectedMaterials, setSelectedMaterials] = useState<string[]>(['all']);
   const [refreshing, setRefreshing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const [messagingRequestId, setMessagingRequestId] = useState<string | null>(null);
 
   // ─── Multi-Select Toggle Helpers ────────────────────────────
   const toggleCategory = (cat: CustomRequestCategory) => {
@@ -336,8 +341,14 @@ export default function VendorStudioScreen() {
     refetch: refetchWorkbench,
   } = useGetVendorProductRequestsQuery();
 
+  const {
+    data: studioSummaryData,
+    refetch: refetchStudioSummary,
+  } = useGetVendorStudioSummaryQuery();
+
   const [createCustomBidMutation, { isLoading: isSubmittingBidMutation }] = useCreateCustomBidMutation();
   const [updateProductionProgressMutation, { isLoading: isUpdatingProgressMutation }] = useUpdateProductionProgressMutation();
+  const [triggerGetChatRoom] = useLazyGetChatRoomQuery();
 
   // ─── Data Transformations: Live Requests with Merged Vendor Bids ────────────
   const liveRequests = useMemo<CustomClientRequest[]>(() => {
@@ -483,22 +494,29 @@ export default function VendorStudioScreen() {
     });
   }, [workbenchData]);
 
-  // Combined data collections with state overrides for immediate UI reactivity
-  const [requests, setRequests] = useState<CustomClientRequest[]>([]);
-  const [commissions, setCommissions] = useState<ActiveWorkbenchCommission[]>([]);
+  // Combined data collections with synchronous derivation to prevent empty-state flash
+  const [localRequests, setRequests] = useState<CustomClientRequest[]>([]);
+  const [syncedLiveRequests, setSyncedLiveRequests] = useState<CustomClientRequest[]>(liveRequests);
+  const [localCommissions, setCommissions] = useState<ActiveWorkbenchCommission[]>([]);
+  const [syncedLiveCommissions, setSyncedLiveCommissions] = useState<ActiveWorkbenchCommission[]>(liveCommissions);
 
   // Sync RTK Query data when received
   React.useEffect(() => {
     if (marketplaceData) {
       setRequests(liveRequests);
+      setSyncedLiveRequests(liveRequests);
     }
   }, [marketplaceData, liveRequests]);
 
   React.useEffect(() => {
     if (workbenchData) {
       setCommissions(liveCommissions);
+      setSyncedLiveCommissions(liveCommissions);
     }
   }, [workbenchData, liveCommissions]);
+
+  const requests = marketplaceData && liveRequests !== syncedLiveRequests ? liveRequests : localRequests;
+  const commissions = workbenchData && liveCommissions !== syncedLiveCommissions ? liveCommissions : localCommissions;
 
   // ─── Bottom Sheet Modals State ──────────────────────────────────────────────
   const [filterModalVisible, setFilterModalVisible] = useState(false);
@@ -531,9 +549,10 @@ export default function VendorStudioScreen() {
     return formatPrice(val, currencyCode, exchangeRate);
   };
 
-  const showToast = (msg: string) => {
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToastType(type);
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 2800);
+    setTimeout(() => setToastMessage(null), 3200);
   };
 
   const onRefresh = async () => {
@@ -544,6 +563,7 @@ export default function VendorStudioScreen() {
         refetchMarketplace(),
         refetchBids(),
         refetchWorkbench(),
+        refetchStudioSummary(),
       ]);
       showToast('Studio workbench updated');
     } catch {
@@ -559,20 +579,24 @@ export default function VendorStudioScreen() {
     return ['all', ...types];
   }, [requests]);
 
-  // Tab counts (Web Parity: All Requests vs Offers Sent)
-  const allRequestsCount = requests.length;
+  // Tab counts & Studio Pipeline KPIs (Dedicated Backend Summary Endpoint + Local Fallback)
+  const allRequestsCount = studioSummaryData?.openRequestsCount ?? requests.length;
   const offeredRequestsCount = useMemo(() => {
+    if (studioSummaryData) return studioSummaryData.offeredRequestsCount ?? 0;
     return requests.filter((r) => Boolean(r.myExistingBid)).length;
-  }, [requests]);
+  }, [studioSummaryData, requests]);
+  const activeWorkbenchCount = studioSummaryData?.activeWorkbenchCount ?? commissions.length;
 
   const totalInStudioValue = useMemo(() => {
+    if (studioSummaryData) return studioSummaryData.totalPipelineValue ?? 0;
     return commissions.reduce((sum, item) => sum + item.agreedPrice, 0) + requests.reduce((sum, r) => sum + r.budget, 0);
-  }, [commissions, requests]);
+  }, [studioSummaryData, commissions, requests]);
 
   const avgProgress = useMemo(() => {
+    if (studioSummaryData) return studioSummaryData.avgWorkbenchProgress ?? 0;
     if (commissions.length === 0) return 0;
     return Math.round(commissions.reduce((s, c) => s + c.progressPercent, 0) / commissions.length);
-  }, [commissions]);
+  }, [studioSummaryData, commissions]);
 
   // Derive multi-select active filter states
   const isCategoryFiltered = !selectedCategories.includes('ALL') && selectedCategories.length > 0;
@@ -698,18 +722,42 @@ export default function VendorStudioScreen() {
     setOfferModalVisible(true);
   };
 
-  const handleMessageClient = (req: CustomClientRequest) => {
+  const handleMessageClient = async (req: CustomClientRequest) => {
+    if (!req.myExistingBid) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      showToast('Submit a custom offer first to unlock client chat', 'error');
+      return;
+    }
+
+    if (messagingRequestId === req.id) return;
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setInspectModalVisible(false);
-    // Route to vendor messenger with authentic conversation / context parameters
-    router.push({
-      pathname: '/(vendor)/messenger',
-      params: {
-        chatId: req.chatId || req.id,
-        clientName: req.customer.name,
-        requestTitle: req.title,
-      },
-    });
+    setMessagingRequestId(req.id);
+
+    try {
+      const targetChatId = req.chatId || req.id;
+      await triggerGetChatRoom(targetChatId).unwrap();
+      setInspectModalVisible(false);
+      router.push({
+        pathname: '/(vendor)/messenger',
+        params: {
+          chatId: targetChatId,
+          clientName: req.customer.name,
+          requestTitle: req.title,
+        },
+      });
+    } catch (err: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      const status = err?.status;
+      const backendMsg = err?.data?.message || err?.data?.error?.message;
+      const errorMsg =
+        status === 403
+          ? 'Submit a custom offer first to join this client chat'
+          : backendMsg || 'Unable to open chat right now. Please try again.';
+      showToast(errorMsg, 'error');
+    } finally {
+      setMessagingRequestId(null);
+    }
   };
 
   const handleAcceptClientBudget = () => {
@@ -722,7 +770,7 @@ export default function VendorStudioScreen() {
   const handleSubmitBid = async () => {
     if (!activeRequest) return;
     setSubmittingBid(true);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
       const calculatedTimeline = new Date(Date.now() + deliveryDays * 86400000).toISOString();
@@ -733,51 +781,47 @@ export default function VendorStudioScreen() {
         notes: proposalNotes.trim() || undefined,
       }).unwrap();
 
-      // Optimistic state update in local view
+      const updatedBid = {
+        price: bidPrice,
+        days: deliveryDays,
+        status: 'PENDING' as const,
+        notes: proposalNotes,
+      };
+
       setRequests((prev) =>
         prev.map((r) =>
           r.id === activeRequest.id
             ? {
                 ...r,
                 bidsCount: r.myExistingBid ? r.bidsCount : r.bidsCount + 1,
-                myExistingBid: {
-                  price: bidPrice,
-                  days: deliveryDays,
-                  status: 'PENDING',
-                  notes: proposalNotes,
-                },
+                myExistingBid: updatedBid,
               }
             : r
         )
       );
 
-      setOfferModalVisible(false);
-      setShowCelebration(true);
-      setTimeout(() => setShowCelebration(false), 2400);
-      showToast('Bid submitted successfully to patron!');
-    } catch (err: any) {
-      console.warn('Bid mutation failed, falling back to optimistic cache', err);
-      // Fallback update
-      setRequests((prev) =>
-        prev.map((r) =>
-          r.id === activeRequest.id
-            ? {
-                ...r,
-                bidsCount: r.myExistingBid ? r.bidsCount : r.bidsCount + 1,
-                myExistingBid: {
-                  price: bidPrice,
-                  days: deliveryDays,
-                  status: 'PENDING',
-                  notes: proposalNotes,
-                },
-              }
-            : r
-        )
+      setActiveRequest((prev) =>
+        prev && prev.id === activeRequest.id
+          ? {
+              ...prev,
+              bidsCount: prev.myExistingBid ? prev.bidsCount : prev.bidsCount + 1,
+              myExistingBid: updatedBid,
+            }
+          : prev
       );
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setOfferModalVisible(false);
       setShowCelebration(true);
       setTimeout(() => setShowCelebration(false), 2400);
-      showToast('Bid registered in your studio workbench');
+      showToast('Bid submitted! Client chat is now unlocked.', 'success');
+    } catch (err: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      const errorMsg =
+        err?.data?.message ||
+        err?.data?.error?.message ||
+        'Failed to submit bid. Please check your connection and try again.';
+      showToast(errorMsg, 'error');
     } finally {
       setSubmittingBid(false);
     }
@@ -1016,17 +1060,35 @@ export default function VendorStudioScreen() {
         <View style={styles.actionRow}>
           <TouchableOpacity
             onPress={() => handleMessageClient(req)}
+            disabled={messagingRequestId === req.id}
             style={[
               styles.messageBtn,
               {
                 backgroundColor: theme.backgroundSecondary,
                 borderColor: theme.borderSubtle,
+                opacity: !hasBid ? 0.55 : messagingRequestId === req.id ? 0.75 : 1,
               },
             ]}
             activeOpacity={0.75}
           >
-            <Ionicons name="chatbubble-ellipses-outline" size={14} color={theme.textPrimary} style={{ marginRight: 4 }} />
-            <Text style={[styles.messageBtnText, { color: theme.textPrimary }]}>Message</Text>
+            {messagingRequestId === req.id ? (
+              <>
+                <ActivityIndicator size="small" color={theme.primary} style={{ marginRight: 5 }} />
+                <Text style={[styles.messageBtnText, { color: theme.textPrimary }]}>Opening...</Text>
+              </>
+            ) : (
+              <>
+                <Ionicons
+                  name={hasBid ? 'chatbubble-ellipses-outline' : 'lock-closed-outline'}
+                  size={14}
+                  color={hasBid ? theme.textPrimary : theme.textMuted}
+                  style={{ marginRight: 4 }}
+                />
+                <Text style={[styles.messageBtnText, { color: hasBid ? theme.textPrimary : theme.textMuted }]}>
+                  Message
+                </Text>
+              </>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -1210,7 +1272,7 @@ export default function VendorStudioScreen() {
 
   const renderListEmpty = () => {
     if (hubTab === 'OPEN_REQUESTS') {
-      if (isMarketplaceLoading) {
+      if (isMarketplaceLoading || (isMarketplaceFetching && requests.length === 0)) {
         return <VendorStudioRequestsSkeleton count={3} />;
       }
       if (marketplaceError) {
@@ -1255,7 +1317,7 @@ export default function VendorStudioScreen() {
       );
     }
 
-    if (isWorkbenchLoading) {
+    if (isWorkbenchLoading || (isWorkbenchFetching && commissions.length === 0)) {
       return <VendorStudioWorkbenchSkeleton count={2} />;
     }
     if (workbenchError) {
@@ -1411,7 +1473,7 @@ export default function VendorStudioScreen() {
           </Text>
           <View style={[styles.countBadge, { backgroundColor: 'rgba(196, 108, 39, 0.16)' }]}>
             <Text style={[styles.countBadgeText, { color: isDark ? '#D1995A' : theme.primary }]}>
-              {hubTab === 'OPEN_REQUESTS' ? `${requests.length} Requests` : `${commissions.length} Active`}
+              {hubTab === 'OPEN_REQUESTS' ? `${allRequestsCount} Requests` : `${activeWorkbenchCount} Active`}
             </Text>
           </View>
         </View>
@@ -1469,7 +1531,7 @@ export default function VendorStudioScreen() {
               ]}
             >
               <Text style={[styles.heroCountPillText, { color: theme.textSecondary }]}>
-                {commissions.length} In Studio
+                {activeWorkbenchCount} In Studio
               </Text>
             </View>
           </View>
@@ -1557,7 +1619,7 @@ export default function VendorStudioScreen() {
 
             <View style={styles.kpiValueRow}>
               <Text style={[styles.kpiValueText, { color: theme.textPrimary }]}>
-                {requests.length} Requests
+                {allRequestsCount} Requests
               </Text>
             </View>
 
@@ -1602,7 +1664,7 @@ export default function VendorStudioScreen() {
                   { color: isDark ? '#D1995A' : theme.primary },
                 ]}
               >
-                {commissions.length} {commissions.length === 1 ? 'Piece' : 'Pieces'}
+                {activeWorkbenchCount} {activeWorkbenchCount === 1 ? 'Piece' : 'Pieces'}
               </Text>
             </View>
 
@@ -1653,7 +1715,7 @@ export default function VendorStudioScreen() {
               },
             ]}
           >
-            Client Requests ({requests.length})
+            Client Requests ({allRequestsCount})
           </Text>
         </TouchableOpacity>
 
@@ -1689,7 +1751,7 @@ export default function VendorStudioScreen() {
               },
             ]}
           >
-            Workbench ({commissions.length})
+            Workbench ({activeWorkbenchCount})
           </Text>
         </TouchableOpacity>
       </View>
@@ -1976,10 +2038,18 @@ export default function VendorStudioScreen() {
         <View
           style={[
             styles.toastContainer,
-            { backgroundColor: theme.cardElevated, borderColor: theme.borderAccent },
+            {
+              backgroundColor: theme.cardElevated,
+              borderColor: toastType === 'error' ? '#EF4444' : theme.borderAccent,
+            },
           ]}
         >
-          <Ionicons name="checkmark-circle" size={18} color="#009D1A" style={{ marginRight: 8 }} />
+          <Ionicons
+            name={toastType === 'error' ? 'alert-circle' : 'checkmark-circle'}
+            size={18}
+            color={toastType === 'error' ? '#EF4444' : '#009D1A'}
+            style={{ marginRight: 8 }}
+          />
           <Text style={[styles.toastText, { color: theme.textPrimary }]}>{toastMessage}</Text>
         </View>
       )}
@@ -2115,13 +2185,25 @@ export default function VendorStudioScreen() {
                   </View>
                   <TouchableOpacity
                     onPress={() => handleMessageClient(activeRequest)}
+                    disabled={messagingRequestId === activeRequest.id}
                     style={[
                       styles.inspectMessageIconBtn,
-                      { backgroundColor: isDark ? 'rgba(196, 108, 39, 0.18)' : '#FEF3C7' },
+                      {
+                        backgroundColor: isDark ? 'rgba(196, 108, 39, 0.18)' : '#FEF3C7',
+                        opacity: !activeRequest.myExistingBid ? 0.5 : 1,
+                      },
                     ]}
                     activeOpacity={0.8}
                   >
-                    <Ionicons name="chatbubble-ellipses" size={16} color={theme.primary} />
+                    {messagingRequestId === activeRequest.id ? (
+                      <ActivityIndicator size="small" color={theme.primary} />
+                    ) : (
+                      <Ionicons
+                        name={activeRequest.myExistingBid ? 'chatbubble-ellipses' : 'lock-closed-outline'}
+                        size={16}
+                        color={activeRequest.myExistingBid ? theme.primary : theme.textMuted}
+                      />
+                    )}
                   </TouchableOpacity>
                 </View>
 
@@ -2271,14 +2353,41 @@ export default function VendorStudioScreen() {
                   <View style={{ flexDirection: 'row', gap: 10 }}>
                     <TouchableOpacity
                       onPress={() => handleMessageClient(activeRequest)}
+                      disabled={messagingRequestId === activeRequest.id}
                       style={[
                         styles.modalSecondaryActionBtn,
-                        { backgroundColor: theme.backgroundSecondary, borderColor: theme.borderSubtle, flex: 1 },
+                        {
+                          backgroundColor: theme.backgroundSecondary,
+                          borderColor: theme.borderSubtle,
+                          flex: 1,
+                          opacity: !activeRequest.myExistingBid ? 0.55 : messagingRequestId === activeRequest.id ? 0.75 : 1,
+                        },
                       ]}
                       activeOpacity={0.8}
                     >
-                      <Ionicons name="chatbubble-outline" size={15} color={theme.textPrimary} style={{ marginRight: 6 }} />
-                      <Text style={[styles.modalSecondaryActionBtnText, { color: theme.textPrimary }]}>Message Client</Text>
+                      {messagingRequestId === activeRequest.id ? (
+                        <>
+                          <ActivityIndicator size="small" color={theme.primary} style={{ marginRight: 6 }} />
+                          <Text style={[styles.modalSecondaryActionBtnText, { color: theme.textPrimary }]}>Opening...</Text>
+                        </>
+                      ) : (
+                        <>
+                          <Ionicons
+                            name={activeRequest.myExistingBid ? 'chatbubble-outline' : 'lock-closed-outline'}
+                            size={15}
+                            color={activeRequest.myExistingBid ? theme.textPrimary : theme.textMuted}
+                            style={{ marginRight: 6 }}
+                          />
+                          <Text
+                            style={[
+                              styles.modalSecondaryActionBtnText,
+                              { color: activeRequest.myExistingBid ? theme.textPrimary : theme.textMuted },
+                            ]}
+                          >
+                            {activeRequest.myExistingBid ? 'Message Client' : 'Bid to Chat'}
+                          </Text>
+                        </>
+                      )}
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -2652,12 +2761,20 @@ export default function VendorStudioScreen() {
                       activeOpacity={0.85}
                       disabled={submittingBid || isSubmittingBidMutation}
                     >
-                      <Ionicons
-                        name="paper-plane-outline"
-                        size={17}
-                        color={isDark ? '#D1995A' : theme.primary}
-                        style={{ marginRight: 8 }}
-                      />
+                      {submittingBid || isSubmittingBidMutation ? (
+                        <ActivityIndicator
+                          size="small"
+                          color={isDark ? '#D1995A' : theme.primary}
+                          style={{ marginRight: 8 }}
+                        />
+                      ) : (
+                        <Ionicons
+                          name="paper-plane-outline"
+                          size={17}
+                          color={isDark ? '#D1995A' : theme.primary}
+                          style={{ marginRight: 8 }}
+                        />
+                      )}
                       <Text style={[styles.modalPrimaryActionBtnText, { color: isDark ? '#FFF3D6' : theme.primaryDark }]}>
                         {submittingBid || isSubmittingBidMutation ? 'Dispatching Bid...' : `Submit Bid of ${formatPriceValue(bidPrice)} ✧`}
                       </Text>

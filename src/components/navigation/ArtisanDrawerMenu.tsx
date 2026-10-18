@@ -16,7 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { logout, setRole } from '@/store/slices/authSlice';
+import { logout } from '@/store/slices/authSlice';
 import { ThemeMode } from '@/store/slices/themeSlice';
 import { CurrencyPickerModal } from '@/components/common/CurrencyPickerModal';
 import { setCurrency, SUPPORTED_CURRENCIES } from '@/store/slices/currencySlice';
@@ -98,15 +98,6 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
     onClose();
     setTimeout(() => {
       router.push(route as any);
-    }, 150);
-  };
-
-  const handleSwitchToCustomerMode = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    onClose();
-    setTimeout(() => {
-      dispatch(setRole('user'));
-      router.replace('/(user)');
     }, 150);
   };
 
@@ -452,35 +443,6 @@ export const ArtisanDrawerMenu: React.FC<ArtisanDrawerMenuProps> = ({
 
           {/* Footer Actions */}
           <View style={styles.footerActions}>
-            {/* Switch to Customer Mode */}
-            <TouchableOpacity
-              style={[
-                styles.customerSwitchBtn,
-                {
-                  backgroundColor: isDark ? theme.cardElevated : '#FCF4E1',
-                  borderColor: isDark ? theme.borderAccent : 'rgba(102, 37, 2, 0.25)',
-                  shadowColor: isDark ? '#000000' : 'rgba(54, 19, 0, 0.10)',
-                },
-              ]}
-              onPress={handleSwitchToCustomerMode}
-              activeOpacity={0.8}
-            >
-              <Ionicons
-                name="bag-handle-outline"
-                size={17}
-                color={isDark ? theme.primaryLight : theme.primary}
-                style={{ marginRight: 8 }}
-              />
-              <Text
-                style={[
-                  styles.customerSwitchText,
-                  { color: isDark ? theme.textPrimary : theme.primaryDark },
-                ]}
-              >
-                Switch to Customer Mode
-              </Text>
-            </TouchableOpacity>
-
             {/* Logout */}
             <TouchableOpacity
               style={styles.signOutBtn}

@@ -429,19 +429,6 @@ export default function VendorDocumentsScreen() {
         {/* Escape Hatches / Alternate actions */}
         <View style={styles.secondaryActionsWrap}>
           <TouchableOpacity
-            style={styles.secondaryActionBtn}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              dispatch(setRole('user'));
-              router.replace('/(user)');
-            }}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="bag-handle-outline" size={16} color="#662502" style={{ marginRight: 6 }} />
-            <Text style={styles.secondaryActionText}>Switch to Customer Mode & Browse</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
             style={styles.startOverBtn}
             onPress={handleStartOver}
             activeOpacity={0.7}

@@ -73,15 +73,8 @@ export default function VendorBusinessInfoScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Alert.alert(
       'Exit Workshop Setup?',
-      'You can switch to customer mode to browse the marketplace, or sign out completely. You can return later anytime with your login credentials.',
+      'You can sign out and return later anytime with your login credentials to finish your workshop setup.',
       [
-        {
-          text: 'Browse as Customer',
-          onPress: () => {
-            dispatch(setRole('user'));
-            router.replace('/(user)');
-          },
-        },
         {
           text: 'Sign Out & Start Over',
           style: 'destructive',
@@ -534,19 +527,6 @@ export default function VendorBusinessInfoScreen() {
 
             {/* Escape Hatches / Alternate actions */}
             <View style={styles.secondaryActionsWrap}>
-              <TouchableOpacity
-                style={styles.secondaryActionBtn}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  dispatch(setRole('user'));
-                  router.replace('/(user)');
-                }}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="bag-handle-outline" size={16} color="#662502" style={{ marginRight: 6 }} />
-                <Text style={styles.secondaryActionText}>Switch to Customer Mode & Browse</Text>
-              </TouchableOpacity>
-
               <TouchableOpacity
                 style={styles.startOverBtn}
                 onPress={handleStartOver}

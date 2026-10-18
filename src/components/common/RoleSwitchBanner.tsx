@@ -7,65 +7,7 @@ import { toggleRole } from '@/store/slices/authSlice';
 import { Colors, FontFamily, Radius, Shadows, Spacing, Typography } from '@/constants/theme';
 
 export const RoleSwitchBanner = () => {
-  const router = useRouter();
-  const dispatch = useAppDispatch();
-  const activeRole = useAppSelector((state) => state.auth.activeRole);
-
-  const isUser = activeRole === 'user';
-
-  const handleToggle = () => {
-    dispatch(toggleRole());
-    if (isUser) {
-      router.replace('/(vendor)');
-    } else {
-      router.replace('/(user)');
-    }
-  };
-
-  return (
-    <View style={[styles.container, Shadows.sm]}>
-      <View style={styles.leftGroup}>
-        <View
-          style={[
-            styles.pulseRing,
-            { backgroundColor: isUser ? `${Colors.primary}20` : `${Colors.secondary}20` },
-          ]}
-        >
-          <View
-            style={[
-              styles.indicatorDot,
-              { backgroundColor: isUser ? Colors.primary : Colors.secondary },
-            ]}
-          />
-        </View>
-        <View>
-          <Text style={styles.roleLabel}>CURRENT VIEW</Text>
-          <Text style={styles.roleTitle}>
-            {isUser ? 'Customer Boutique' : 'Artisan Workshop'}
-          </Text>
-        </View>
-      </View>
-
-      <TouchableOpacity
-        onPress={handleToggle}
-        activeOpacity={0.82}
-        style={[
-          styles.switchButton,
-          { backgroundColor: isUser ? Colors.primaryDark : Colors.primary },
-        ]}
-      >
-        <Ionicons
-          name="swap-horizontal"
-          size={14}
-          color={Colors.textInverse}
-          style={styles.switchIcon}
-        />
-        <Text style={styles.switchButtonText}>
-          {isUser ? 'Switch to Vendor' : 'Switch to Customer'}
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
+  return null;
 };
 
 const styles = StyleSheet.create({

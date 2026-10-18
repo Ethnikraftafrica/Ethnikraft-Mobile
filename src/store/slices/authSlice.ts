@@ -53,10 +53,7 @@ export const authSlice = createSlice({
       state.isAuthenticated = true;
       state.hasVendorAccount = user.role === 'VENDOR' || !!vendor;
       state.sessionExpired = false;
-
-      if (state.hasVendorAccount && !state.activeRole) {
-        state.activeRole = 'vendor';
-      }
+      state.activeRole = state.hasVendorAccount ? 'vendor' : 'user';
 
       // Non-blocking asynchronous storage persistence to prevent any frame drops/lag
       StorageService.setTokens(tokens.access_token, tokens.refresh_token).catch((e) =>
@@ -96,9 +93,8 @@ export const authSlice = createSlice({
       state.isAuthenticated = !!action.payload.token;
       state.hasVendorAccount =
         action.payload.user?.role === 'VENDOR' || !!action.payload.vendor;
-      if (action.payload.activeRole) {
-        state.activeRole = action.payload.activeRole;
-      }
+      state.activeRole =
+        state.isAuthenticated && state.hasVendorAccount ? 'vendor' : 'user';
       if (action.payload.token) {
         state.sessionExpired = false;
       }

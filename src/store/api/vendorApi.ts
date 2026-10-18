@@ -913,9 +913,11 @@ export const vendorApi = baseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: [
+      invalidatesTags: (result, error, arg) => [
         { type: 'CustomRequests', id: 'LIST' },
         { type: 'VendorBids', id: 'LIST' },
+        { type: 'Chats', id: arg.customRequestId },
+        { type: 'VendorMessages', id: 'LIST' },
         'VendorOverview',
       ],
       transformResponse: (response: any): CustomBidItem => {
@@ -1323,6 +1325,126 @@ export const vendorApi = baseApi.injectEndpoints({
         return payload;
       },
     }),
+
+    // 32. Get vendor products inventory summary
+    getVendorProductsSummary: builder.query<
+      {
+        totalCount: number;
+        inStockCount: number;
+        lowStockCount: number;
+        outStockCount: number;
+        totalValuation: number;
+      },
+      void
+    >({
+      query: () => ({
+        url: API_ENDPOINTS.vendor.myProductsSummary,
+        method: 'GET',
+      }),
+      providesTags: [{ type: 'Products', id: 'LIST' }],
+      transformResponse: (response: any) => {
+        const data = response?.data || response || {};
+        return {
+          totalCount: Number(data.totalCount ?? 0),
+          inStockCount: Number(data.inStockCount ?? 0),
+          lowStockCount: Number(data.lowStockCount ?? 0),
+          outStockCount: Number(data.outStockCount ?? 0),
+          totalValuation: Number(data.totalValuation ?? 0),
+        };
+      },
+    }),
+
+    // 33. Get vendor studio summary
+    getVendorStudioSummary: builder.query<
+      {
+        openRequestsCount: number;
+        offeredRequestsCount: number;
+        activeWorkbenchCount: number;
+        totalPipelineValue: number;
+        avgWorkbenchProgress: number;
+      },
+      void
+    >({
+      query: () => ({
+        url: API_ENDPOINTS.studio.studioSummary,
+        method: 'GET',
+      }),
+      providesTags: [
+        { type: 'CustomRequests', id: 'LIST' },
+        { type: 'CustomRequests', id: 'WORKBENCH_LIST' },
+        { type: 'VendorBids', id: 'LIST' },
+      ],
+      transformResponse: (response: any) => {
+        const data = response?.data || response || {};
+        return {
+          openRequestsCount: Number(data.openRequestsCount ?? 0),
+          offeredRequestsCount: Number(data.offeredRequestsCount ?? 0),
+          activeWorkbenchCount: Number(data.activeWorkbenchCount ?? 0),
+          totalPipelineValue: Number(data.totalPipelineValue ?? 0),
+          avgWorkbenchProgress: Number(data.avgWorkbenchProgress ?? 0),
+        };
+      },
+    }),
+
+    // 34. Get vendor product requests summary
+    getVendorProductRequestsSummary: builder.query<
+      {
+        total: number;
+        inProd: number;
+        pending: number;
+        completed: number;
+        shipped: number;
+        cancelled: number;
+      },
+      void
+    >({
+      query: () => ({
+        url: API_ENDPOINTS.studio.vendorRequestsSummary,
+        method: 'GET',
+      }),
+      providesTags: [{ type: 'CustomRequests', id: 'WORKBENCH_LIST' }],
+      transformResponse: (response: any) => {
+        const data = response?.data || response || {};
+        return {
+          total: Number(data.total ?? 0),
+          inProd: Number(data.inProd ?? 0),
+          pending: Number(data.pending ?? 0),
+          completed: Number(data.completed ?? 0),
+          shipped: Number(data.shipped ?? 0),
+          cancelled: Number(data.cancelled ?? 0),
+        };
+      },
+    }),
+
+    // 35. Get vendor orders summary
+    getVendorOrdersSummary: builder.query<
+      {
+        totalOrdersCount: number;
+        pendingOrdersCount: number;
+        inFulfillmentCount: number;
+        completedOrdersCount: number;
+        cancelledOrdersCount: number;
+        totalOrderRevenue: number;
+      },
+      void
+    >({
+      query: () => ({
+        url: API_ENDPOINTS.vendor.ordersSummary,
+        method: 'GET',
+      }),
+      providesTags: ['VendorOrders'],
+      transformResponse: (response: any) => {
+        const data = response?.data || response || {};
+        return {
+          totalOrdersCount: Number(data.totalOrdersCount ?? 0),
+          pendingOrdersCount: Number(data.pendingOrdersCount ?? 0),
+          inFulfillmentCount: Number(data.inFulfillmentCount ?? 0),
+          completedOrdersCount: Number(data.completedOrdersCount ?? 0),
+          cancelledOrdersCount: Number(data.cancelledOrdersCount ?? 0),
+          totalOrderRevenue: Number(data.totalOrderRevenue ?? 0),
+        };
+      },
+    }),
   }),
   overrideExisting: true,
 });
@@ -1330,17 +1452,21 @@ export const vendorApi = baseApi.injectEndpoints({
 export const {
   useGetVendorOverviewQuery,
   useGetVendorOrdersQuery,
+  useGetVendorOrdersSummaryQuery,
   useGetVendorProductsQuery,
+  useGetVendorProductsSummaryQuery,
   useCreateProductMutation,
   useUpdateProductMutation,
   useDeleteProductMutation,
   useUpdateOrderStatusMutation,
   useGetMarketplaceRequestsQuery,
+  useGetVendorStudioSummaryQuery,
   useGetVendorBidsQuery,
   useCreateCustomBidMutation,
   useUpdateCustomBidMutation,
   useDeleteCustomBidMutation,
   useGetVendorProductRequestsQuery,
+  useGetVendorProductRequestsSummaryQuery,
   useStartProductionMutation,
   useUpdateProductionProgressMutation,
   useMarkProductReadyMutation,
@@ -1351,6 +1477,7 @@ export const {
   useGetVendorMessagesQuery,
   useGetVendorMessageStatsQuery,
   useGetChatRoomQuery,
+  useLazyGetChatRoomQuery,
   useSendChatMessageMutation,
   useGetVendorProfileQuery,
   useUpdateVendorSettingsMutation,

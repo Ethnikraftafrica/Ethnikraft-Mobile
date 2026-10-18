@@ -156,7 +156,8 @@ export default function VendorCustomersScreen() {
   const { theme, isDark } = useAppTheme();
   const currentCurrency = useAppSelector((state) => state.currency);
 
-  const [patrons, setPatrons] = useState<PatronRecord[]>([]);
+  const [localPatrons, setPatrons] = useState<PatronRecord[]>([]);
+  const [syncedLiveOrders, setSyncedLiveOrders] = useState<typeof liveOrders>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTier, setSelectedTier] = useState<PatronTier>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
@@ -173,13 +174,25 @@ export default function VendorCustomersScreen() {
     refetch: refetchOrders,
   } = useGetVendorOrdersQuery();
 
+  const mappedLivePatrons = useMemo<PatronRecord[]>(() => {
+    if (liveOrders && Array.isArray(liveOrders)) {
+      return deriveCustomers(liveOrders);
+    }
+    return [];
+  }, [liveOrders]);
+
   // Synchronize derived collectors with live orders
   React.useEffect(() => {
     if (liveOrders && Array.isArray(liveOrders)) {
-      const derived = deriveCustomers(liveOrders);
-      setPatrons(derived);
+      setPatrons(mappedLivePatrons);
+      setSyncedLiveOrders(liveOrders);
     }
-  }, [liveOrders]);
+  }, [liveOrders, mappedLivePatrons]);
+
+  const patrons =
+    liveOrders && liveOrders !== syncedLiveOrders
+      ? mappedLivePatrons
+      : localPatrons;
 
   // Selected patron for the 84% Dossier Bottom Sheet
   const [selectedPatron, setSelectedPatron] = useState<PatronRecord | null>(null);

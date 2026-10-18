@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { toggleRole, logout } from '@/store/slices/authSlice';
+import { logout } from '@/store/slices/authSlice';
 import {
   syncUserFromAuth,
   syncFromFullProfile,
@@ -148,12 +148,6 @@ export default function ProfileScreen() {
     }
   }, [user, dispatch]);
 
-  const handleSwitchToVendor = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    dispatch(toggleRole());
-    router.replace('/(vendor)');
-  };
-
   const handleLogout = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out of your Ethnikraft account?', [
       { text: 'Cancel', style: 'cancel' },
@@ -283,26 +277,6 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
         )}
-
-        {/* Artisan Vendor Switcher Banner */}
-        <TouchableOpacity
-          style={[styles.vendorSwitchCard, Shadows.sm]}
-          onPress={handleSwitchToVendor}
-          activeOpacity={0.85}
-        >
-          <View style={styles.switchIconCircle}>
-            <Ionicons name="briefcase" size={20} color="#F5EBD5" />
-          </View>
-          <View style={styles.switchTextContainer}>
-            <Text style={styles.switchTitle}>
-              {hasVendorAccount ? 'Switch to Artisan Vendor Hub' : 'Artisan Workshop Mode'}
-            </Text>
-            <Text style={styles.switchSubtitle}>
-              Manage workshop catalog, client commissions, and order fulfillment
-            </Text>
-          </View>
-          <Ionicons name="arrow-forward" size={18} color="#C46C27" />
-        </TouchableOpacity>
 
         {/* Section: Account & Addresses */}
         <Text style={styles.sectionHeader}>ACCOUNT</Text>

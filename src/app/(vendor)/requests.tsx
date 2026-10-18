@@ -33,6 +33,7 @@ import {
 } from '@/components/vendor/DashboardFigmaIcons';
 import {
   useGetVendorProductRequestsQuery,
+  useGetVendorProductRequestsSummaryQuery,
   useStartProductionMutation,
   useUpdateProductionProgressMutation,
   useMarkProductReadyMutation,
@@ -186,6 +187,11 @@ export default function VendorProductRequestsScreen() {
     refetch: refetchRequests,
   } = useGetVendorProductRequestsQuery();
 
+  const {
+    data: requestsSummaryData,
+    refetch: refetchRequestsSummary,
+  } = useGetVendorProductRequestsSummaryQuery();
+
   const [startProductionMutation, { isLoading: isStartingProductionMutation }] = useStartProductionMutation();
   const [updateProductionProgressMutation, { isLoading: isUpdatingProgressMutation }] = useUpdateProductionProgressMutation();
   const [markProductReadyMutation, { isLoading: isMarkingReadyMutation }] = useMarkProductReadyMutation();
@@ -244,15 +250,20 @@ export default function VendorProductRequestsScreen() {
     });
   }, [productRequestsData]);
 
-  // ─── State Management ────────────────────────────────────────────────────────
-  const [requests, setRequests] = useState<ProductRequestItem[]>(INITIAL_PRODUCT_REQUESTS);
+  // ─── State Management (Zero-Flash Synchronous Derivation) ──────────────────
+  const [localRequests, setRequests] = useState<ProductRequestItem[]>(INITIAL_PRODUCT_REQUESTS);
+  const [syncedLiveRequests, setSyncedLiveRequests] = useState<ProductRequestItem[]>(liveRequests);
 
   // Sync RTK Query live data to local state
   React.useEffect(() => {
     if (productRequestsData) {
       setRequests(liveRequests);
+      setSyncedLiveRequests(liveRequests);
     }
   }, [productRequestsData, liveRequests]);
+
+  const requests =
+    productRequestsData && liveRequests !== syncedLiveRequests ? liveRequests : localRequests;
 
   const [selectedStatusTab, setSelectedStatusTab] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -294,7 +305,10 @@ export default function VendorProductRequestsScreen() {
     setRefreshing(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
-      await refetchRequests().unwrap();
+      await Promise.all([
+        refetchRequests().unwrap(),
+        refetchRequestsSummary(),
+      ]);
       showToast('Requests refreshed');
     } catch {
       showToast('Requests refreshed from cache');
@@ -303,8 +317,17 @@ export default function VendorProductRequestsScreen() {
     }
   };
 
-  // ─── KPI Metrics ─────────────────────────────────────────────────────────────
+  // ─── KPI Metrics (Dedicated Backend Summary Endpoint + Local Fallback) ──────
   const stats = useMemo(() => {
+    if (requestsSummaryData) {
+      return {
+        total: requestsSummaryData.total ?? 0,
+        inProd: requestsSummaryData.inProd ?? 0,
+        pending: requestsSummaryData.pending ?? 0,
+        completed: requestsSummaryData.completed ?? 0,
+      };
+    }
+
     const total = requests.length;
     const inProd = requests.filter(
       (r) => r.status === 'IN_PRODUCTION' || r.status === 'PRODUCTION_DELAYED'
@@ -312,7 +335,7 @@ export default function VendorProductRequestsScreen() {
     const pending = requests.filter((r) => r.status === 'PRODUCTION_PENDING').length;
     const completed = requests.filter((r) => r.status === 'COMPLETED').length;
     return { total, inProd, pending, completed };
-  }, [requests]);
+  }, [requestsSummaryData, requests]);
 
   // ─── Filtering & Search ──────────────────────────────────────────────────────
   const filteredRequests = useMemo(() => {
@@ -850,7 +873,7 @@ export default function VendorProductRequestsScreen() {
   };
 
   const renderListEmpty = () => {
-    if (isRequestsLoading) {
+    if (isRequestsLoading || (isRequestsFetching && requests.length === 0)) {
       return <VendorProductRequestsSkeleton count={3} />;
     }
     if (requestsError) {
