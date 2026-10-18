@@ -4,6 +4,7 @@ import {
   Text,
   View,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   TextInput,
   Image,
@@ -654,6 +655,29 @@ export default function VendorStudioScreen() {
     setSearchQuery('');
   };
 
+  // ─── 10-Item Pagination ─────────────────────────────────────────────────────
+  const [currentRequestsPage, setCurrentRequestsPage] = useState(1);
+  const [currentWorkbenchPage, setCurrentWorkbenchPage] = useState(1);
+  const pageSize = 10;
+
+  React.useEffect(() => {
+    setCurrentRequestsPage(1);
+  }, [requestSegment, selectedCategories, selectedStatuses, selectedMaterials, searchQuery, sortFilter]);
+
+  const totalRequestsCount = filteredRequests.length;
+  const totalRequestsPages = Math.max(1, Math.ceil(totalRequestsCount / pageSize));
+  const paginatedRequests = useMemo(() => {
+    const startIndex = (currentRequestsPage - 1) * pageSize;
+    return filteredRequests.slice(startIndex, startIndex + pageSize);
+  }, [filteredRequests, currentRequestsPage, pageSize]);
+
+  const totalWorkbenchCount = commissions.length;
+  const totalWorkbenchPages = Math.max(1, Math.ceil(totalWorkbenchCount / pageSize));
+  const paginatedCommissions = useMemo(() => {
+    const startIndex = (currentWorkbenchPage - 1) * pageSize;
+    return commissions.slice(startIndex, startIndex + pageSize);
+  }, [commissions, currentWorkbenchPage, pageSize]);
+
   // ─── Action Handlers ────────────────────────────────────────────────────────
   const handleOpenInspect = (req: CustomClientRequest) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -830,6 +854,1121 @@ export default function VendorStudioScreen() {
     }
   };
 
+  const renderRequestItem = (req: CustomClientRequest) => {
+    const hasBid = Boolean(req.myExistingBid);
+    const locationResolved = resolveRequestLocation(req);
+    const { displayName, initials } = formatClientName(req.customer.name);
+    const formattedDate = new Date(req.deadlineDate).toLocaleDateString('en-NG', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+
+    return (
+      <View
+        style={[
+          styles.requestCard,
+          {
+            backgroundColor: theme.card,
+            borderColor: hasBid
+              ? isDark
+                ? '#D1995A'
+                : theme.primary
+              : theme.borderSubtle,
+          },
+        ]}
+      >
+        {/* Top Row: Patron Avatar Column & Content Header */}
+        <View style={styles.requestCardHeader}>
+          <View style={styles.clientRow}>
+            <View
+              style={[
+                styles.clientAvatar,
+                {
+                  backgroundColor: isDark ? 'rgba(196, 108, 39, 0.18)' : '#FCF4E1',
+                  borderColor: theme.borderSubtle,
+                },
+              ]}
+            >
+              <Text style={[styles.clientAvatarText, { color: isDark ? '#D1995A' : theme.primary }]}>
+                {initials}
+              </Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={[styles.clientName, { color: theme.textPrimary }]} numberOfLines={1}>
+                  {displayName}
+                </Text>
+                {req.customer.verified && (
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={13}
+                    color="#009D1A"
+                    style={{ marginLeft: 4 }}
+                  />
+                )}
+              </View>
+              {locationResolved && (
+                <Text style={[styles.clientLocation, { color: theme.textMuted }]} numberOfLines={1}>
+                  {locationResolved}
+                </Text>
+              )}
+            </View>
+          </View>
+
+          {/* Status Badge */}
+          <View
+            style={[
+              styles.statusBadge,
+              {
+                backgroundColor: hasBid
+                  ? 'rgba(0, 157, 26, 0.14)'
+                  : isDark
+                  ? 'rgba(209, 153, 90, 0.16)'
+                  : '#FEF3C7',
+                borderColor: hasBid ? 'rgba(0, 157, 26, 0.3)' : theme.borderSubtle,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.statusBadgeText,
+                { color: hasBid ? '#009D1A' : isDark ? '#FFD79E' : '#92400E' },
+              ]}
+            >
+              {hasBid ? 'OFFER SENT' : `${req.daysRemaining}d left`}
+            </Text>
+          </View>
+        </View>
+
+        {/* Title & Description */}
+        <Text style={[styles.requestTitle, { color: theme.textPrimary }]}>{req.title}</Text>
+        <Text style={[styles.requestDesc, { color: theme.textSecondary }]} numberOfLines={2}>
+          {req.description}
+        </Text>
+
+        {/* Inspiration Photo Thumbnails with Fullscreen Lightbox Trigger */}
+        {req.inspirationImages.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.photoStrip}
+            contentContainerStyle={{ gap: 8 }}
+          >
+            {req.inspirationImages.map((imgUrl, i) => (
+              <TouchableOpacity
+                key={i}
+                onPress={() => handleOpenLightbox(req.inspirationImages, i)}
+                activeOpacity={0.85}
+                style={[styles.photoThumb, { borderColor: theme.borderSubtle }]}
+              >
+                <Image source={{ uri: imgUrl }} style={styles.photoThumbImg} />
+                {i === 2 && req.inspirationImages.length > 3 && (
+                  <View style={styles.morePhotosOverlay}>
+                    <Text style={styles.morePhotosText}>+{req.inspirationImages.length - 3}</Text>
+                  </View>
+                )}
+                <View style={styles.zoomOverlay}>
+                  <Ionicons name="expand-outline" size={10} color="#FFFFFF" />
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+
+        {/* Web Parity Specs Strip: Qty + Big Price + Deliver by clock pill */}
+        <View
+          style={[
+            styles.specsBox,
+            {
+              backgroundColor: theme.backgroundSecondary,
+              borderColor: theme.borderSubtle,
+            },
+          ]}
+        >
+          <View style={{ flex: 1 }}>
+            <View style={styles.qtyAndBudgetRow}>
+              <Text style={[styles.specLabel, { color: theme.textMuted }]}>
+                QTY: {req.quantity ?? 1}
+              </Text>
+            </View>
+            <Text style={[styles.specValueBudget, { color: theme.primary }]}>
+              {formatPriceValue(req.budget)}
+            </Text>
+          </View>
+
+          <View style={[styles.specDivider, { backgroundColor: theme.borderSubtle }]} />
+
+          <View style={{ flex: 1.3, paddingLeft: 12 }}>
+            <View style={[styles.deliverByPill, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
+              <Ionicons name="time-outline" size={12} color={theme.textSecondary} style={{ marginRight: 4 }} />
+              <Text style={[styles.deliverByText, { color: theme.textSecondary }]} numberOfLines={1}>
+                Deliver by: <Text style={{ color: theme.textPrimary, fontFamily: FontFamily.poppinsBold }}>{formattedDate}</Text>
+              </Text>
+            </View>
+            <Text style={[styles.materialSubText, { color: theme.textMuted }]} numberOfLines={1}>
+              {req.materialType}
+            </Text>
+          </View>
+        </View>
+
+        {/* Action Buttons Row with Direct Message Client Integration */}
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            onPress={() => handleMessageClient(req)}
+            style={[
+              styles.messageBtn,
+              {
+                backgroundColor: theme.backgroundSecondary,
+                borderColor: theme.borderSubtle,
+              },
+            ]}
+            activeOpacity={0.75}
+          >
+            <Ionicons name="chatbubble-ellipses-outline" size={14} color={theme.textPrimary} style={{ marginRight: 4 }} />
+            <Text style={[styles.messageBtnText, { color: theme.textPrimary }]}>Message</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => handleOpenInspect(req)}
+            style={[
+              styles.inspectBtn,
+              {
+                backgroundColor: theme.backgroundSecondary,
+                borderColor: theme.borderSubtle,
+              },
+            ]}
+            activeOpacity={0.75}
+          >
+            <Ionicons name="eye-outline" size={14} color={theme.textPrimary} style={{ marginRight: 4 }} />
+            <Text style={[styles.inspectBtnText, { color: theme.textPrimary }]}>Inspect Spec</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => handleOpenOfferSheet(req)}
+            style={[
+              styles.offerBtn,
+              {
+                backgroundColor: isDark ? theme.cardElevated : '#FCF4E1',
+                borderColor: isDark ? theme.borderAccent : 'rgba(102, 37, 2, 0.25)',
+              },
+            ]}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name={hasBid ? 'create-outline' : 'paper-plane-outline'}
+              size={14}
+              color={isDark ? '#D1995A' : theme.primary}
+              style={{ marginRight: 4 }}
+            />
+            <Text style={[styles.offerBtnText, { color: isDark ? '#FFF3D6' : theme.primaryDark }]}>
+              {hasBid ? 'Adjust Offer' : 'Send Offer'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  const renderCommissionItem = (comm: ActiveWorkbenchCommission) => {
+    const stageMeta = STAGE_CONFIG[comm.stage];
+    return (
+      <View
+        style={[
+          styles.commissionCard,
+          {
+            backgroundColor: theme.card,
+            borderColor: theme.borderSubtle,
+          },
+        ]}
+      >
+        {/* Header Strip with Stage Badge */}
+        <View style={styles.commCardHeader}>
+          <View style={{ flex: 1, paddingRight: 8 }}>
+            <Text style={[styles.commIdBadge, { color: isDark ? '#D1995A' : theme.primary }]}>
+              {comm.id}
+            </Text>
+            <Text style={[styles.commTitle, { color: theme.textPrimary }]} numberOfLines={1}>
+              {comm.title}
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.stageBadge,
+              {
+                backgroundColor: isDark ? stageMeta.bgDark : stageMeta.bgLight,
+                borderColor: theme.borderSubtle,
+              },
+            ]}
+          >
+            <Ionicons name={stageMeta.icon} size={12} color={stageMeta.color} style={{ marginRight: 4 }} />
+            <Text style={[styles.stageBadgeText, { color: stageMeta.color }]}>{stageMeta.label}</Text>
+          </View>
+        </View>
+
+        {/* Client & Agreed Value Row */}
+        <View style={styles.commMetaRow}>
+          <Text style={[styles.commClientText, { color: theme.textSecondary }]} numberOfLines={1}>
+            Client: <Text style={{ color: theme.textPrimary, fontFamily: FontFamily.headingBold }}>{comm.client.name}</Text> • {comm.client.location}
+          </Text>
+          <Text style={[styles.commPriceText, { color: theme.textPrimary }]}>
+            {formatPriceValue(comm.agreedPrice)}
+          </Text>
+        </View>
+
+        {/* Progress Track */}
+        <View style={styles.progressWrap}>
+          <View style={styles.progressHeaderRow}>
+            <Text style={[styles.progressLabel, { color: theme.textMuted }]}>
+              Stage Progress ({comm.progressPercent}%)
+            </Text>
+            <Text style={[styles.progressDeadline, { color: theme.textMuted }]}>
+              Due: {comm.targetCompletionDate} ({comm.daysRemaining}d left)
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.progressTrack,
+              { backgroundColor: theme.backgroundSecondary },
+            ]}
+          >
+            <View
+              style={[
+                styles.progressFill,
+                {
+                  width: `${comm.progressPercent}%`,
+                  backgroundColor: stageMeta.color,
+                },
+              ]}
+            />
+          </View>
+        </View>
+
+        {/* Action Row */}
+        <View style={styles.commActionRow}>
+          {comm.client.phone && (
+            <TouchableOpacity
+              onPress={() => Linking.openURL(`tel:${comm.client.phone}`)}
+              style={[
+                styles.commContactBtn,
+                { backgroundColor: theme.backgroundSecondary, borderColor: theme.borderSubtle },
+              ]}
+              activeOpacity={0.75}
+            >
+              <Ionicons name="call-outline" size={14} color={theme.textPrimary} style={{ marginRight: 4 }} />
+              <Text style={[styles.commContactBtnText, { color: theme.textPrimary }]}>Call Client</Text>
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: '/(vendor)/messenger',
+                params: {
+                  chatId: comm.chatId || comm.requestId || comm.id,
+                  clientName: comm.client.name,
+                  requestTitle: comm.title,
+                },
+              })
+            }
+            style={[
+              styles.commContactBtn,
+              { backgroundColor: theme.backgroundSecondary, borderColor: theme.borderSubtle },
+            ]}
+            activeOpacity={0.75}
+          >
+            <Ionicons name="chatbubble-ellipses-outline" size={14} color={theme.textPrimary} style={{ marginRight: 4 }} />
+            <Text style={[styles.commContactBtnText, { color: theme.textPrimary }]}>Message</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => handleOpenMilestoneModal(comm)}
+            style={[
+              styles.commUpdateBtn,
+              {
+                backgroundColor: isDark ? theme.cardElevated : '#FCF4E1',
+                borderColor: isDark ? theme.borderAccent : 'rgba(102, 37, 2, 0.25)',
+              },
+            ]}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name="checkmark-circle-outline"
+              size={15}
+              color={isDark ? '#D1995A' : theme.primary}
+              style={{ marginRight: 5 }}
+            />
+            <Text style={[styles.commUpdateBtnText, { color: isDark ? '#FFF3D6' : theme.primaryDark }]}>
+              Update Stage
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  const renderListEmpty = () => {
+    if (hubTab === 'OPEN_REQUESTS') {
+      if (isMarketplaceLoading) {
+        return <VendorStudioRequestsSkeleton count={3} />;
+      }
+      if (marketplaceError) {
+        return (
+          <View
+            style={[
+              styles.emptyCard,
+              { backgroundColor: theme.card, borderColor: '#EF4444' },
+            ]}
+          >
+            <Ionicons name="alert-circle-outline" size={36} color="#EF4444" />
+            <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Unable to Load Requests</Text>
+            <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
+              There was a problem communicating with the studio marketplace server.
+            </Text>
+            <TouchableOpacity onPress={() => refetchMarketplace()} style={styles.emptyActionBtn}>
+              <Text style={styles.emptyActionBtnText}>Retry Connection</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      }
+      return (
+        <View
+          style={[
+            styles.emptyCard,
+            { backgroundColor: theme.card, borderColor: theme.borderSubtle },
+          ]}
+        >
+          <Ionicons name="sparkles-outline" size={36} color={theme.primary} />
+          <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>No Requests Found</Text>
+          <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
+            {requestSegment === 'OFFERED'
+              ? 'You have not submitted offers for any requests yet.'
+              : 'No custom requests match your selected filters.'}
+          </Text>
+          {hasActiveFilters && (
+            <TouchableOpacity onPress={clearAllFilters} style={styles.emptyActionBtn}>
+              <Text style={styles.emptyActionBtnText}>Clear Filters</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      );
+    }
+
+    if (isWorkbenchLoading) {
+      return <VendorStudioWorkbenchSkeleton count={2} />;
+    }
+    if (workbenchError) {
+      return (
+        <View
+          style={[
+            styles.emptyCard,
+            { backgroundColor: theme.card, borderColor: '#EF4444' },
+          ]}
+        >
+          <Ionicons name="alert-circle-outline" size={36} color="#EF4444" />
+          <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Unable to Load Workbench</Text>
+          <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
+            There was a problem retrieving your active production commissions from the studio server.
+          </Text>
+          <TouchableOpacity onPress={() => refetchWorkbench()} style={styles.emptyActionBtn}>
+            <Text style={styles.emptyActionBtnText}>Retry Connection</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    return (
+      <View
+        style={[
+          styles.emptyCard,
+          { backgroundColor: theme.card, borderColor: theme.borderSubtle },
+        ]}
+      >
+        <Ionicons name="construct-outline" size={36} color={theme.primary} />
+        <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>No Active Commissions</Text>
+        <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
+          All studio pieces are currently completed or waiting for client offers.
+        </Text>
+      </View>
+    );
+  };
+
+  const renderListFooter = () => {
+    const isRequests = hubTab === 'OPEN_REQUESTS';
+    const isLoading = isRequests ? isMarketplaceLoading : isWorkbenchLoading;
+    const hasError = isRequests ? !!marketplaceError : !!workbenchError;
+    const totalCount = isRequests ? totalRequestsCount : totalWorkbenchCount;
+    const currentPage = isRequests ? currentRequestsPage : currentWorkbenchPage;
+    const totalPages = isRequests ? totalRequestsPages : totalWorkbenchPages;
+    const setPage = isRequests ? setCurrentRequestsPage : setCurrentWorkbenchPage;
+
+    return (
+      <View>
+        {!isLoading && !hasError && totalCount > pageSize && (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingVertical: 14,
+              paddingHorizontal: 16,
+              marginTop: 4,
+              borderRadius: 12,
+              borderWidth: 1,
+              backgroundColor: theme.card,
+              borderColor: theme.borderSubtle,
+            }}
+          >
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: theme.borderSubtle,
+                opacity: currentPage <= 1 ? 0.45 : 1,
+              }}
+              disabled={currentPage <= 1}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setPage((p) => Math.max(1, p - 1));
+              }}
+            >
+              <Ionicons
+                name="chevron-back"
+                size={15}
+                color={currentPage <= 1 ? theme.textMuted : theme.textPrimary}
+              />
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontFamily: FontFamily.poppinsBold,
+                  marginHorizontal: 4,
+                  color: currentPage <= 1 ? theme.textMuted : theme.textPrimary,
+                }}
+              >
+                Previous
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={{ fontSize: 12, fontFamily: FontFamily.poppinsMedium, color: theme.textSecondary }}>
+              Page <Text style={{ color: theme.textPrimary, fontFamily: FontFamily.poppinsBold }}>{currentPage}</Text> of{' '}
+              <Text style={{ color: theme.textPrimary, fontFamily: FontFamily.poppinsBold }}>{totalPages}</Text>
+            </Text>
+
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: currentPage >= totalPages ? theme.borderSubtle : theme.primary,
+                backgroundColor: currentPage >= totalPages ? 'transparent' : theme.primary,
+                opacity: currentPage >= totalPages ? 0.45 : 1,
+              }}
+              disabled={currentPage >= totalPages}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setPage((p) => Math.min(totalPages, p + 1));
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontFamily: FontFamily.poppinsBold,
+                  marginHorizontal: 4,
+                  color: currentPage >= totalPages ? theme.textMuted : '#FFFFFF',
+                }}
+              >
+                Next
+              </Text>
+              <Ionicons
+                name="chevron-forward"
+                size={15}
+                color={currentPage >= totalPages ? theme.textMuted : '#FFFFFF'}
+              />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Bottom spacing for bottom navigation bar */}
+        <View style={{ height: Math.max(insets.bottom, 16) + 120 }} />
+      </View>
+    );
+  };
+
+  const listHeaderElement = (
+    <View>
+      {/* ── 1. Header & Counter Badges ── */}
+      <View style={styles.headerRow}>
+        <View style={styles.headerTitleGroup}>
+          <Text style={[styles.pageTitle, { color: theme.textPrimary }]}>
+            Ethnikraft Studio
+          </Text>
+          <View style={[styles.countBadge, { backgroundColor: 'rgba(196, 108, 39, 0.16)' }]}>
+            <Text style={[styles.countBadgeText, { color: isDark ? '#D1995A' : theme.primary }]}>
+              {hubTab === 'OPEN_REQUESTS' ? `${requests.length} Requests` : `${commissions.length} Active`}
+            </Text>
+          </View>
+        </View>
+        <TouchableOpacity
+          onPress={onRefresh}
+          style={[styles.headerRefreshBtn, { backgroundColor: theme.card, borderColor: theme.borderSubtle }]}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="refresh" size={17} color={theme.textSecondary} />
+        </TouchableOpacity>
+      </View>
+
+      {/* ── 2. Option B: Executive Hero Card + 2 Split Sub-Cards ── */}
+      <View style={styles.optionBContainer}>
+        {/* Top Hero Card: Total Studio Pipeline */}
+        <View
+          style={[
+            styles.heroMetricCard,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+            },
+          ]}
+        >
+          <View style={styles.heroMetricTopRow}>
+            <View
+              style={[
+                styles.heroPillBadge,
+                {
+                  backgroundColor: isDark
+                    ? 'rgba(10, 210, 79, 0.12)'
+                    : 'rgba(0, 157, 26, 0.08)',
+                },
+              ]}
+            >
+              <TrendingUpFigmaIcon size={6} color={isDark ? '#0AD24F' : '#009D1A'} />
+              <Text
+                style={[
+                  styles.heroPillText,
+                  { color: isDark ? '#0AD24F' : '#009D1A' },
+                ]}
+              >
+                Live Pipeline
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.heroCountPill,
+                {
+                  backgroundColor: isDark
+                    ? 'rgba(255, 255, 255, 0.06)'
+                    : 'rgba(0, 0, 0, 0.04)',
+                },
+              ]}
+            >
+              <Text style={[styles.heroCountPillText, { color: theme.textSecondary }]}>
+                {commissions.length} In Studio
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.heroValueRow}>
+            <Text
+              style={[styles.heroValueText, { color: theme.textPrimary }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
+              {formatPriceValue(totalInStudioValue)}
+            </Text>
+          </View>
+
+          <Text style={[styles.heroSubtitleText, { color: theme.textMuted }]}>
+            Total Studio Pipeline
+          </Text>
+
+          {/* Studio Health / Progress Track */}
+          <View style={styles.heroProgressSection}>
+            <View
+              style={[
+                styles.heroProgressTrack,
+                { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' },
+              ]}
+            >
+              <View
+                style={[
+                  styles.heroProgressBar,
+                  {
+                    width: `${Math.max(8, avgProgress)}%`,
+                    backgroundColor: isDark ? theme.textGold : theme.primary,
+                  },
+                ]}
+              />
+            </View>
+            <View style={styles.heroProgressInfoRow}>
+              <Text style={[styles.heroProgressInfoText, { color: theme.textSecondary }]}>
+                Workbench Crafting Health
+              </Text>
+              <Text
+                style={[
+                  styles.heroProgressPercentText,
+                  { color: isDark ? theme.textGold : theme.primary },
+                ]}
+              >
+                {avgProgress}% avg progress
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Bottom Split Row: 2 Secondary Cards */}
+        <View style={styles.splitRow}>
+          {/* Split Card 1: Open Bespoke Inquiries */}
+          <View
+            style={[
+              styles.splitCard,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.kpiPillBadge,
+                {
+                  backgroundColor: isDark
+                    ? 'rgba(209, 153, 90, 0.16)'
+                    : 'rgba(85, 107, 47, 0.10)',
+                },
+              ]}
+            >
+              <CustomBidsFigmaIcon size={12} color={isDark ? '#D1995A' : '#556B2F'} />
+              <Text
+                style={[
+                  styles.kpiPillText,
+                  { color: isDark ? '#D1995A' : '#556B2F' },
+                ]}
+              >
+                Open Inquiries
+              </Text>
+            </View>
+
+            <View style={styles.kpiValueRow}>
+              <Text style={[styles.kpiValueText, { color: theme.textPrimary }]}>
+                {requests.length} Requests
+              </Text>
+            </View>
+
+            <Text style={styles.kpiSubtitleText}>Client Briefs</Text>
+          </View>
+
+          {/* Split Card 2: In Crafting */}
+          <View
+            style={[
+              styles.splitCard,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.kpiPillBadge,
+                {
+                  backgroundColor: isDark
+                    ? 'rgba(196, 108, 39, 0.16)'
+                    : 'rgba(196, 108, 39, 0.10)',
+                },
+              ]}
+            >
+              <PackageFigmaIcon size={12} color={isDark ? '#D1995A' : theme.primary} />
+              <Text
+                style={[
+                  styles.kpiPillText,
+                  { color: isDark ? '#D1995A' : theme.primary },
+                ]}
+              >
+                Workbench
+              </Text>
+            </View>
+
+            <View style={styles.kpiValueRow}>
+              <Text
+                style={[
+                  styles.kpiValueText,
+                  { color: isDark ? '#D1995A' : theme.primary },
+                ]}
+              >
+                {commissions.length} {commissions.length === 1 ? 'Piece' : 'Pieces'}
+              </Text>
+            </View>
+
+            <Text style={styles.kpiSubtitleText}>In Crafting</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* ── 3. Segmented 2-Way Tab Switcher ── */}
+      <View
+        style={[
+          styles.tabTrack,
+          {
+            backgroundColor: theme.card,
+            borderColor: theme.borderSubtle,
+          },
+        ]}
+      >
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setHubTab('OPEN_REQUESTS');
+          }}
+          style={[
+            styles.tabSegment,
+            hubTab === 'OPEN_REQUESTS' && [
+              styles.tabSegmentActive,
+              {
+                backgroundColor: isDark ? theme.cardElevated : '#FFFFFF',
+                borderColor: isDark ? theme.borderAccent : 'rgba(54, 19, 0, 0.12)',
+              },
+            ],
+          ]}
+          activeOpacity={0.8}
+        >
+          <Ionicons
+            name="hammer-outline"
+            size={15}
+            color={hubTab === 'OPEN_REQUESTS' ? (isDark ? theme.textGold : theme.primary) : theme.textMuted}
+            style={{ marginRight: 6 }}
+          />
+          <Text
+            style={[
+              styles.tabSegmentText,
+              {
+                color: hubTab === 'OPEN_REQUESTS' ? theme.textPrimary : theme.textMuted,
+                fontFamily: hubTab === 'OPEN_REQUESTS' ? FontFamily.poppinsBold : FontFamily.poppinsMedium,
+              },
+            ]}
+          >
+            Client Requests ({requests.length})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setHubTab('ACTIVE_WORKBENCH');
+          }}
+          style={[
+            styles.tabSegment,
+            hubTab === 'ACTIVE_WORKBENCH' && [
+              styles.tabSegmentActive,
+              {
+                backgroundColor: isDark ? theme.cardElevated : '#FFFFFF',
+                borderColor: isDark ? theme.borderAccent : 'rgba(54, 19, 0, 0.12)',
+              },
+            ],
+          ]}
+          activeOpacity={0.8}
+        >
+          <Ionicons
+            name="construct-outline"
+            size={15}
+            color={hubTab === 'ACTIVE_WORKBENCH' ? (isDark ? theme.textGold : theme.primary) : theme.textMuted}
+            style={{ marginRight: 6 }}
+          />
+          <Text
+            style={[
+              styles.tabSegmentText,
+              {
+                color: hubTab === 'ACTIVE_WORKBENCH' ? theme.textPrimary : theme.textMuted,
+                fontFamily: hubTab === 'ACTIVE_WORKBENCH' ? FontFamily.poppinsBold : FontFamily.poppinsMedium,
+              },
+            ]}
+          >
+            Workbench ({commissions.length})
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ─── TAB 1 HEADER CONTROLS: OPEN CLIENT REQUESTS (WEB PARITY) ─── */}
+      {hubTab === 'OPEN_REQUESTS' && (
+        <View>
+          {/* Search Input Bar + Filter Trigger */}
+          <View style={styles.searchRow}>
+            <View
+              style={[
+                styles.searchBar,
+                {
+                  backgroundColor: theme.card,
+                  borderColor: theme.borderSubtle,
+                },
+              ]}
+            >
+              <Ionicons name="search" size={17} color={theme.textMuted} style={{ marginRight: 8 }} />
+              <TextInput
+                style={[styles.searchInput, { color: theme.textPrimary }]}
+                placeholder="Search requests, materials, or locations..."
+                placeholderTextColor={theme.textMuted}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                clearButtonMode="while-editing"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Ionicons name="close-circle" size={16} color={theme.textMuted} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <TouchableOpacity
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setFilterModalVisible(true);
+              }}
+              style={[
+                styles.filterTriggerBtn,
+                {
+                  backgroundColor: hasActiveFilters ? (isDark ? 'rgba(196, 108, 39, 0.22)' : '#FEF3C7') : theme.card,
+                  borderColor: hasActiveFilters ? (isDark ? '#D1995A' : theme.primary) : theme.borderSubtle,
+                },
+              ]}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name="options-outline"
+                size={18}
+                color={hasActiveFilters ? (isDark ? '#FFD79E' : theme.primary) : theme.textSecondary}
+              />
+              {hasActiveFilters && <View style={styles.filterActiveDot} />}
+            </TouchableOpacity>
+          </View>
+
+          {/* ── Web Parity Sub-Segments: All Requests vs Offers Sent ── */}
+          <View style={styles.subSegmentWrapper}>
+            <View
+              style={[
+                styles.subSegmentTrack,
+                { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#EAEDED' },
+              ]}
+            >
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setRequestSegment('ALL');
+                }}
+                style={[
+                  styles.subSegmentBtn,
+                  requestSegment === 'ALL' && [
+                    styles.subSegmentBtnActive,
+                    {
+                      backgroundColor: isDark ? theme.cardElevated : theme.primary,
+                    },
+                  ],
+                ]}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.subSegmentText,
+                    {
+                      color: requestSegment === 'ALL' ? '#FFFFFF' : theme.textSecondary,
+                      fontFamily: requestSegment === 'ALL' ? FontFamily.poppinsBold : FontFamily.poppinsMedium,
+                    },
+                  ]}
+                >
+                  All Requests ({allRequestsCount})
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setRequestSegment('OFFERED');
+                }}
+                style={[
+                  styles.subSegmentBtn,
+                  requestSegment === 'OFFERED' && [
+                    styles.subSegmentBtnActive,
+                    {
+                      backgroundColor: isDark ? theme.cardElevated : theme.primary,
+                    },
+                  ],
+                ]}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.subSegmentText,
+                    {
+                      color: requestSegment === 'OFFERED' ? '#FFFFFF' : theme.textSecondary,
+                      fontFamily: requestSegment === 'OFFERED' ? FontFamily.poppinsBold : FontFamily.poppinsMedium,
+                    },
+                  ]}
+                >
+                  Offers Sent ({offeredRequestsCount})
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Active Filter Chips Bar (Web Parity) */}
+          {hasActiveFilters && (
+            <View style={styles.activeFiltersBar}>
+              <Text style={[styles.activeFilterLabel, { color: theme.textMuted }]}>Active:</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                {isCategoryFiltered &&
+                  selectedCategories.map((catKey) => {
+                    const catLabel = CATEGORY_CHIPS.find((c) => c.id === catKey)?.label || catKey;
+                    return (
+                      <View
+                        key={`cat-${catKey}`}
+                        style={[
+                          styles.activeFilterChip,
+                          { backgroundColor: isDark ? 'rgba(196, 108, 39, 0.18)' : '#FEF3C7', borderColor: theme.borderAccent },
+                        ]}
+                      >
+                        <Text style={[styles.activeFilterChipText, { color: isDark ? '#FFD79E' : theme.primary }]}>
+                          {catLabel}
+                        </Text>
+                        <TouchableOpacity onPress={() => toggleCategory(catKey)}>
+                          <Ionicons name="close" size={13} color={theme.primary} />
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+
+                {isStatusFiltered &&
+                  selectedStatuses.map((stKey) => {
+                    const stLabel = stKey === 'OPEN' ? 'Open Inquiries' : stKey === 'PENDING' ? 'Offers Pending' : stKey;
+                    return (
+                      <View
+                        key={`st-${stKey}`}
+                        style={[
+                          styles.activeFilterChip,
+                          { backgroundColor: isDark ? 'rgba(196, 108, 39, 0.18)' : '#FEF3C7', borderColor: theme.borderAccent },
+                        ]}
+                      >
+                        <Text style={[styles.activeFilterChipText, { color: isDark ? '#FFD79E' : theme.primary }]}>
+                          {stLabel}
+                        </Text>
+                        <TouchableOpacity onPress={() => toggleStatus(stKey)}>
+                          <Ionicons name="close" size={13} color={theme.primary} />
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+
+                {isMaterialFiltered &&
+                  selectedMaterials.map((matKey) => {
+                    return (
+                      <View
+                        key={`mat-${matKey}`}
+                        style={[
+                          styles.activeFilterChip,
+                          { backgroundColor: isDark ? 'rgba(196, 108, 39, 0.18)' : '#FEF3C7', borderColor: theme.borderAccent },
+                        ]}
+                      >
+                        <Text style={[styles.activeFilterChipText, { color: isDark ? '#FFD79E' : theme.primary }]}>
+                          {matKey}
+                        </Text>
+                        <TouchableOpacity onPress={() => toggleMaterial(matKey)}>
+                          <Ionicons name="close" size={13} color={theme.primary} />
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+
+                {sortFilter !== 'recent' && (
+                  <View
+                    style={[
+                      styles.activeFilterChip,
+                      { backgroundColor: isDark ? 'rgba(196, 108, 39, 0.18)' : '#FEF3C7', borderColor: theme.borderAccent },
+                    ]}
+                  >
+                    <Text style={[styles.activeFilterChipText, { color: isDark ? '#FFD79E' : theme.primary }]}>
+                      {sortFilter === 'oldest' ? 'Oldest First' : sortFilter === 'budget_high' ? 'Highest Budget' : 'Lowest Budget'}
+                    </Text>
+                    <TouchableOpacity onPress={() => setSortFilter('recent')}>
+                      <Ionicons name="close" size={13} color={theme.primary} />
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                <TouchableOpacity onPress={clearAllFilters} style={styles.clearAllBtn}>
+                  <Text style={[styles.clearAllText, { color: theme.textMuted }]}>Clear all</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Category Filter Chips Horizontal */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryCarousel}
+          >
+            {CATEGORY_CHIPS.map((cat) => {
+              const isSelected = selectedCategories.includes(cat.id);
+              return (
+                <TouchableOpacity
+                  key={cat.id}
+                  onPress={() => toggleCategory(cat.id)}
+                  style={[
+                    styles.categoryPill,
+                    {
+                      backgroundColor: isSelected
+                        ? isDark
+                          ? 'rgba(196, 108, 39, 0.18)'
+                          : '#FEF3C7'
+                        : theme.card,
+                      borderColor: isSelected
+                        ? isDark
+                          ? '#D1995A'
+                          : theme.primary
+                        : theme.borderSubtle,
+                    },
+                  ]}
+                  activeOpacity={0.8}
+                >
+                  {isSelected && cat.id !== 'ALL' ? (
+                    <Ionicons
+                      name="checkmark"
+                      size={13}
+                      color={isDark ? '#FFD79E' : theme.primary}
+                      style={{ marginRight: 4 }}
+                    />
+                  ) : (
+                    <Ionicons
+                      name={cat.icon}
+                      size={13}
+                      color={isSelected ? (isDark ? '#FFD79E' : theme.primary) : theme.textMuted}
+                      style={{ marginRight: 5 }}
+                    />
+                  )}
+                  <Text
+                    style={[
+                      styles.categoryPillText,
+                      {
+                        color: isSelected ? (isDark ? '#FFD79E' : theme.primary) : theme.textSecondary,
+                        fontFamily: isSelected ? FontFamily.poppinsBold : FontFamily.poppinsMedium,
+                      },
+                    ]}
+                  >
+                    {cat.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Toast Notification */}
@@ -845,10 +1984,32 @@ export default function VendorStudioScreen() {
         </View>
       )}
 
-      {/* Main Scroll Container */}
-      <ScrollView
+      {/* Main Virtualized List Container */}
+      <FlatList
+        data={
+          hubTab === 'OPEN_REQUESTS'
+            ? isMarketplaceLoading || !!marketplaceError
+              ? []
+              : paginatedRequests
+            : isWorkbenchLoading || !!workbenchError
+            ? []
+            : (paginatedCommissions as any[])
+        }
+        keyExtractor={(item: any) => item.id}
+        renderItem={({ item }: { item: any }) =>
+          hubTab === 'OPEN_REQUESTS'
+            ? renderRequestItem(item as CustomClientRequest)
+            : renderCommissionItem(item as ActiveWorkbenchCommission)
+        }
+        ListHeaderComponent={listHeaderElement}
+        ListEmptyComponent={renderListEmpty}
+        ListFooterComponent={renderListFooter}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={5}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -857,1012 +2018,7 @@ export default function VendorStudioScreen() {
             colors={[theme.primary, theme.accentGold]}
           />
         }
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ── 1. Header & Counter Badges ── */}
-        <View style={styles.headerRow}>
-          <View style={styles.headerTitleGroup}>
-            <Text style={[styles.pageTitle, { color: theme.textPrimary }]}>
-              Ethnikraft Studio
-            </Text>
-            <View style={[styles.countBadge, { backgroundColor: 'rgba(196, 108, 39, 0.16)' }]}>
-              <Text style={[styles.countBadgeText, { color: isDark ? '#D1995A' : theme.primary }]}>
-                {hubTab === 'OPEN_REQUESTS' ? `${requests.length} Requests` : `${commissions.length} Active`}
-              </Text>
-            </View>
-          </View>
-          <TouchableOpacity
-            onPress={onRefresh}
-            style={[styles.headerRefreshBtn, { backgroundColor: theme.card, borderColor: theme.borderSubtle }]}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="refresh" size={17} color={theme.textSecondary} />
-          </TouchableOpacity>
-        </View>
-
-        {/* ── 2. Option B: Executive Hero Card + 2 Split Sub-Cards ── */}
-        <View style={styles.optionBContainer}>
-          {/* Top Hero Card: Total Studio Pipeline */}
-          <View
-            style={[
-              styles.heroMetricCard,
-              {
-                backgroundColor: theme.card,
-                borderColor: theme.border,
-              },
-            ]}
-          >
-            <View style={styles.heroMetricTopRow}>
-              <View
-                style={[
-                  styles.heroPillBadge,
-                  {
-                    backgroundColor: isDark
-                      ? 'rgba(10, 210, 79, 0.12)'
-                      : 'rgba(0, 157, 26, 0.08)',
-                  },
-                ]}
-              >
-                <TrendingUpFigmaIcon size={6} color={isDark ? '#0AD24F' : '#009D1A'} />
-                <Text
-                  style={[
-                    styles.heroPillText,
-                    { color: isDark ? '#0AD24F' : '#009D1A' },
-                  ]}
-                >
-                  Live Pipeline
-                </Text>
-              </View>
-
-              <View
-                style={[
-                  styles.heroCountPill,
-                  {
-                    backgroundColor: isDark
-                      ? 'rgba(255, 255, 255, 0.06)'
-                      : 'rgba(0, 0, 0, 0.04)',
-                  },
-                ]}
-              >
-                <Text style={[styles.heroCountPillText, { color: theme.textSecondary }]}>
-                  {commissions.length} In Studio
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.heroValueRow}>
-              <Text
-                style={[styles.heroValueText, { color: theme.textPrimary }]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-              >
-                {formatPriceValue(totalInStudioValue)}
-              </Text>
-            </View>
-
-            <Text style={[styles.heroSubtitleText, { color: theme.textMuted }]}>
-              Total Studio Pipeline
-            </Text>
-
-            {/* Studio Health / Progress Track */}
-            <View style={styles.heroProgressSection}>
-              <View
-                style={[
-                  styles.heroProgressTrack,
-                  { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.heroProgressBar,
-                    {
-                      width: `${Math.max(8, avgProgress)}%`,
-                      backgroundColor: isDark ? theme.textGold : theme.primary,
-                    },
-                  ]}
-                />
-              </View>
-              <View style={styles.heroProgressInfoRow}>
-                <Text style={[styles.heroProgressInfoText, { color: theme.textSecondary }]}>
-                  Workbench Crafting Health
-                </Text>
-                <Text
-                  style={[
-                    styles.heroProgressPercentText,
-                    { color: isDark ? theme.textGold : theme.primary },
-                  ]}
-                >
-                  {avgProgress}% avg progress
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Bottom Split Row: 2 Secondary Cards */}
-          <View style={styles.splitRow}>
-            {/* Split Card 1: Open Bespoke Inquiries */}
-            <View
-              style={[
-                styles.splitCard,
-                {
-                  backgroundColor: theme.card,
-                  borderColor: theme.border,
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.kpiPillBadge,
-                  {
-                    backgroundColor: isDark
-                      ? 'rgba(209, 153, 90, 0.16)'
-                      : 'rgba(85, 107, 47, 0.10)',
-                  },
-                ]}
-              >
-                <CustomBidsFigmaIcon size={12} color={isDark ? '#D1995A' : '#556B2F'} />
-                <Text
-                  style={[
-                    styles.kpiPillText,
-                    { color: isDark ? '#D1995A' : '#556B2F' },
-                  ]}
-                >
-                  Open Inquiries
-                </Text>
-              </View>
-
-              <View style={styles.kpiValueRow}>
-                <Text style={[styles.kpiValueText, { color: theme.textPrimary }]}>
-                  {requests.length} Requests
-                </Text>
-              </View>
-
-              <Text style={styles.kpiSubtitleText}>Client Briefs</Text>
-            </View>
-
-            {/* Split Card 2: In Crafting */}
-            <View
-              style={[
-                styles.splitCard,
-                {
-                  backgroundColor: theme.card,
-                  borderColor: theme.border,
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.kpiPillBadge,
-                  {
-                    backgroundColor: isDark
-                      ? 'rgba(196, 108, 39, 0.16)'
-                      : 'rgba(196, 108, 39, 0.10)',
-                  },
-                ]}
-              >
-                <PackageFigmaIcon size={12} color={isDark ? '#D1995A' : theme.primary} />
-                <Text
-                  style={[
-                    styles.kpiPillText,
-                    { color: isDark ? '#D1995A' : theme.primary },
-                  ]}
-                >
-                  Workbench
-                </Text>
-              </View>
-
-              <View style={styles.kpiValueRow}>
-                <Text
-                  style={[
-                    styles.kpiValueText,
-                    { color: isDark ? '#D1995A' : theme.primary },
-                  ]}
-                >
-                  {commissions.length} {commissions.length === 1 ? 'Piece' : 'Pieces'}
-                </Text>
-              </View>
-
-              <Text style={styles.kpiSubtitleText}>In Crafting</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* ── 3. Segmented 2-Way Tab Switcher ── */}
-        <View
-          style={[
-            styles.tabTrack,
-            {
-              backgroundColor: theme.card,
-              borderColor: theme.borderSubtle,
-            },
-          ]}
-        >
-          <TouchableOpacity
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              setHubTab('OPEN_REQUESTS');
-            }}
-            style={[
-              styles.tabSegment,
-              hubTab === 'OPEN_REQUESTS' && [
-                styles.tabSegmentActive,
-                {
-                  backgroundColor: isDark ? theme.cardElevated : '#FFFFFF',
-                  borderColor: isDark ? theme.borderAccent : 'rgba(54, 19, 0, 0.12)',
-                },
-              ],
-            ]}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name="hammer-outline"
-              size={15}
-              color={hubTab === 'OPEN_REQUESTS' ? (isDark ? theme.textGold : theme.primary) : theme.textMuted}
-              style={{ marginRight: 6 }}
-            />
-            <Text
-              style={[
-                styles.tabSegmentText,
-                {
-                  color: hubTab === 'OPEN_REQUESTS' ? theme.textPrimary : theme.textMuted,
-                  fontFamily: hubTab === 'OPEN_REQUESTS' ? FontFamily.poppinsBold : FontFamily.poppinsMedium,
-                },
-              ]}
-            >
-              Client Requests ({requests.length})
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              setHubTab('ACTIVE_WORKBENCH');
-            }}
-            style={[
-              styles.tabSegment,
-              hubTab === 'ACTIVE_WORKBENCH' && [
-                styles.tabSegmentActive,
-                {
-                  backgroundColor: isDark ? theme.cardElevated : '#FFFFFF',
-                  borderColor: isDark ? theme.borderAccent : 'rgba(54, 19, 0, 0.12)',
-                },
-              ],
-            ]}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name="construct-outline"
-              size={15}
-              color={hubTab === 'ACTIVE_WORKBENCH' ? (isDark ? theme.textGold : theme.primary) : theme.textMuted}
-              style={{ marginRight: 6 }}
-            />
-            <Text
-              style={[
-                styles.tabSegmentText,
-                {
-                  color: hubTab === 'ACTIVE_WORKBENCH' ? theme.textPrimary : theme.textMuted,
-                  fontFamily: hubTab === 'ACTIVE_WORKBENCH' ? FontFamily.poppinsBold : FontFamily.poppinsMedium,
-                },
-              ]}
-            >
-              Workbench ({commissions.length})
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* ─── TAB 1: OPEN CLIENT REQUESTS (WEB PARITY) ─── */}
-        {hubTab === 'OPEN_REQUESTS' && (
-          <View>
-            {/* Search Input Bar + Filter Trigger */}
-            <View style={styles.searchRow}>
-              <View
-                style={[
-                  styles.searchBar,
-                  {
-                    backgroundColor: theme.card,
-                    borderColor: theme.borderSubtle,
-                  },
-                ]}
-              >
-                <Ionicons name="search" size={17} color={theme.textMuted} style={{ marginRight: 8 }} />
-                <TextInput
-                  style={[styles.searchInput, { color: theme.textPrimary }]}
-                  placeholder="Search requests, materials, or locations..."
-                  placeholderTextColor={theme.textMuted}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  clearButtonMode="while-editing"
-                />
-                {searchQuery.length > 0 && (
-                  <TouchableOpacity onPress={() => setSearchQuery('')}>
-                    <Ionicons name="close-circle" size={16} color={theme.textMuted} />
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              <TouchableOpacity
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setFilterModalVisible(true);
-                }}
-                style={[
-                  styles.filterTriggerBtn,
-                  {
-                    backgroundColor: hasActiveFilters ? (isDark ? 'rgba(196, 108, 39, 0.22)' : '#FEF3C7') : theme.card,
-                    borderColor: hasActiveFilters ? (isDark ? '#D1995A' : theme.primary) : theme.borderSubtle,
-                  },
-                ]}
-                activeOpacity={0.8}
-              >
-                <Ionicons
-                  name="options-outline"
-                  size={18}
-                  color={hasActiveFilters ? (isDark ? '#FFD79E' : theme.primary) : theme.textSecondary}
-                />
-                {hasActiveFilters && <View style={styles.filterActiveDot} />}
-              </TouchableOpacity>
-            </View>
-
-            {/* ── Web Parity Sub-Segments: All Requests vs Offers Sent ── */}
-            <View style={styles.subSegmentWrapper}>
-              <View
-                style={[
-                  styles.subSegmentTrack,
-                  { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#EAEDED' },
-                ]}
-              >
-                <TouchableOpacity
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setRequestSegment('ALL');
-                  }}
-                  style={[
-                    styles.subSegmentBtn,
-                    requestSegment === 'ALL' && [
-                      styles.subSegmentBtnActive,
-                      {
-                        backgroundColor: isDark ? theme.cardElevated : theme.primary,
-                      },
-                    ],
-                  ]}
-                  activeOpacity={0.8}
-                >
-                  <Text
-                    style={[
-                      styles.subSegmentText,
-                      {
-                        color: requestSegment === 'ALL' ? '#FFFFFF' : theme.textSecondary,
-                        fontFamily: requestSegment === 'ALL' ? FontFamily.poppinsBold : FontFamily.poppinsMedium,
-                      },
-                    ]}
-                  >
-                    All Requests ({allRequestsCount})
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setRequestSegment('OFFERED');
-                  }}
-                  style={[
-                    styles.subSegmentBtn,
-                    requestSegment === 'OFFERED' && [
-                      styles.subSegmentBtnActive,
-                      {
-                        backgroundColor: isDark ? theme.cardElevated : theme.primary,
-                      },
-                    ],
-                  ]}
-                  activeOpacity={0.8}
-                >
-                  <Text
-                    style={[
-                      styles.subSegmentText,
-                      {
-                        color: requestSegment === 'OFFERED' ? '#FFFFFF' : theme.textSecondary,
-                        fontFamily: requestSegment === 'OFFERED' ? FontFamily.poppinsBold : FontFamily.poppinsMedium,
-                      },
-                    ]}
-                  >
-                    Offers Sent ({offeredRequestsCount})
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Active Filter Chips Bar (Web Parity) */}
-            {hasActiveFilters && (
-              <View style={styles.activeFiltersBar}>
-                <Text style={[styles.activeFilterLabel, { color: theme.textMuted }]}>Active:</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-                  {isCategoryFiltered &&
-                    selectedCategories.map((catKey) => {
-                      const catLabel = CATEGORY_CHIPS.find((c) => c.id === catKey)?.label || catKey;
-                      return (
-                        <View
-                          key={`cat-${catKey}`}
-                          style={[
-                            styles.activeFilterChip,
-                            { backgroundColor: isDark ? 'rgba(196, 108, 39, 0.18)' : '#FEF3C7', borderColor: theme.borderAccent },
-                          ]}
-                        >
-                          <Text style={[styles.activeFilterChipText, { color: isDark ? '#FFD79E' : theme.primary }]}>
-                            {catLabel}
-                          </Text>
-                          <TouchableOpacity onPress={() => toggleCategory(catKey)}>
-                            <Ionicons name="close" size={13} color={theme.primary} />
-                          </TouchableOpacity>
-                        </View>
-                      );
-                    })}
-
-                  {isStatusFiltered &&
-                    selectedStatuses.map((stKey) => {
-                      const stLabel = stKey === 'OPEN' ? 'Open Inquiries' : stKey === 'PENDING' ? 'Offers Pending' : stKey;
-                      return (
-                        <View
-                          key={`st-${stKey}`}
-                          style={[
-                            styles.activeFilterChip,
-                            { backgroundColor: isDark ? 'rgba(196, 108, 39, 0.18)' : '#FEF3C7', borderColor: theme.borderAccent },
-                          ]}
-                        >
-                          <Text style={[styles.activeFilterChipText, { color: isDark ? '#FFD79E' : theme.primary }]}>
-                            {stLabel}
-                          </Text>
-                          <TouchableOpacity onPress={() => toggleStatus(stKey)}>
-                            <Ionicons name="close" size={13} color={theme.primary} />
-                          </TouchableOpacity>
-                        </View>
-                      );
-                    })}
-
-                  {isMaterialFiltered &&
-                    selectedMaterials.map((matKey) => {
-                      return (
-                        <View
-                          key={`mat-${matKey}`}
-                          style={[
-                            styles.activeFilterChip,
-                            { backgroundColor: isDark ? 'rgba(196, 108, 39, 0.18)' : '#FEF3C7', borderColor: theme.borderAccent },
-                          ]}
-                        >
-                          <Text style={[styles.activeFilterChipText, { color: isDark ? '#FFD79E' : theme.primary }]}>
-                            {matKey}
-                          </Text>
-                          <TouchableOpacity onPress={() => toggleMaterial(matKey)}>
-                            <Ionicons name="close" size={13} color={theme.primary} />
-                          </TouchableOpacity>
-                        </View>
-                      );
-                    })}
-
-                  {sortFilter !== 'recent' && (
-                    <View
-                      style={[
-                        styles.activeFilterChip,
-                        { backgroundColor: isDark ? 'rgba(196, 108, 39, 0.18)' : '#FEF3C7', borderColor: theme.borderAccent },
-                      ]}
-                    >
-                      <Text style={[styles.activeFilterChipText, { color: isDark ? '#FFD79E' : theme.primary }]}>
-                        {sortFilter === 'oldest' ? 'Oldest First' : sortFilter === 'budget_high' ? 'Highest Budget' : 'Lowest Budget'}
-                      </Text>
-                      <TouchableOpacity onPress={() => setSortFilter('recent')}>
-                        <Ionicons name="close" size={13} color={theme.primary} />
-                      </TouchableOpacity>
-                    </View>
-                  )}
-
-                  <TouchableOpacity onPress={clearAllFilters} style={styles.clearAllBtn}>
-                    <Text style={[styles.clearAllText, { color: theme.textMuted }]}>Clear all</Text>
-                  </TouchableOpacity>
-                </ScrollView>
-              </View>
-            )}
-
-            {/* Category Filter Chips Horizontal */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoryCarousel}
-            >
-              {CATEGORY_CHIPS.map((cat) => {
-                const isSelected = selectedCategories.includes(cat.id);
-                return (
-                  <TouchableOpacity
-                    key={cat.id}
-                    onPress={() => toggleCategory(cat.id)}
-                    style={[
-                      styles.categoryPill,
-                      {
-                        backgroundColor: isSelected
-                          ? isDark
-                            ? 'rgba(196, 108, 39, 0.18)'
-                            : '#FEF3C7'
-                          : theme.card,
-                        borderColor: isSelected
-                          ? isDark
-                            ? '#D1995A'
-                            : theme.primary
-                          : theme.borderSubtle,
-                      },
-                    ]}
-                    activeOpacity={0.8}
-                  >
-                    {isSelected && cat.id !== 'ALL' ? (
-                      <Ionicons
-                        name="checkmark"
-                        size={13}
-                        color={isDark ? '#FFD79E' : theme.primary}
-                        style={{ marginRight: 4 }}
-                      />
-                    ) : (
-                      <Ionicons
-                        name={cat.icon}
-                        size={13}
-                        color={isSelected ? (isDark ? '#FFD79E' : theme.primary) : theme.textMuted}
-                        style={{ marginRight: 5 }}
-                      />
-                    )}
-                    <Text
-                      style={[
-                        styles.categoryPillText,
-                        {
-                          color: isSelected ? (isDark ? '#FFD79E' : theme.primary) : theme.textSecondary,
-                          fontFamily: isSelected ? FontFamily.poppinsBold : FontFamily.poppinsMedium,
-                        },
-                      ]}
-                    >
-                      {cat.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-
-            {/* Requests Cards List */}
-            <View style={styles.cardsList}>
-              {isMarketplaceLoading ? (
-                <VendorStudioRequestsSkeleton count={3} />
-              ) : marketplaceError ? (
-                <View
-                  style={[
-                    styles.emptyCard,
-                    { backgroundColor: theme.card, borderColor: '#EF4444' },
-                  ]}
-                >
-                  <Ionicons name="alert-circle-outline" size={36} color="#EF4444" />
-                  <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Unable to Load Requests</Text>
-                  <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
-                    There was a problem communicating with the studio marketplace server.
-                  </Text>
-                  <TouchableOpacity onPress={() => refetchMarketplace()} style={styles.emptyActionBtn}>
-                    <Text style={styles.emptyActionBtnText}>Retry Connection</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : filteredRequests.length === 0 ? (
-                <View
-                  style={[
-                    styles.emptyCard,
-                    { backgroundColor: theme.card, borderColor: theme.borderSubtle },
-                  ]}
-                >
-                  <Ionicons name="sparkles-outline" size={36} color={theme.primary} />
-                  <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>No Requests Found</Text>
-                  <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
-                    {requestSegment === 'OFFERED'
-                      ? 'You have not submitted offers for any requests yet.'
-                      : 'No custom requests match your selected filters.'}
-                  </Text>
-                  {hasActiveFilters && (
-                    <TouchableOpacity onPress={clearAllFilters} style={styles.emptyActionBtn}>
-                      <Text style={styles.emptyActionBtnText}>Clear Filters</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              ) : (
-                filteredRequests.map((req) => {
-                  const hasBid = Boolean(req.myExistingBid);
-                  const locationResolved = resolveRequestLocation(req);
-                  const { displayName, initials } = formatClientName(req.customer.name);
-                  const formattedDate = new Date(req.deadlineDate).toLocaleDateString('en-NG', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  });
-
-                  return (
-                    <View
-                      key={req.id}
-                      style={[
-                        styles.requestCard,
-                        {
-                          backgroundColor: theme.card,
-                          borderColor: hasBid
-                            ? isDark
-                              ? '#D1995A'
-                              : theme.primary
-                            : theme.borderSubtle,
-                        },
-                      ]}
-                    >
-                      {/* Top Row: Patron Avatar Column & Content Header */}
-                      <View style={styles.requestCardHeader}>
-                        <View style={styles.clientRow}>
-                          <View
-                            style={[
-                              styles.clientAvatar,
-                              {
-                                backgroundColor: isDark ? 'rgba(196, 108, 39, 0.18)' : '#FCF4E1',
-                                borderColor: theme.borderSubtle,
-                              },
-                            ]}
-                          >
-                            <Text style={[styles.clientAvatarText, { color: isDark ? '#D1995A' : theme.primary }]}>
-                              {initials}
-                            </Text>
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                              <Text style={[styles.clientName, { color: theme.textPrimary }]} numberOfLines={1}>
-                                {displayName}
-                              </Text>
-                              {req.customer.verified && (
-                                <Ionicons
-                                  name="checkmark-circle"
-                                  size={13}
-                                  color="#009D1A"
-                                  style={{ marginLeft: 4 }}
-                                />
-                              )}
-                            </View>
-                            {locationResolved && (
-                              <Text style={[styles.clientLocation, { color: theme.textMuted }]} numberOfLines={1}>
-                                {locationResolved}
-                              </Text>
-                            )}
-                          </View>
-                        </View>
-
-                        {/* Status Badge */}
-                        <View
-                          style={[
-                            styles.statusBadge,
-                            {
-                              backgroundColor: hasBid
-                                ? 'rgba(0, 157, 26, 0.14)'
-                                : isDark
-                                ? 'rgba(209, 153, 90, 0.16)'
-                                : '#FEF3C7',
-                              borderColor: hasBid ? 'rgba(0, 157, 26, 0.3)' : theme.borderSubtle,
-                            },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.statusBadgeText,
-                              { color: hasBid ? '#009D1A' : isDark ? '#FFD79E' : '#92400E' },
-                            ]}
-                          >
-                            {hasBid ? 'OFFER SENT' : `${req.daysRemaining}d left`}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {/* Title & Description */}
-                      <Text style={[styles.requestTitle, { color: theme.textPrimary }]}>{req.title}</Text>
-                      <Text style={[styles.requestDesc, { color: theme.textSecondary }]} numberOfLines={2}>
-                        {req.description}
-                      </Text>
-
-                      {/* Inspiration Photo Thumbnails with Fullscreen Lightbox Trigger */}
-                      {req.inspirationImages.length > 0 && (
-                        <ScrollView
-                          horizontal
-                          showsHorizontalScrollIndicator={false}
-                          style={styles.photoStrip}
-                          contentContainerStyle={{ gap: 8 }}
-                        >
-                          {req.inspirationImages.map((imgUrl, i) => (
-                            <TouchableOpacity
-                              key={i}
-                              onPress={() => handleOpenLightbox(req.inspirationImages, i)}
-                              activeOpacity={0.85}
-                              style={[styles.photoThumb, { borderColor: theme.borderSubtle }]}
-                            >
-                              <Image source={{ uri: imgUrl }} style={styles.photoThumbImg} />
-                              {i === 2 && req.inspirationImages.length > 3 && (
-                                <View style={styles.morePhotosOverlay}>
-                                  <Text style={styles.morePhotosText}>+{req.inspirationImages.length - 3}</Text>
-                                </View>
-                              )}
-                              <View style={styles.zoomOverlay}>
-                                <Ionicons name="expand-outline" size={10} color="#FFFFFF" />
-                              </View>
-                            </TouchableOpacity>
-                          ))}
-                        </ScrollView>
-                      )}
-
-                      {/* Web Parity Specs Strip: Qty + Big Price + Deliver by clock pill */}
-                      <View
-                        style={[
-                          styles.specsBox,
-                          {
-                            backgroundColor: theme.backgroundSecondary,
-                            borderColor: theme.borderSubtle,
-                          },
-                        ]}
-                      >
-                        <View style={{ flex: 1 }}>
-                          <View style={styles.qtyAndBudgetRow}>
-                            <Text style={[styles.specLabel, { color: theme.textMuted }]}>
-                              QTY: {req.quantity ?? 1}
-                            </Text>
-                          </View>
-                          <Text style={[styles.specValueBudget, { color: theme.primary }]}>
-                            {formatPriceValue(req.budget)}
-                          </Text>
-                        </View>
-
-                        <View style={[styles.specDivider, { backgroundColor: theme.borderSubtle }]} />
-
-                        <View style={{ flex: 1.3, paddingLeft: 12 }}>
-                          <View style={[styles.deliverByPill, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
-                            <Ionicons name="time-outline" size={12} color={theme.textSecondary} style={{ marginRight: 4 }} />
-                            <Text style={[styles.deliverByText, { color: theme.textSecondary }]} numberOfLines={1}>
-                              Deliver by: <Text style={{ color: theme.textPrimary, fontFamily: FontFamily.poppinsBold }}>{formattedDate}</Text>
-                            </Text>
-                          </View>
-                          <Text style={[styles.materialSubText, { color: theme.textMuted }]} numberOfLines={1}>
-                            {req.materialType}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {/* Action Buttons Row with Direct Message Client Integration */}
-                      <View style={styles.actionRow}>
-                        <TouchableOpacity
-                          onPress={() => handleMessageClient(req)}
-                          style={[
-                            styles.messageBtn,
-                            {
-                              backgroundColor: theme.backgroundSecondary,
-                              borderColor: theme.borderSubtle,
-                            },
-                          ]}
-                          activeOpacity={0.75}
-                        >
-                          <Ionicons name="chatbubble-ellipses-outline" size={14} color={theme.textPrimary} style={{ marginRight: 4 }} />
-                          <Text style={[styles.messageBtnText, { color: theme.textPrimary }]}>Message</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          onPress={() => handleOpenInspect(req)}
-                          style={[
-                            styles.inspectBtn,
-                            {
-                              backgroundColor: theme.backgroundSecondary,
-                              borderColor: theme.borderSubtle,
-                            },
-                          ]}
-                          activeOpacity={0.75}
-                        >
-                          <Ionicons name="eye-outline" size={14} color={theme.textPrimary} style={{ marginRight: 4 }} />
-                          <Text style={[styles.inspectBtnText, { color: theme.textPrimary }]}>Inspect Spec</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          onPress={() => handleOpenOfferSheet(req)}
-                          style={[
-                            styles.offerBtn,
-                            {
-                              backgroundColor: isDark ? theme.cardElevated : '#FCF4E1',
-                              borderColor: isDark ? theme.borderAccent : 'rgba(102, 37, 2, 0.25)',
-                            },
-                          ]}
-                          activeOpacity={0.8}
-                        >
-                          <Ionicons
-                            name={hasBid ? 'create-outline' : 'paper-plane-outline'}
-                            size={14}
-                            color={isDark ? '#D1995A' : theme.primary}
-                            style={{ marginRight: 4 }}
-                          />
-                          <Text style={[styles.offerBtnText, { color: isDark ? '#FFF3D6' : theme.primaryDark }]}>
-                            {hasBid ? 'Adjust Offer' : 'Send Offer'}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  );
-                })
-              )}
-            </View>
-          </View>
-        )}
-
-        {/* ─── TAB 2: ACTIVE WORKBENCH COMMISSIONS ─── */}
-        {hubTab === 'ACTIVE_WORKBENCH' && (
-          <View style={styles.cardsList}>
-            {isWorkbenchLoading ? (
-              <VendorStudioWorkbenchSkeleton count={2} />
-            ) : workbenchError ? (
-              <View
-                style={[
-                  styles.emptyCard,
-                  { backgroundColor: theme.card, borderColor: '#EF4444' },
-                ]}
-              >
-                <Ionicons name="alert-circle-outline" size={36} color="#EF4444" />
-                <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Unable to Load Workbench</Text>
-                <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
-                  There was a problem retrieving your active production commissions from the studio server.
-                </Text>
-                <TouchableOpacity onPress={() => refetchWorkbench()} style={styles.emptyActionBtn}>
-                  <Text style={styles.emptyActionBtnText}>Retry Connection</Text>
-                </TouchableOpacity>
-              </View>
-            ) : commissions.length === 0 ? (
-              <View
-                style={[
-                  styles.emptyCard,
-                  { backgroundColor: theme.card, borderColor: theme.borderSubtle },
-                ]}
-              >
-                <Ionicons name="construct-outline" size={36} color={theme.primary} />
-                <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>No Active Commissions</Text>
-                <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
-                  All studio pieces are currently completed or waiting for client offers.
-                </Text>
-              </View>
-            ) : (
-              commissions.map((comm) => {
-                const stageMeta = STAGE_CONFIG[comm.stage];
-                return (
-                  <View
-                    key={comm.id}
-                    style={[
-                      styles.commissionCard,
-                      {
-                        backgroundColor: theme.card,
-                        borderColor: theme.borderSubtle,
-                      },
-                    ]}
-                  >
-                    {/* Header Strip with Stage Badge */}
-                    <View style={styles.commCardHeader}>
-                      <View style={{ flex: 1, paddingRight: 8 }}>
-                        <Text style={[styles.commIdBadge, { color: isDark ? '#D1995A' : theme.primary }]}>
-                          {comm.id}
-                        </Text>
-                        <Text style={[styles.commTitle, { color: theme.textPrimary }]} numberOfLines={1}>
-                          {comm.title}
-                        </Text>
-                      </View>
-
-                      <View
-                        style={[
-                          styles.stageBadge,
-                          {
-                            backgroundColor: isDark ? stageMeta.bgDark : stageMeta.bgLight,
-                            borderColor: theme.borderSubtle,
-                          },
-                        ]}
-                      >
-                        <Ionicons name={stageMeta.icon} size={12} color={stageMeta.color} style={{ marginRight: 4 }} />
-                        <Text style={[styles.stageBadgeText, { color: stageMeta.color }]}>{stageMeta.label}</Text>
-                      </View>
-                    </View>
-
-                    {/* Client & Agreed Value Row */}
-                    <View style={styles.commMetaRow}>
-                      <Text style={[styles.commClientText, { color: theme.textSecondary }]} numberOfLines={1}>
-                        Client: <Text style={{ color: theme.textPrimary, fontFamily: FontFamily.headingBold }}>{comm.client.name}</Text> • {comm.client.location}
-                      </Text>
-                      <Text style={[styles.commPriceText, { color: theme.textPrimary }]}>
-                        {formatPriceValue(comm.agreedPrice)}
-                      </Text>
-                    </View>
-
-                    {/* Progress Track */}
-                    <View style={styles.progressWrap}>
-                      <View style={styles.progressHeaderRow}>
-                        <Text style={[styles.progressLabel, { color: theme.textMuted }]}>
-                          Stage Progress ({comm.progressPercent}%)
-                        </Text>
-                        <Text style={[styles.progressDeadline, { color: theme.textMuted }]}>
-                          Due: {comm.targetCompletionDate} ({comm.daysRemaining}d left)
-                        </Text>
-                      </View>
-                      <View
-                        style={[
-                          styles.progressTrack,
-                          { backgroundColor: theme.backgroundSecondary },
-                        ]}
-                      >
-                        <View
-                          style={[
-                            styles.progressFill,
-                            {
-                              width: `${comm.progressPercent}%`,
-                              backgroundColor: stageMeta.color,
-                            },
-                          ]}
-                        />
-                      </View>
-                    </View>
-
-                    {/* Action Row */}
-                    <View style={styles.commActionRow}>
-                      {comm.client.phone && (
-                        <TouchableOpacity
-                          onPress={() => Linking.openURL(`tel:${comm.client.phone}`)}
-                          style={[
-                            styles.commContactBtn,
-                            { backgroundColor: theme.backgroundSecondary, borderColor: theme.borderSubtle },
-                          ]}
-                          activeOpacity={0.75}
-                        >
-                          <Ionicons name="call-outline" size={14} color={theme.textPrimary} style={{ marginRight: 4 }} />
-                          <Text style={[styles.commContactBtnText, { color: theme.textPrimary }]}>Call Client</Text>
-                        </TouchableOpacity>
-                      )}
-
-                      <TouchableOpacity
-                        onPress={() =>
-                          router.push({
-                            pathname: '/(vendor)/messenger',
-                            params: {
-                              chatId: comm.chatId || comm.requestId || comm.id,
-                              clientName: comm.client.name,
-                              requestTitle: comm.title,
-                            },
-                          })
-                        }
-                        style={[
-                          styles.commContactBtn,
-                          { backgroundColor: theme.backgroundSecondary, borderColor: theme.borderSubtle },
-                        ]}
-                        activeOpacity={0.75}
-                      >
-                        <Ionicons name="chatbubble-ellipses-outline" size={14} color={theme.textPrimary} style={{ marginRight: 4 }} />
-                        <Text style={[styles.commContactBtnText, { color: theme.textPrimary }]}>Message</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        onPress={() => handleOpenMilestoneModal(comm)}
-                        style={[
-                          styles.commUpdateBtn,
-                          {
-                            backgroundColor: isDark ? theme.cardElevated : '#FCF4E1',
-                            borderColor: isDark ? theme.borderAccent : 'rgba(102, 37, 2, 0.25)',
-                          },
-                        ]}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons
-                          name="checkmark-circle-outline"
-                          size={15}
-                          color={isDark ? '#D1995A' : theme.primary}
-                          style={{ marginRight: 5 }}
-                        />
-                        <Text style={[styles.commUpdateBtnText, { color: isDark ? '#FFF3D6' : theme.primaryDark }]}>
-                          Update Stage
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                );
-              })
-            )}
-          </View>
-        )}
-
-        {/* Bottom spacing for bottom navigation bar */}
-        <View style={{ height: Math.max(insets.bottom, 16) + 120 }} />
-      </ScrollView>
+      />
 
       {/* ══════════════════════════════════════════════════════════════════════════
           MODAL 1: 85% INSPECT SPEC BOTTOM SHEET (WITH DIRECT MESSAGING & LIGHTBOX)
@@ -3404,6 +3560,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     borderWidth: 1,
     padding: Spacing.md,
+    marginBottom: Spacing.md,
   },
   requestCardHeader: {
     flexDirection: 'row',
@@ -3602,6 +3759,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     borderWidth: 1,
     padding: Spacing.md,
+    marginBottom: Spacing.md,
   },
   commCardHeader: {
     flexDirection: 'row',

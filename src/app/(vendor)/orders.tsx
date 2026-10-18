@@ -1,9 +1,10 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   TextInput,
   Image,
@@ -206,6 +207,8 @@ export default function VendorOrdersScreen() {
   const [orders, setOrders] = useState<VendorOrderRecord[]>(INITIAL_ORDERS);
   const [selectedStatuses, setSelectedStatuses] = useState<OrderStatusType[]>(['ALL']);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
   const [refreshing, setRefreshing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -265,6 +268,7 @@ export default function VendorOrdersScreen() {
   // ── Multi-Select Toggle Helper ────────────────────────────
   const toggleStatus = (st: OrderStatusType) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setCurrentPage(1);
     if (st === 'ALL') {
       setSelectedStatuses(['ALL']);
       return;
@@ -284,6 +288,7 @@ export default function VendorOrdersScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedStatuses(['ALL']);
     setSearchQuery('');
+    setCurrentPage(1);
   };
 
   // ── Modals State ──────────────────────────────────────────────────────────
@@ -348,6 +353,16 @@ export default function VendorOrdersScreen() {
       return true;
     });
   }, [orders, selectedStatuses, searchQuery, isStatusFiltered]);
+
+  const totalCount = filteredOrders.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const hasPrevPage = currentPage > 1;
+  const hasNextPage = currentPage < totalPages;
+
+  const paginatedOrders = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredOrders.slice(startIndex, startIndex + pageSize);
+  }, [filteredOrders, currentPage, pageSize]);
 
   // ── Aggregate Metrics ──────────────────────────────────────
   const totalOrdersCount = orders.length;
@@ -427,6 +442,590 @@ export default function VendorOrdersScreen() {
     }
   };
 
+  const renderOrderItem = useCallback(
+    ({ item: ord }: { item: VendorOrderRecord }) => {
+      const badgeMeta = STATUS_BADGE_CONFIG[ord.status] || STATUS_BADGE_CONFIG.PENDING;
+      const mainItem = ord.orderItems[0];
+      const extraCount = ord.orderItems.length - 1;
+
+      return (
+        <View
+          style={[
+            styles.orderCard,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+            },
+          ]}
+        >
+          {/* Header Row: Order Number, Date, Status Badge */}
+          <View style={styles.cardHeaderRow}>
+            <View>
+              <Text style={[styles.orderNumberText, { color: isDark ? theme.textGold : theme.primary }]}>
+                {ord.orderNumber}
+              </Text>
+              <Text style={[styles.orderDateText, { color: theme.textMuted }]}>
+                {new Date(ord.createdAt).toLocaleDateString('en-GB', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })}
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.statusBadge,
+                { backgroundColor: isDark ? badgeMeta.bgDark : badgeMeta.bgLight },
+              ]}
+            >
+              <Ionicons name={badgeMeta.icon} size={12} color={badgeMeta.color} style={{ marginRight: 4 }} />
+              <Text style={[styles.statusBadgeText, { color: badgeMeta.color }]}>{badgeMeta.label}</Text>
+            </View>
+          </View>
+
+          {/* Customer Info Strip */}
+          <View style={styles.customerRow}>
+            <View
+              style={[
+                styles.clientAvatarCircle,
+                { backgroundColor: theme.backgroundSecondary },
+              ]}
+            >
+              <Text style={[styles.clientAvatarText, { color: isDark ? theme.textGold : theme.primary }]}>
+                {ord.customer.name.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={[styles.customerNameText, { color: theme.textPrimary }]} numberOfLines={1}>
+                {ord.customer.name}
+              </Text>
+              <Text style={[styles.customerLocationText, { color: theme.textMuted }]} numberOfLines={1}>
+                <Ionicons name="location-sharp" size={10} color={theme.textMuted} /> {ord.customer.city},{' '}
+                {ord.customer.country}
+              </Text>
+            </View>
+          </View>
+
+          {/* Item Preview Box */}
+          {mainItem && (
+            <View
+              style={[
+                styles.itemPreviewBox,
+                {
+                  backgroundColor: theme.backgroundSecondary,
+                  borderColor: theme.borderSubtle,
+                },
+              ]}
+            >
+              <Image source={{ uri: mainItem.mainImage }} style={styles.itemThumbImg} />
+              <View style={{ flex: 1, marginLeft: 10, justifyContent: 'center' }}>
+                <Text style={[styles.itemTitleText, { color: theme.textPrimary }]} numberOfLines={1}>
+                  {mainItem.name}
+                </Text>
+                <Text style={[styles.itemMetaText, { color: theme.textSecondary }]}>
+                  Qty: {mainItem.quantity} • {mainItem.category}
+                  {mainItem.variantSnapshot?.size ? ` • ${mainItem.variantSnapshot.size}` : ''}
+                </Text>
+                {extraCount > 0 && (
+                  <Text style={[styles.extraItemsText, { color: isDark ? '#D1995A' : theme.primary }]}>
+                    +{extraCount} more piece{extraCount > 1 ? 's' : ''} in package
+                  </Text>
+                )}
+              </View>
+            </View>
+          )}
+
+          {/* Shipping / Courier Info Row */}
+          <View style={styles.shippingSummaryRow}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+              <Ionicons name="airplane-outline" size={13} color={theme.primary} style={{ marginRight: 4 }} />
+              <Text style={[styles.shippingProviderText, { color: theme.textSecondary }]} numberOfLines={1}>
+                {ord.shippingProvider}
+              </Text>
+            </View>
+            {ord.shippingTrackingNumber ? (
+              <TouchableOpacity
+                onPress={() => handleOpenTrackingModal(ord)}
+                style={styles.trackingNumberLink}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.trackingNumberLinkText, { color: isDark ? '#D1995A' : theme.primary }]}>
+                  #{ord.shippingTrackingNumber} ↗
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={[styles.trackingNumberPending, { color: theme.textMuted }]}>Tracking Pending</Text>
+            )}
+          </View>
+
+          {/* Divider */}
+          <View style={[styles.cardDivider, { backgroundColor: theme.borderSubtle }]} />
+
+          {/* Footer Row: Total Price & Actions */}
+          <View style={styles.cardFooterRow}>
+            <View>
+              <Text style={[styles.totalLabelText, { color: theme.textMuted }]}>ORDER TOTAL</Text>
+              <Text style={[styles.totalAmountText, { color: isDark ? '#D1995A' : theme.primary }]}>
+                {formatPriceValue(ord.totalAmount)}
+              </Text>
+            </View>
+
+            <View style={styles.footerActionsGroup}>
+              <TouchableOpacity
+                onPress={() => handleOpenStatusModal(ord)}
+                style={[
+                  styles.updateStatusBtn,
+                  {
+                    backgroundColor: theme.card,
+                    borderColor: theme.border,
+                  },
+                ]}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="pencil" size={13} color={theme.textPrimary} style={{ marginRight: 4 }} />
+                <Text style={[styles.updateStatusBtnText, { color: theme.textPrimary }]}>Status</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => handleOpenDetailModal(ord)}
+                style={[styles.inspectOrderBtn, { backgroundColor: theme.primary }]}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.inspectOrderBtnText}>Details ✦</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      );
+    },
+    [theme, isDark, currencyCode, exchangeRate]
+  );
+
+  const renderListEmpty = useCallback(
+    () => (
+      <View style={styles.ordersListContainer}>
+        {isOrdersLoading && orders.length === 0 ? (
+          <VendorOrderCardsSkeleton count={3} />
+        ) : (
+          <View
+            style={[
+              styles.emptyStateCard,
+              { backgroundColor: theme.card, borderColor: theme.borderSubtle },
+            ]}
+          >
+            <Ionicons name="cube-outline" size={38} color={theme.primary} />
+            <Text style={[styles.emptyStateTitle, { color: theme.textPrimary }]}>No Orders Found</Text>
+            <Text style={[styles.emptyStateSub, { color: theme.textSecondary }]}>
+              No orders match your active search or status filter criteria.
+            </Text>
+            {(searchQuery.trim().length > 0 || isStatusFiltered) && (
+              <TouchableOpacity
+                onPress={handleClearAllFilters}
+                style={[styles.emptyResetBtn, { borderColor: theme.border }]}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="refresh-outline" size={14} color={theme.textPrimary} style={{ marginRight: 4 }} />
+                <Text style={[styles.emptyResetBtnText, { color: theme.textPrimary }]}>Clear Filters</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+      </View>
+    ),
+    [isOrdersLoading, orders.length, theme, searchQuery, isStatusFiltered]
+  );
+
+  const renderListFooter = useCallback(
+    () => (
+      <View style={[styles.listFooterContainer, { paddingBottom: Math.max(insets.bottom, 16) + 110 }]}>
+        {totalCount > pageSize && (
+          <View style={[styles.paginationCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <View style={styles.paginationInfoRow}>
+              <Text style={[styles.paginationInfoText, { color: theme.textSecondary }]}>
+                Page <Text style={{ color: theme.textPrimary, fontFamily: FontFamily.headingBold }}>{currentPage}</Text> of{' '}
+                <Text style={{ color: theme.textPrimary, fontFamily: FontFamily.headingBold }}>{totalPages}</Text>
+              </Text>
+              <Text style={[styles.paginationInfoText, { color: theme.textMuted }]}>
+                Total: <Text style={{ color: isDark ? '#D1995A' : theme.primary, fontFamily: FontFamily.headingBold }}>{totalCount}</Text> orders
+              </Text>
+            </View>
+            <View style={styles.paginationButtonsRow}>
+              <TouchableOpacity
+                disabled={!hasPrevPage}
+                onPress={() => {
+                  if (hasPrevPage) {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setCurrentPage((p) => Math.max(1, p - 1));
+                  }
+                }}
+                style={[
+                  styles.pageNavBtn,
+                  {
+                    backgroundColor: hasPrevPage ? theme.backgroundSecondary : 'transparent',
+                    borderColor: theme.border,
+                    opacity: hasPrevPage ? 1 : 0.4,
+                  },
+                ]}
+                activeOpacity={0.75}
+              >
+                <Ionicons name="chevron-back" size={16} color={theme.textPrimary} />
+                <Text style={[styles.pageNavBtnText, { color: theme.textPrimary }]}>Previous</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                disabled={!hasNextPage}
+                onPress={() => {
+                  if (hasNextPage) {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setCurrentPage((p) => p + 1);
+                  }
+                }}
+                style={[
+                  styles.pageNavBtn,
+                  {
+                    backgroundColor: hasNextPage ? theme.primary : 'transparent',
+                    borderColor: hasNextPage ? theme.primary : theme.border,
+                    opacity: hasNextPage ? 1 : 0.4,
+                  },
+                ]}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.pageNavBtnText, { color: hasNextPage ? '#FFFFFF' : theme.textPrimary }]}>Next</Text>
+                <Ionicons name="chevron-forward" size={16} color={hasNextPage ? '#FFFFFF' : theme.textPrimary} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </View>
+    ),
+    [insets.bottom, totalCount, pageSize, theme, currentPage, totalPages, isDark, hasPrevPage, hasNextPage]
+  );
+
+  const listHeaderElement = (
+    <View>
+      {/* ── 1. Executive Header & Counter Badge ──────────────────── */}
+      <View style={styles.headerRow}>
+        <View style={styles.headerTitleGroup}>
+          <Text style={[styles.pageTitle, { color: theme.textPrimary }]}>
+            Orders & Dispatch
+          </Text>
+          <View style={[styles.countBadge, { backgroundColor: isDark ? 'rgba(209, 153, 90, 0.16)' : 'rgba(196, 108, 39, 0.12)' }]}>
+            <Text style={[styles.countBadgeText, { color: isDark ? '#D1995A' : theme.primary }]}>
+              {filteredOrders.length} {filteredOrders.length === 1 ? 'Order' : 'Orders'}
+            </Text>
+          </View>
+          {isOrdersFetching && !isOrdersLoading && (
+            <ActivityIndicator size="small" color={theme.primary} style={{ marginLeft: 6 }} />
+          )}
+        </View>
+      </View>
+
+      {/* ── 2. Option A: 2x2 Metric Cards Grid (Figma Standard 183x125) ───── */}
+      <View style={styles.kpiGrid}>
+        {/* 1. Gross Revenue */}
+        <View
+          style={[
+            styles.kpiCard,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.kpiPillBadge,
+              {
+                backgroundColor: isDark
+                  ? 'rgba(10, 210, 79, 0.12)'
+                  : 'rgba(0, 157, 26, 0.08)',
+              },
+            ]}
+          >
+            <TrendingUpFigmaIcon size={12} color={isDark ? '#0AD24F' : '#009D1A'} />
+            <Text
+              style={[
+                styles.kpiPillText,
+                { color: isDark ? '#0AD24F' : '#009D1A' },
+              ]}
+            >
+              Order Revenue
+            </Text>
+          </View>
+
+          <View style={styles.kpiValueRow}>
+            <Text
+              style={[styles.kpiValueText, { color: theme.textPrimary }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
+              {formatPriceValue(totalOrderRevenue)}
+            </Text>
+          </View>
+
+          <Text style={styles.kpiSubtitleText}>Settled & In-Flight</Text>
+        </View>
+
+        {/* 2. Order Volume */}
+        <View
+          style={[
+            styles.kpiCard,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.kpiPillBadge,
+              {
+                backgroundColor: isDark
+                  ? 'rgba(196, 108, 39, 0.16)'
+                  : 'rgba(196, 108, 39, 0.10)',
+              },
+            ]}
+          >
+            <PackageFigmaIcon size={12} color={isDark ? '#D1995A' : theme.primary} />
+            <Text
+              style={[
+                styles.kpiPillText,
+                { color: isDark ? '#D1995A' : theme.primary },
+              ]}
+            >
+              Order Volume
+            </Text>
+          </View>
+
+          <View style={styles.kpiValueRow}>
+            <Text style={[styles.kpiValueText, { color: theme.textPrimary }]}>
+              {totalOrdersCount} Placed
+            </Text>
+          </View>
+
+          <Text style={styles.kpiSubtitleText}>Total Client Orders</Text>
+        </View>
+
+        {/* 3. In Fulfillment */}
+        <View
+          style={[
+            styles.kpiCard,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.kpiPillBadge,
+              {
+                backgroundColor: isDark
+                  ? 'rgba(209, 153, 90, 0.16)'
+                  : 'rgba(85, 107, 47, 0.10)',
+              },
+            ]}
+          >
+            <CustomBidsFigmaIcon size={12} color={isDark ? '#D1995A' : '#556B2F'} />
+            <Text
+              style={[
+                styles.kpiPillText,
+                { color: isDark ? '#D1995A' : '#556B2F' },
+              ]}
+            >
+              In Fulfillment
+            </Text>
+          </View>
+
+          <View style={styles.kpiValueRow}>
+            <Text style={[styles.kpiValueText, { color: theme.textPrimary }]}>
+              {inFulfillmentCount} Active
+            </Text>
+          </View>
+
+          <Text style={styles.kpiSubtitleText}>Processing & Transit</Text>
+        </View>
+
+        {/* 4. Fulfilled & Settled */}
+        <View
+          style={[
+            styles.kpiCard,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.kpiPillBadge,
+              {
+                backgroundColor: isDark
+                  ? 'rgba(10, 210, 79, 0.12)'
+                  : 'rgba(0, 157, 26, 0.08)',
+              },
+            ]}
+          >
+            <StarOutlineFigmaIcon size={11} color={isDark ? '#0AD24F' : '#009D1A'} />
+            <Text
+              style={[
+                styles.kpiPillText,
+                { color: isDark ? '#0AD24F' : '#009D1A' },
+              ]}
+            >
+              Fulfilled
+            </Text>
+          </View>
+
+          <View style={styles.kpiValueRow}>
+            <Text style={[styles.kpiValueText, { color: theme.textPrimary }]}>
+              {completedOrdersCount} Delivered
+            </Text>
+          </View>
+
+          <Text style={styles.kpiSubtitleText}>Successful Delivery</Text>
+        </View>
+      </View>
+
+      {/* ── 3. Search Bar ────────────────────────────────────────────────── */}
+      <View style={styles.searchSection}>
+        <View
+          style={[
+            styles.searchBarWrap,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+            },
+          ]}
+        >
+          <Ionicons name="search" size={18} color={theme.textMuted} style={styles.searchIcon} />
+          <TextInput
+            style={[styles.searchInput, { color: theme.textPrimary }]}
+            placeholder="Search by Order #, customer name, product..."
+            placeholderTextColor={theme.textMuted}
+            value={searchQuery}
+            onChangeText={(text) => {
+              setSearchQuery(text);
+              setCurrentPage(1);
+            }}
+            clearButtonMode="while-editing"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              onPress={() => {
+                setSearchQuery('');
+                setCurrentPage(1);
+              }}
+            >
+              <Ionicons name="close-circle" size={18} color={theme.textMuted} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {/* ── 4. Horizontal Status Filter Tabs Carousel (Multi-Select) ── */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.statusCarousel}
+      >
+        {STATUS_TABS.map((tab) => {
+          const isSelected = selectedStatuses.includes(tab.id);
+          return (
+            <TouchableOpacity
+              key={tab.id}
+              onPress={() => toggleStatus(tab.id)}
+              style={[
+                styles.statusPill,
+                {
+                  backgroundColor: isSelected
+                    ? theme.primary
+                    : theme.card,
+                  borderColor: isSelected
+                    ? theme.primary
+                    : theme.border,
+                },
+              ]}
+              activeOpacity={0.8}
+            >
+              {isSelected && tab.id !== 'ALL' ? (
+                <Ionicons
+                  name="checkmark"
+                  size={13}
+                  color="#FFFFFF"
+                  style={{ marginRight: 5 }}
+                />
+              ) : (
+                <Ionicons
+                  name={tab.icon}
+                  size={13}
+                  color={isSelected ? '#FFFFFF' : isDark ? theme.textGold : theme.primary}
+                  style={{ marginRight: 6 }}
+                />
+              )}
+              <Text
+                style={[
+                  styles.statusPillText,
+                  {
+                    color: isSelected ? '#FFFFFF' : theme.textPrimary,
+                    fontFamily: isSelected ? FontFamily.headingBold : FontFamily.bodyRegular,
+                  },
+                ]}
+              >
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* ── 4b. Active Status Filter Chips Bar ── */}
+      {isStatusFiltered && (
+        <View style={styles.activeChipsContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.activeChipsScroll}
+          >
+            <Text style={[styles.activeChipsLeadLabel, { color: theme.textMuted }]}>
+              Active:
+            </Text>
+            {selectedStatuses.map((stKey) => {
+              const label = STATUS_TABS.find((t) => t.id === stKey)?.label || stKey;
+              return (
+                <TouchableOpacity
+                  key={`st-${stKey}`}
+                  style={[
+                    styles.activeChipPill,
+                    {
+                      backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#FAF6EE',
+                      borderColor: theme.border,
+                    },
+                  ]}
+                  onPress={() => toggleStatus(stKey)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.activeChipText, { color: theme.textPrimary }]}>
+                    {label}
+                  </Text>
+                  <Ionicons name="close-circle" size={14} color={theme.textMuted} style={{ marginLeft: 4 }} />
+                </TouchableOpacity>
+              );
+            })}
+            <TouchableOpacity
+              style={[styles.clearAllChip, { borderColor: theme.border }]}
+              onPress={handleClearAllFilters}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.clearAllChipText, { color: theme.textMuted }]}>Clear all</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* ── Toast Notification Pill ────────────────────────────────────────── */}
@@ -442,10 +1041,21 @@ export default function VendorOrdersScreen() {
         </View>
       )}
 
-      {/* ── Main Scroll Container ──────────────────────────────────────────── */}
-      <ScrollView
+      {/* ── Main Virtualized List Container ────────────────────────────────── */}
+      <FlatList
+        data={isOrdersLoading && orders.length === 0 ? [] : paginatedOrders}
+        keyExtractor={(item) => item.id}
+        renderItem={renderOrderItem}
+        ListHeaderComponent={listHeaderElement}
+        ListEmptyComponent={renderListEmpty}
+        ListFooterComponent={renderListFooter}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        removeClippedSubviews={Platform.OS === 'android'}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -454,510 +1064,7 @@ export default function VendorOrdersScreen() {
             colors={[theme.primary, '#D1995A']}
           />
         }
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ── 1. Executive Header & Counter Badge ──────────────────── */}
-        <View style={styles.headerRow}>
-          <View style={styles.headerTitleGroup}>
-            <Text style={[styles.pageTitle, { color: theme.textPrimary }]}>
-              Orders & Dispatch
-            </Text>
-            <View style={[styles.countBadge, { backgroundColor: isDark ? 'rgba(209, 153, 90, 0.16)' : 'rgba(196, 108, 39, 0.12)' }]}>
-              <Text style={[styles.countBadgeText, { color: isDark ? '#D1995A' : theme.primary }]}>
-                {filteredOrders.length} {filteredOrders.length === 1 ? 'Order' : 'Orders'}
-              </Text>
-            </View>
-            {isOrdersFetching && !isOrdersLoading && (
-              <ActivityIndicator size="small" color={theme.primary} style={{ marginLeft: 6 }} />
-            )}
-          </View>
-        </View>
-
-        {/* ── 2. Option A: 2x2 Metric Cards Grid (Figma Standard 183x125) ───── */}
-        <View style={styles.kpiGrid}>
-          {/* 1. Gross Revenue */}
-          <View
-            style={[
-              styles.kpiCard,
-              {
-                backgroundColor: theme.card,
-                borderColor: theme.border,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.kpiPillBadge,
-                {
-                  backgroundColor: isDark
-                    ? 'rgba(10, 210, 79, 0.12)'
-                    : 'rgba(0, 157, 26, 0.08)',
-                },
-              ]}
-            >
-              <TrendingUpFigmaIcon size={6} color={isDark ? '#0AD24F' : '#009D1A'} />
-              <Text
-                style={[
-                  styles.kpiPillText,
-                  { color: isDark ? '#0AD24F' : '#009D1A' },
-                ]}
-              >
-                Gross Revenue
-              </Text>
-            </View>
-
-            <View style={styles.kpiValueRow}>
-              <Text
-                style={[styles.kpiValueText, { color: theme.textPrimary }]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-              >
-                {formatPriceValue(totalOrderRevenue)}
-              </Text>
-            </View>
-
-            <Text style={styles.kpiSubtitleText}>Settled & In-Flight</Text>
-          </View>
-
-          {/* 2. Order Volume */}
-          <View
-            style={[
-              styles.kpiCard,
-              {
-                backgroundColor: theme.card,
-                borderColor: theme.border,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.kpiPillBadge,
-                {
-                  backgroundColor: isDark
-                    ? 'rgba(196, 108, 39, 0.16)'
-                    : 'rgba(196, 108, 39, 0.10)',
-                },
-              ]}
-            >
-              <PackageFigmaIcon size={12} color={isDark ? '#D1995A' : theme.primary} />
-              <Text
-                style={[
-                  styles.kpiPillText,
-                  { color: isDark ? '#D1995A' : theme.primary },
-                ]}
-              >
-                Order Volume
-              </Text>
-            </View>
-
-            <View style={styles.kpiValueRow}>
-              <Text style={[styles.kpiValueText, { color: theme.textPrimary }]}>
-                {totalOrdersCount} Placed
-              </Text>
-            </View>
-
-            <Text style={styles.kpiSubtitleText}>Total Client Orders</Text>
-          </View>
-
-          {/* 3. In Fulfillment */}
-          <View
-            style={[
-              styles.kpiCard,
-              {
-                backgroundColor: theme.card,
-                borderColor: theme.border,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.kpiPillBadge,
-                {
-                  backgroundColor: isDark
-                    ? 'rgba(209, 153, 90, 0.16)'
-                    : 'rgba(85, 107, 47, 0.10)',
-                },
-              ]}
-            >
-              <CustomBidsFigmaIcon size={12} color={isDark ? '#D1995A' : '#556B2F'} />
-              <Text
-                style={[
-                  styles.kpiPillText,
-                  { color: isDark ? '#D1995A' : '#556B2F' },
-                ]}
-              >
-                In Fulfillment
-              </Text>
-            </View>
-
-            <View style={styles.kpiValueRow}>
-              <Text style={[styles.kpiValueText, { color: theme.textPrimary }]}>
-                {inFulfillmentCount} Active
-              </Text>
-            </View>
-
-            <Text style={styles.kpiSubtitleText}>Processing & Transit</Text>
-          </View>
-
-          {/* 4. Fulfilled & Settled */}
-          <View
-            style={[
-              styles.kpiCard,
-              {
-                backgroundColor: theme.card,
-                borderColor: theme.border,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.kpiPillBadge,
-                {
-                  backgroundColor: isDark
-                    ? 'rgba(10, 210, 79, 0.12)'
-                    : 'rgba(0, 157, 26, 0.08)',
-                },
-              ]}
-            >
-              <StarOutlineFigmaIcon size={11} color={isDark ? '#0AD24F' : '#009D1A'} />
-              <Text
-                style={[
-                  styles.kpiPillText,
-                  { color: isDark ? '#0AD24F' : '#009D1A' },
-                ]}
-              >
-                Fulfilled
-              </Text>
-            </View>
-
-            <View style={styles.kpiValueRow}>
-              <Text style={[styles.kpiValueText, { color: theme.textPrimary }]}>
-                {completedOrdersCount} Delivered
-              </Text>
-            </View>
-
-            <Text style={styles.kpiSubtitleText}>Successful Delivery</Text>
-          </View>
-        </View>
-
-        {/* ── 3. Search Bar ────────────────────────────────────────────────── */}
-        <View style={styles.searchSection}>
-          <View
-            style={[
-              styles.searchBarWrap,
-              {
-                backgroundColor: theme.card,
-                borderColor: theme.border,
-              },
-            ]}
-          >
-            <Ionicons name="search" size={18} color={theme.textMuted} style={styles.searchIcon} />
-            <TextInput
-              style={[styles.searchInput, { color: theme.textPrimary }]}
-              placeholder="Search by Order #, customer name, product..."
-              placeholderTextColor={theme.textMuted}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              clearButtonMode="while-editing"
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={18} color={theme.textMuted} />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-
-        {/* ── 4. Horizontal Status Filter Tabs Carousel (Multi-Select) ── */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.statusCarousel}
-        >
-          {STATUS_TABS.map((tab) => {
-            const isSelected = selectedStatuses.includes(tab.id);
-            return (
-              <TouchableOpacity
-                key={tab.id}
-                onPress={() => toggleStatus(tab.id)}
-                style={[
-                  styles.statusPill,
-                  {
-                    backgroundColor: isSelected
-                      ? theme.primary
-                      : theme.card,
-                    borderColor: isSelected
-                      ? theme.primary
-                      : theme.border,
-                  },
-                ]}
-                activeOpacity={0.8}
-              >
-                {isSelected && tab.id !== 'ALL' ? (
-                  <Ionicons
-                    name="checkmark"
-                    size={13}
-                    color="#FFFFFF"
-                    style={{ marginRight: 5 }}
-                  />
-                ) : (
-                  <Ionicons
-                    name={tab.icon}
-                    size={13}
-                    color={isSelected ? '#FFFFFF' : isDark ? theme.textGold : theme.primary}
-                    style={{ marginRight: 6 }}
-                  />
-                )}
-                <Text
-                  style={[
-                    styles.statusPillText,
-                    {
-                      color: isSelected ? '#FFFFFF' : theme.textPrimary,
-                      fontFamily: isSelected ? FontFamily.headingBold : FontFamily.bodyRegular,
-                    },
-                  ]}
-                >
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        {/* ── 4b. Active Status Filter Chips Bar ── */}
-        {isStatusFiltered && (
-          <View style={styles.activeChipsContainer}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.activeChipsScroll}
-            >
-              <Text style={[styles.activeChipsLeadLabel, { color: theme.textMuted }]}>
-                Active:
-              </Text>
-              {selectedStatuses.map((stKey) => {
-                const label = STATUS_TABS.find((t) => t.id === stKey)?.label || stKey;
-                return (
-                  <TouchableOpacity
-                    key={`st-${stKey}`}
-                    style={[
-                      styles.activeChipPill,
-                      {
-                        backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#FAF6EE',
-                        borderColor: theme.border,
-                      },
-                    ]}
-                    onPress={() => toggleStatus(stKey)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.activeChipText, { color: theme.textPrimary }]}>
-                      {label}
-                    </Text>
-                    <Ionicons name="close-circle" size={14} color={theme.textMuted} style={{ marginLeft: 4 }} />
-                  </TouchableOpacity>
-                );
-              })}
-              <TouchableOpacity
-                style={[styles.clearAllChip, { borderColor: theme.border }]}
-                onPress={handleClearAllFilters}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.clearAllChipText, { color: theme.textMuted }]}>Clear all</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        )}
-
-        {/* ── 5. Order Cards Listing ── */}
-        <View style={styles.ordersListContainer}>
-          {isOrdersLoading && orders.length === 0 ? (
-            <VendorOrderCardsSkeleton count={3} />
-          ) : filteredOrders.length === 0 ? (
-            <View
-              style={[
-                styles.emptyStateCard,
-                { backgroundColor: theme.card, borderColor: theme.borderSubtle },
-              ]}
-            >
-              <Ionicons name="cube-outline" size={38} color={theme.primary} />
-              <Text style={[styles.emptyStateTitle, { color: theme.textPrimary }]}>No Orders Found</Text>
-              <Text style={[styles.emptyStateSub, { color: theme.textSecondary }]}>
-                No orders match your active search or status filter criteria.
-              </Text>
-              {(searchQuery.trim().length > 0 || isStatusFiltered) && (
-                <TouchableOpacity
-                  onPress={handleClearAllFilters}
-                  style={[styles.emptyResetBtn, { borderColor: theme.border }]}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="refresh-outline" size={14} color={theme.textPrimary} style={{ marginRight: 4 }} />
-                  <Text style={[styles.emptyResetBtnText, { color: theme.textPrimary }]}>Clear Filters</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          ) : (
-            filteredOrders.map((ord) => {
-              const badgeMeta = STATUS_BADGE_CONFIG[ord.status] || STATUS_BADGE_CONFIG.PENDING;
-              const mainItem = ord.orderItems[0];
-              const extraCount = ord.orderItems.length - 1;
-
-              return (
-                <View
-                  key={ord.id}
-                  style={[
-                    styles.orderCard,
-                    {
-                      backgroundColor: theme.card,
-                      borderColor: theme.border,
-                    },
-                  ]}
-                >
-                  {/* Header Row: Order Number, Date, Status Badge */}
-                  <View style={styles.cardHeaderRow}>
-                    <View>
-                      <Text style={[styles.orderNumberText, { color: isDark ? theme.textGold : theme.primary }]}>
-                        {ord.orderNumber}
-                      </Text>
-                      <Text style={[styles.orderDateText, { color: theme.textMuted }]}>
-                        {new Date(ord.createdAt).toLocaleDateString('en-GB', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </Text>
-                    </View>
-
-                    <View
-                      style={[
-                        styles.statusBadge,
-                        { backgroundColor: isDark ? badgeMeta.bgDark : badgeMeta.bgLight },
-                      ]}
-                    >
-                      <Ionicons name={badgeMeta.icon} size={12} color={badgeMeta.color} style={{ marginRight: 4 }} />
-                      <Text style={[styles.statusBadgeText, { color: badgeMeta.color }]}>{badgeMeta.label}</Text>
-                    </View>
-                  </View>
-
-                  {/* Customer Info Strip */}
-                  <View style={styles.customerRow}>
-                    <View
-                      style={[
-                        styles.clientAvatarCircle,
-                        { backgroundColor: theme.backgroundSecondary },
-                      ]}
-                    >
-                      <Text style={[styles.clientAvatarText, { color: isDark ? theme.textGold : theme.primary }]}>
-                        {ord.customer.name.charAt(0).toUpperCase()}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={[styles.customerNameText, { color: theme.textPrimary }]} numberOfLines={1}>
-                        {ord.customer.name}
-                      </Text>
-                      <Text style={[styles.customerLocationText, { color: theme.textMuted }]} numberOfLines={1}>
-                        <Ionicons name="location-sharp" size={10} color={theme.textMuted} /> {ord.customer.city},{' '}
-                        {ord.customer.country}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Item Preview Box */}
-                  {mainItem && (
-                    <View
-                      style={[
-                        styles.itemPreviewBox,
-                        {
-                          backgroundColor: theme.backgroundSecondary,
-                          borderColor: theme.borderSubtle,
-                        },
-                      ]}
-                    >
-                      <Image source={{ uri: mainItem.mainImage }} style={styles.itemThumbImg} />
-                      <View style={{ flex: 1, marginLeft: 10, justifyContent: 'center' }}>
-                        <Text style={[styles.itemTitleText, { color: theme.textPrimary }]} numberOfLines={1}>
-                          {mainItem.name}
-                        </Text>
-                        <Text style={[styles.itemMetaText, { color: theme.textSecondary }]}>
-                          Qty: {mainItem.quantity} • {mainItem.category}
-                          {mainItem.variantSnapshot?.size ? ` • ${mainItem.variantSnapshot.size}` : ''}
-                        </Text>
-                        {extraCount > 0 && (
-                          <Text style={[styles.extraItemsText, { color: isDark ? '#D1995A' : theme.primary }]}>
-                            +{extraCount} more piece{extraCount > 1 ? 's' : ''} in package
-                          </Text>
-                        )}
-                      </View>
-                    </View>
-                  )}
-
-                  {/* Shipping / Courier Info Row */}
-                  <View style={styles.shippingSummaryRow}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                      <Ionicons name="airplane-outline" size={13} color={theme.primary} style={{ marginRight: 4 }} />
-                      <Text style={[styles.shippingProviderText, { color: theme.textSecondary }]} numberOfLines={1}>
-                        {ord.shippingProvider}
-                      </Text>
-                    </View>
-                    {ord.shippingTrackingNumber ? (
-                      <TouchableOpacity
-                        onPress={() => handleOpenTrackingModal(ord)}
-                        style={styles.trackingNumberLink}
-                        activeOpacity={0.75}
-                      >
-                        <Text style={[styles.trackingNumberLinkText, { color: isDark ? '#D1995A' : theme.primary }]}>
-                          #{ord.shippingTrackingNumber} ↗
-                        </Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <Text style={[styles.trackingNumberPending, { color: theme.textMuted }]}>Tracking Pending</Text>
-                    )}
-                  </View>
-
-                  {/* Divider */}
-                  <View style={[styles.cardDivider, { backgroundColor: theme.borderSubtle }]} />
-
-                  {/* Footer Row: Total Price & Actions */}
-                  <View style={styles.cardFooterRow}>
-                    <View>
-                      <Text style={[styles.totalLabelText, { color: theme.textMuted }]}>ORDER TOTAL</Text>
-                      <Text style={[styles.totalAmountText, { color: isDark ? '#D1995A' : theme.primary }]}>
-                        {formatPriceValue(ord.totalAmount)}
-                      </Text>
-                    </View>
-
-                    <View style={styles.footerActionsGroup}>
-                      <TouchableOpacity
-                        onPress={() => handleOpenStatusModal(ord)}
-                        style={[
-                          styles.updateStatusBtn,
-                          {
-                            backgroundColor: theme.card,
-                            borderColor: theme.border,
-                          },
-                        ]}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons name="pencil" size={13} color={theme.textPrimary} style={{ marginRight: 4 }} />
-                        <Text style={[styles.updateStatusBtnText, { color: theme.textPrimary }]}>Status</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        onPress={() => handleOpenDetailModal(ord)}
-                        style={[styles.inspectOrderBtn, { backgroundColor: theme.primary }]}
-                        activeOpacity={0.85}
-                      >
-                        <Text style={styles.inspectOrderBtnText}>Details ✦</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
-              );
-            })
-          )}
-        </View>
-
-        <View style={{ height: Math.max(insets.bottom, 16) + 120 }} />
-      </ScrollView>
+      />
 
       {/* ══════════════════════════════════════════════════════════════════════
           MODAL 1: FULL ORDER DETAILS & BREAKDOWN SHEET
@@ -1594,6 +1701,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     padding: Spacing.md,
     borderWidth: 1,
+    marginBottom: Spacing.md,
   },
   cardHeaderRow: {
     flexDirection: 'row',
@@ -2115,5 +2223,44 @@ const styles = StyleSheet.create({
   trackingDismissText: {
     fontFamily: FontFamily.poppinsMedium,
     fontSize: 12,
+  },
+  listFooterContainer: {
+    marginTop: 4,
+  },
+  paginationCard: {
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    padding: Spacing.md,
+    alignItems: 'center',
+    gap: 12,
+  },
+  paginationInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+  },
+  paginationInfoText: {
+    fontSize: 12,
+    fontFamily: FontFamily.bodyRegular,
+  },
+  paginationButtonsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    width: '100%',
+  },
+  pageNavBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 38,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    gap: 6,
+  },
+  pageNavBtnText: {
+    fontSize: 12,
+    fontFamily: FontFamily.headingBold,
   },
 });

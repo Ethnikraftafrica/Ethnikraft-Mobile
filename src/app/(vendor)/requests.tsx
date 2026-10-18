@@ -4,6 +4,7 @@ import {
   Text,
   View,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   TextInput,
   Image,
@@ -354,6 +355,21 @@ export default function VendorProductRequestsScreen() {
     return result;
   }, [requests, selectedStatusTab, selectedStatusFilters, selectedAmountFilters, searchQuery]);
 
+  // ─── 10-Item Pagination ──────────────────────────────────────────────────────
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedStatusTab, selectedStatusFilters, selectedAmountFilters, selectedTimelineFilters]);
+
+  const totalCount = filteredRequests.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const paginatedRequests = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredRequests.slice(startIndex, startIndex + pageSize);
+  }, [filteredRequests, currentPage, pageSize]);
+
   // ─── Multi-Select Filter Helpers ─────────────────────────────────────────────
   const toggleFilter = (
     value: string,
@@ -648,6 +664,673 @@ export default function VendorProductRequestsScreen() {
     });
   };
 
+  const renderRequestItem = ({ item }: { item: ProductRequestItem }) => {
+    const statusCfg = STATUS_MAP[item.status] || {
+      label: item.status,
+      color: '#666',
+      bgLight: '#EEE',
+      bgDark: '#333',
+      dotColor: '#666',
+    };
+
+    const canStart = item.status === 'PRODUCTION_PENDING';
+    const canProgress = item.status === 'IN_PRODUCTION' || item.status === 'PRODUCTION_DELAYED';
+    const canReady = item.status === 'IN_PRODUCTION' || item.status === 'PRODUCTION_DELAYED';
+
+    const createdDateFormatted = new Date(item.createdAt).toLocaleDateString('en-NG', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+
+    return (
+      <View
+        style={[
+          styles.requestCard,
+          { backgroundColor: theme.card, borderColor: theme.border },
+        ]}
+      >
+        {/* Card Header */}
+        <View style={styles.cardHeader}>
+          <Image
+            source={{ uri: item.productImage }}
+            style={styles.productThumbnail}
+            resizeMode="cover"
+          />
+          <View style={styles.cardHeaderInfo}>
+            <View style={styles.titleStatusRow}>
+              <Text style={[styles.productNameText, { color: theme.textPrimary }]} numberOfLines={1}>
+                {item.productName}
+              </Text>
+              <View
+                style={[
+                  styles.statusBadge,
+                  { backgroundColor: isDark ? statusCfg.bgDark : statusCfg.bgLight },
+                ]}
+              >
+                <View style={[styles.statusDotSmall, { backgroundColor: statusCfg.dotColor }]} />
+                <Text style={[styles.statusBadgeText, { color: statusCfg.color }]}>
+                  {statusCfg.label}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.metaRow}>
+              <Text style={[styles.requestNumberText, { color: theme.textSecondary }]}>
+                {item.requestNumber}
+              </Text>
+              <Text style={[styles.metaDivider, { color: theme.border }]}>•</Text>
+              <Text style={[styles.dateText, { color: theme.textSecondary }]}>
+                {createdDateFormatted}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Customer & Financial Breakdown */}
+        <View style={[styles.cardDivider, { backgroundColor: theme.border }]} />
+
+        <View style={styles.cardMetaGrid}>
+          <View style={styles.metaCol}>
+            <Text style={[styles.metaColLabel, { color: theme.textSecondary }]}>Customer</Text>
+            <Text style={[styles.metaColValue, { color: theme.textPrimary }]} numberOfLines={1}>
+              {item.customerName}
+            </Text>
+            <Text style={[styles.customerEmailText, { color: theme.textSecondary }]} numberOfLines={1}>
+              {item.customerEmail}
+            </Text>
+          </View>
+
+          <View style={styles.metaColRight}>
+            <Text style={[styles.metaColLabel, { color: theme.textSecondary }]}>Order Total</Text>
+            <Text style={[styles.orderAmountValue, { color: theme.primary }]}>
+              {formatPrice(item.orderAmount, currencyCode, exchangeRate)}
+            </Text>
+            <Text style={[styles.quantityText, { color: theme.textSecondary }]}>
+              Qty: {item.quantity}
+            </Text>
+          </View>
+        </View>
+
+        {/* Customization Teaser */}
+        {item.customizationData?.measurements && (
+          <View style={[styles.specsTeaserBox, { backgroundColor: isDark ? '#222' : '#FFFBF4', borderColor: theme.border }]}>
+            <View style={styles.specsTeaserHeader}>
+              <Ionicons name="resize-outline" size={13} color="#D1995A" style={{ marginRight: 4 }} />
+              <Text style={styles.specsTeaserTitle}>Custom Measurements Provided:</Text>
+            </View>
+            <Text style={[styles.specsTeaserSummary, { color: theme.textPrimary }]} numberOfLines={1}>
+              {Object.entries(item.customizationData.measurements)
+                .map(([k, v]) => `${k}: ${v}"`)
+                .join('  |  ')}
+            </Text>
+          </View>
+        )}
+
+        {/* Progress Updates Teaser */}
+        {item.progressUpdates && item.progressUpdates.length > 0 && (
+          <View style={styles.progressTeaserRow}>
+            <Ionicons name="images-outline" size={14} color="#662502" style={{ marginRight: 6 }} />
+            <Text style={[styles.progressTeaserText, { color: theme.textSecondary }]}>
+              {item.progressUpdates.length} workshop update{item.progressUpdates.length > 1 ? 's' : ''} logged
+            </Text>
+          </View>
+        )}
+
+        {/* Action Buttons Row */}
+        <View style={styles.cardActionsRow}>
+          <TouchableOpacity
+            style={[styles.inspectButton, { backgroundColor: theme.card, borderColor: theme.border }]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setActiveRequest(item);
+              setInspectModalVisible(true);
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="eye-outline" size={15} color={theme.textPrimary} style={{ marginRight: 4 }} />
+            <Text style={[styles.inspectButtonText, { color: theme.textPrimary }]} numberOfLines={1}>
+              Inspect
+            </Text>
+          </TouchableOpacity>
+
+          {canStart && (
+            <TouchableOpacity
+              style={[styles.primaryActionBtn, { backgroundColor: '#662502' }]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                setActiveRequest(item);
+                setStartModalVisible(true);
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="play" size={14} color="#FFF" style={{ marginRight: 4 }} />
+              <Text style={styles.primaryActionBtnText} numberOfLines={1}>
+                Start Production
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {canProgress && (
+            <TouchableOpacity
+              style={[styles.secondaryActionBtn, { backgroundColor: '#FCF4E1', borderColor: '#D1995A' }]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                setActiveRequest(item);
+                setProgressModalVisible(true);
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="camera-outline" size={14} color="#662502" style={{ marginRight: 4 }} />
+              <Text style={[styles.secondaryActionBtnText, { color: '#662502' }]} numberOfLines={1}>
+                Update
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {canReady && (
+            <TouchableOpacity
+              style={[styles.successActionBtn, { backgroundColor: '#006F00' }]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                setActiveRequest(item);
+                setReadyModalVisible(true);
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="checkmark-done" size={14} color="#FFF" style={{ marginRight: 4 }} />
+              <Text style={styles.successActionBtnText} numberOfLines={1}>
+                Mark Ready
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    );
+  };
+
+  const renderListEmpty = () => {
+    if (isRequestsLoading) {
+      return <VendorProductRequestsSkeleton count={3} />;
+    }
+    if (requestsError) {
+      return (
+        <View style={[styles.emptyContainer, { backgroundColor: theme.card, borderColor: '#EF4444' }]}>
+          <View style={[styles.emptyIconCircle, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+            <Ionicons name="alert-circle-outline" size={32} color="#EF4444" />
+          </View>
+          <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Unable to Load Requests</Text>
+          <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
+            There was a problem communicating with the studio product requests server.
+          </Text>
+          <TouchableOpacity
+            style={[styles.emptyResetBtn, { backgroundColor: theme.primary }]}
+            onPress={() => refetchRequests()}
+          >
+            <Text style={styles.emptyResetText}>Retry Connection</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    return (
+      <View style={[styles.emptyContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
+        <View style={styles.emptyIconCircle}>
+          <Ionicons name="file-tray-outline" size={32} color={theme.primary} />
+        </View>
+        <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>No product requests found</Text>
+        <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
+          {searchQuery || activeFilterCount > 0 || selectedStatusTab !== 'ALL'
+            ? 'Try clearing your filters or changing your search criteria.'
+            : 'Customizable product orders will appear here automatically.'}
+        </Text>
+        {(activeFilterCount > 0 || selectedStatusTab !== 'ALL' || searchQuery) && (
+          <TouchableOpacity
+            style={[styles.emptyResetBtn, { backgroundColor: theme.primary }]}
+            onPress={() => {
+              setSelectedStatusTab('ALL');
+              clearAllFilters();
+              setSearchQuery('');
+            }}
+          >
+            <Text style={styles.emptyResetText}>Reset All Filters</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
+
+  const renderListFooter = () => {
+    if (isRequestsLoading || !!requestsError || totalCount <= pageSize) return null;
+    return (
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingVertical: 14,
+          paddingHorizontal: 16,
+          marginTop: 4,
+          borderRadius: 12,
+          borderWidth: 1,
+          backgroundColor: theme.card,
+          borderColor: theme.border,
+        }}
+      >
+        <TouchableOpacity
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: theme.border,
+            opacity: currentPage <= 1 ? 0.45 : 1,
+          }}
+          disabled={currentPage <= 1}
+          onPress={() => {
+            Haptics.selectionAsync();
+            setCurrentPage((p) => Math.max(1, p - 1));
+          }}
+        >
+          <Ionicons
+            name="chevron-back"
+            size={15}
+            color={currentPage <= 1 ? theme.textSecondary : theme.textPrimary}
+          />
+          <Text
+            style={{
+              fontSize: 12,
+              fontFamily: FontFamily.bodyBold,
+              marginHorizontal: 4,
+              color: currentPage <= 1 ? theme.textSecondary : theme.textPrimary,
+            }}
+          >
+            Previous
+          </Text>
+        </TouchableOpacity>
+
+        <Text style={{ fontSize: 12, fontFamily: FontFamily.headingMedium, color: theme.textSecondary }}>
+          Page <Text style={{ color: theme.textPrimary, fontFamily: FontFamily.bodyBold }}>{currentPage}</Text> of{' '}
+          <Text style={{ color: theme.textPrimary, fontFamily: FontFamily.bodyBold }}>{totalPages}</Text>
+        </Text>
+
+        <TouchableOpacity
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: currentPage >= totalPages ? theme.border : theme.primary,
+            backgroundColor: currentPage >= totalPages ? 'transparent' : theme.primary,
+            opacity: currentPage >= totalPages ? 0.45 : 1,
+          }}
+          disabled={currentPage >= totalPages}
+          onPress={() => {
+            Haptics.selectionAsync();
+            setCurrentPage((p) => Math.min(totalPages, p + 1));
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 12,
+              fontFamily: FontFamily.bodyBold,
+              marginHorizontal: 4,
+              color: currentPage >= totalPages ? theme.textSecondary : '#FFFFFF',
+            }}
+          >
+            Next
+          </Text>
+          <Ionicons
+            name="chevron-forward"
+            size={15}
+            color={currentPage >= totalPages ? theme.textSecondary : '#FFFFFF'}
+          />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const listHeaderElement = (
+    <View>
+      {/* ── Header Title & Subtitle ── */}
+      <View style={styles.headerRow}>
+        <View>
+          <Text style={[styles.pageTitle, { color: theme.textPrimary }]}>
+            Product <Text style={{ color: theme.primary }}>Requests</Text>
+          </Text>
+          <Text style={[styles.pageSubtitle, { color: theme.textSecondary }]}>
+            Manage production queues, workshop updates & fulfillment
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={[styles.refreshIconButton, { backgroundColor: theme.card, borderColor: theme.border }]}
+          onPress={onRefresh}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="refresh" size={18} color={theme.primary} />
+        </TouchableOpacity>
+      </View>
+
+      {/* ── KPI Summary Cards (2x2 Grid) ── */}
+      <View style={styles.kpiGrid}>
+        {/* Card 1: Total */}
+        <View
+          style={[
+            styles.kpiCard,
+            { backgroundColor: theme.card, borderColor: theme.border },
+          ]}
+        >
+          <View
+            style={[
+              styles.kpiPillBadge,
+              {
+                backgroundColor: isDark
+                  ? 'rgba(196, 108, 39, 0.16)'
+                  : 'rgba(196, 108, 39, 0.10)',
+              },
+            ]}
+          >
+            <View style={styles.kpiIconBox}>
+              <PackageFigmaIcon size={12} color={isDark ? '#D1995A' : theme.primary} />
+            </View>
+            <Text
+              style={[
+                styles.kpiPillText,
+                { color: isDark ? '#D1995A' : theme.primary },
+              ]}
+            >
+              Total
+            </Text>
+          </View>
+
+          <View style={styles.kpiValueRow}>
+            <Text style={[styles.kpiValueText, { color: theme.textPrimary }]}>
+              {stats.total}
+            </Text>
+          </View>
+
+          <Text style={styles.kpiSubtitleText}>All Production Orders</Text>
+        </View>
+
+        {/* Card 2: In Prod. */}
+        <View
+          style={[
+            styles.kpiCard,
+            { backgroundColor: theme.card, borderColor: theme.border },
+          ]}
+        >
+          <View
+            style={[
+              styles.kpiPillBadge,
+              {
+                backgroundColor: isDark
+                  ? 'rgba(102, 37, 2, 0.25)'
+                  : '#FCF4E1',
+              },
+            ]}
+          >
+            <View style={styles.kpiIconBox}>
+              <TrendingUpFigmaIcon size={6} color={isDark ? '#D1995A' : '#662502'} />
+            </View>
+            <Text
+              style={[
+                styles.kpiPillText,
+                { color: isDark ? '#D1995A' : '#662502' },
+              ]}
+            >
+              In Prod.
+            </Text>
+          </View>
+
+          <View style={styles.kpiValueRow}>
+            <Text style={[styles.kpiValueText, { color: isDark ? '#D1995A' : '#662502' }]}>
+              {stats.inProd}
+            </Text>
+          </View>
+
+          <Text style={styles.kpiSubtitleText}>Active at Atelier</Text>
+        </View>
+
+        {/* Card 3: Pending */}
+        <View
+          style={[
+            styles.kpiCard,
+            { backgroundColor: theme.card, borderColor: theme.border },
+          ]}
+        >
+          <View
+            style={[
+              styles.kpiPillBadge,
+              {
+                backgroundColor: isDark
+                  ? 'rgba(209, 153, 90, 0.16)'
+                  : '#FFF8EE',
+              },
+            ]}
+          >
+            <View style={styles.kpiIconBox}>
+              <CustomBidsFigmaIcon size={12} color={isDark ? '#D1995A' : '#A6620D'} />
+            </View>
+            <Text
+              style={[
+                styles.kpiPillText,
+                { color: isDark ? '#D1995A' : '#A6620D' },
+              ]}
+            >
+              Pending
+            </Text>
+          </View>
+
+          <View style={styles.kpiValueRow}>
+            <Text style={[styles.kpiValueText, { color: isDark ? '#D1995A' : '#A6620D' }]}>
+              {stats.pending}
+            </Text>
+          </View>
+
+          <Text style={styles.kpiSubtitleText}>Awaiting Start</Text>
+        </View>
+
+        {/* Card 4: Ready */}
+        <View
+          style={[
+            styles.kpiCard,
+            { backgroundColor: theme.card, borderColor: theme.border },
+          ]}
+        >
+          <View
+            style={[
+              styles.kpiPillBadge,
+              {
+                backgroundColor: isDark
+                  ? 'rgba(10, 210, 79, 0.12)'
+                  : 'rgba(0, 111, 0, 0.08)',
+              },
+            ]}
+          >
+            <View style={styles.kpiIconBox}>
+              <Ionicons name="checkmark-done" size={13} color={isDark ? '#0AD24F' : '#006F00'} />
+            </View>
+            <Text
+              style={[
+                styles.kpiPillText,
+                { color: isDark ? '#0AD24F' : '#006F00' },
+              ]}
+            >
+              Ready
+            </Text>
+          </View>
+
+          <View style={styles.kpiValueRow}>
+            <Text style={[styles.kpiValueText, { color: isDark ? '#0AD24F' : '#006F00' }]}>
+              {stats.completed}
+            </Text>
+          </View>
+
+          <Text style={styles.kpiSubtitleText}>Ready & Shipped</Text>
+        </View>
+      </View>
+
+      {/* ── Search & Filter Controls ── */}
+      <View style={styles.searchRow}>
+        <View
+          style={[
+            styles.searchBar,
+            { backgroundColor: theme.card, borderColor: theme.border },
+          ]}
+        >
+          <Ionicons name="search-outline" size={18} color={theme.textSecondary} style={{ marginRight: 8 }} />
+          <TextInput
+            style={[styles.searchInput, { color: theme.textPrimary }]}
+            placeholder="Search by customer, product, order ID..."
+            placeholderTextColor={theme.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            clearButtonMode="while-editing"
+          />
+          {searchQuery.length > 0 && Platform.OS !== 'ios' && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Filter Modal Trigger Button */}
+        <TouchableOpacity
+          style={[
+            styles.filterTriggerButton,
+            {
+              backgroundColor: activeFilterCount > 0 ? theme.primary : theme.card,
+              borderColor: activeFilterCount > 0 ? theme.primary : theme.border,
+            },
+          ]}
+          onPress={() => setFilterModalVisible(true)}
+          activeOpacity={0.8}
+        >
+          <Ionicons
+            name="options-outline"
+            size={18}
+            color={activeFilterCount > 0 ? '#FFF' : theme.textPrimary}
+          />
+          {activeFilterCount > 0 && (
+            <View style={styles.filterBadge}>
+              <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* ── Horizontal Status Tab Pills ── */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.statusTabsScroll}
+      >
+        <TouchableOpacity
+          style={[
+            styles.statusTabPill,
+            selectedStatusTab === 'ALL'
+              ? { backgroundColor: theme.primary, borderColor: theme.primary }
+              : { backgroundColor: theme.card, borderColor: theme.border },
+          ]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setSelectedStatusTab('ALL');
+          }}
+        >
+          <Text
+            style={[
+              styles.statusTabText,
+              { color: selectedStatusTab === 'ALL' ? '#FFF' : theme.textPrimary },
+            ]}
+          >
+            All Requests ({requests.length})
+          </Text>
+        </TouchableOpacity>
+
+        {STATUS_OPTIONS.map((item) => {
+          const count = requests.filter((r) => r.status === item.key).length;
+          const isSelected = selectedStatusTab === item.key;
+          return (
+            <TouchableOpacity
+              key={item.key}
+              style={[
+                styles.statusTabPill,
+                isSelected
+                  ? { backgroundColor: '#662502', borderColor: '#662502' }
+                  : { backgroundColor: theme.card, borderColor: theme.border },
+              ]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setSelectedStatusTab(item.key);
+              }}
+            >
+              <View
+                style={[
+                  styles.statusDot,
+                  { backgroundColor: isSelected ? '#FFF' : item.dotColor },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.statusTabText,
+                  { color: isSelected ? '#FFF' : theme.textPrimary },
+                ]}
+              >
+                {item.label} ({count})
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* ── Active Filter Badges Row ── */}
+      {activeFilterCount > 0 && (
+        <View style={styles.activeFiltersRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {selectedStatusFilters.map((s) => (
+              <View key={s} style={[styles.activeChip, { backgroundColor: theme.card, borderColor: theme.primary }]}>
+                <Text style={[styles.activeChipText, { color: theme.primary }]}>
+                  Status: {STATUS_MAP[s]?.label || s}
+                </Text>
+                <TouchableOpacity
+                  onPress={() =>
+                    setSelectedStatusFilters((prev) => prev.filter((item) => item !== s))
+                  }
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                >
+                  <Ionicons name="close" size={14} color={theme.primary} style={{ marginLeft: 4 }} />
+                </TouchableOpacity>
+              </View>
+            ))}
+
+            {selectedAmountFilters.map((a) => (
+              <View key={a} style={[styles.activeChip, { backgroundColor: theme.card, borderColor: theme.primary }]}>
+                <Text style={[styles.activeChipText, { color: theme.primary }]}>
+                  Amount: {a.replace('_', ' ')}
+                </Text>
+                <TouchableOpacity
+                  onPress={() =>
+                    setSelectedAmountFilters((prev) => prev.filter((item) => item !== a))
+                  }
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                >
+                  <Ionicons name="close" size={14} color={theme.primary} style={{ marginLeft: 4 }} />
+                </TouchableOpacity>
+              </View>
+            ))}
+
+            <TouchableOpacity onPress={clearAllFilters} style={styles.clearAllBtn}>
+              <Text style={[styles.clearAllText, { color: theme.primary }]}>Clear All</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <StatusBar
@@ -665,10 +1348,19 @@ export default function VendorProductRequestsScreen() {
         </View>
       )}
 
-      {/* ── Main Scrollable Area ── */}
-      <ScrollView
+      {/* ── Main Virtualized List Area ── */}
+      <FlatList
+        data={isRequestsLoading || !!requestsError ? [] : paginatedRequests}
+        keyExtractor={(item) => item.id}
+        renderItem={renderRequestItem}
+        ListHeaderComponent={listHeaderElement}
+        ListEmptyComponent={renderListEmpty}
+        ListFooterComponent={renderListFooter}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 90 }]}
         showsVerticalScrollIndicator={false}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={5}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -677,574 +1369,7 @@ export default function VendorProductRequestsScreen() {
             colors={[theme.primary]}
           />
         }
-      >
-        {/* ── Header Title & Subtitle ── */}
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={[styles.pageTitle, { color: theme.textPrimary }]}>
-              Product <Text style={{ color: theme.primary }}>Requests</Text>
-            </Text>
-            <Text style={[styles.pageSubtitle, { color: theme.textSecondary }]}>
-              Manage production queues, workshop updates & fulfillment
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={[styles.refreshIconButton, { backgroundColor: theme.card, borderColor: theme.border }]}
-            onPress={onRefresh}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="refresh" size={18} color={theme.primary} />
-          </TouchableOpacity>
-        </View>
-
-        {/* ── KPI Summary Cards (2x2 Grid) ── */}
-        <View style={styles.kpiGrid}>
-          {/* Card 1: Total */}
-          <View
-            style={[
-              styles.kpiCard,
-              { backgroundColor: theme.card, borderColor: theme.border },
-            ]}
-          >
-            <View
-              style={[
-                styles.kpiPillBadge,
-                {
-                  backgroundColor: isDark
-                    ? 'rgba(196, 108, 39, 0.16)'
-                    : 'rgba(196, 108, 39, 0.10)',
-                },
-              ]}
-            >
-              <View style={styles.kpiIconBox}>
-                <PackageFigmaIcon size={12} color={isDark ? '#D1995A' : theme.primary} />
-              </View>
-              <Text
-                style={[
-                  styles.kpiPillText,
-                  { color: isDark ? '#D1995A' : theme.primary },
-                ]}
-              >
-                Total
-              </Text>
-            </View>
-
-            <View style={styles.kpiValueRow}>
-              <Text style={[styles.kpiValueText, { color: theme.textPrimary }]}>
-                {stats.total}
-              </Text>
-            </View>
-
-            <Text style={styles.kpiSubtitleText}>All Production Orders</Text>
-          </View>
-
-          {/* Card 2: In Prod. */}
-          <View
-            style={[
-              styles.kpiCard,
-              { backgroundColor: theme.card, borderColor: theme.border },
-            ]}
-          >
-            <View
-              style={[
-                styles.kpiPillBadge,
-                {
-                  backgroundColor: isDark
-                    ? 'rgba(102, 37, 2, 0.25)'
-                    : '#FCF4E1',
-                },
-              ]}
-            >
-              <View style={styles.kpiIconBox}>
-                <TrendingUpFigmaIcon size={6} color={isDark ? '#D1995A' : '#662502'} />
-              </View>
-              <Text
-                style={[
-                  styles.kpiPillText,
-                  { color: isDark ? '#D1995A' : '#662502' },
-                ]}
-              >
-                In Prod.
-              </Text>
-            </View>
-
-            <View style={styles.kpiValueRow}>
-              <Text style={[styles.kpiValueText, { color: isDark ? '#D1995A' : '#662502' }]}>
-                {stats.inProd}
-              </Text>
-            </View>
-
-            <Text style={styles.kpiSubtitleText}>Active at Atelier</Text>
-          </View>
-
-          {/* Card 3: Pending */}
-          <View
-            style={[
-              styles.kpiCard,
-              { backgroundColor: theme.card, borderColor: theme.border },
-            ]}
-          >
-            <View
-              style={[
-                styles.kpiPillBadge,
-                {
-                  backgroundColor: isDark
-                    ? 'rgba(209, 153, 90, 0.16)'
-                    : '#FFF8EE',
-                },
-              ]}
-            >
-              <View style={styles.kpiIconBox}>
-                <CustomBidsFigmaIcon size={12} color={isDark ? '#D1995A' : '#A6620D'} />
-              </View>
-              <Text
-                style={[
-                  styles.kpiPillText,
-                  { color: isDark ? '#D1995A' : '#A6620D' },
-                ]}
-              >
-                Pending
-              </Text>
-            </View>
-
-            <View style={styles.kpiValueRow}>
-              <Text style={[styles.kpiValueText, { color: isDark ? '#D1995A' : '#A6620D' }]}>
-                {stats.pending}
-              </Text>
-            </View>
-
-            <Text style={styles.kpiSubtitleText}>Awaiting Start</Text>
-          </View>
-
-          {/* Card 4: Ready */}
-          <View
-            style={[
-              styles.kpiCard,
-              { backgroundColor: theme.card, borderColor: theme.border },
-            ]}
-          >
-            <View
-              style={[
-                styles.kpiPillBadge,
-                {
-                  backgroundColor: isDark
-                    ? 'rgba(10, 210, 79, 0.12)'
-                    : 'rgba(0, 111, 0, 0.08)',
-                },
-              ]}
-            >
-              <View style={styles.kpiIconBox}>
-                <Ionicons name="checkmark-done" size={13} color={isDark ? '#0AD24F' : '#006F00'} />
-              </View>
-              <Text
-                style={[
-                  styles.kpiPillText,
-                  { color: isDark ? '#0AD24F' : '#006F00' },
-                ]}
-              >
-                Ready
-              </Text>
-            </View>
-
-            <View style={styles.kpiValueRow}>
-              <Text style={[styles.kpiValueText, { color: isDark ? '#0AD24F' : '#006F00' }]}>
-                {stats.completed}
-              </Text>
-            </View>
-
-            <Text style={styles.kpiSubtitleText}>Ready & Shipped</Text>
-          </View>
-        </View>
-
-        {/* ── Search & Filter Controls ── */}
-        <View style={styles.searchRow}>
-          <View
-            style={[
-              styles.searchBar,
-              { backgroundColor: theme.card, borderColor: theme.border },
-            ]}
-          >
-            <Ionicons name="search-outline" size={18} color={theme.textSecondary} style={{ marginRight: 8 }} />
-            <TextInput
-              style={[styles.searchInput, { color: theme.textPrimary }]}
-              placeholder="Search by customer, product, order ID..."
-              placeholderTextColor={theme.textSecondary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              clearButtonMode="while-editing"
-            />
-            {searchQuery.length > 0 && Platform.OS !== 'ios' && (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Filter Modal Trigger Button */}
-          <TouchableOpacity
-            style={[
-              styles.filterTriggerButton,
-              {
-                backgroundColor: activeFilterCount > 0 ? theme.primary : theme.card,
-                borderColor: activeFilterCount > 0 ? theme.primary : theme.border,
-              },
-            ]}
-            onPress={() => setFilterModalVisible(true)}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name="options-outline"
-              size={18}
-              color={activeFilterCount > 0 ? '#FFF' : theme.textPrimary}
-            />
-            {activeFilterCount > 0 && (
-              <View style={styles.filterBadge}>
-                <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* ── Horizontal Status Tab Pills ── */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.statusTabsScroll}
-        >
-          <TouchableOpacity
-            style={[
-              styles.statusTabPill,
-              selectedStatusTab === 'ALL'
-                ? { backgroundColor: theme.primary, borderColor: theme.primary }
-                : { backgroundColor: theme.card, borderColor: theme.border },
-            ]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              setSelectedStatusTab('ALL');
-            }}
-          >
-            <Text
-              style={[
-                styles.statusTabText,
-                { color: selectedStatusTab === 'ALL' ? '#FFF' : theme.textPrimary },
-              ]}
-            >
-              All Requests ({requests.length})
-            </Text>
-          </TouchableOpacity>
-
-          {STATUS_OPTIONS.map((item) => {
-            const count = requests.filter((r) => r.status === item.key).length;
-            const isSelected = selectedStatusTab === item.key;
-            return (
-              <TouchableOpacity
-                key={item.key}
-                style={[
-                  styles.statusTabPill,
-                  isSelected
-                    ? { backgroundColor: '#662502', borderColor: '#662502' }
-                    : { backgroundColor: theme.card, borderColor: theme.border },
-                ]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setSelectedStatusTab(item.key);
-                }}
-              >
-                <View
-                  style={[
-                    styles.statusDot,
-                    { backgroundColor: isSelected ? '#FFF' : item.dotColor },
-                  ]}
-                />
-                <Text
-                  style={[
-                    styles.statusTabText,
-                    { color: isSelected ? '#FFF' : theme.textPrimary },
-                  ]}
-                >
-                  {item.label} ({count})
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        {/* ── Active Filter Badges Row ── */}
-        {activeFilterCount > 0 && (
-          <View style={styles.activeFiltersRow}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {selectedStatusFilters.map((s) => (
-                <View key={s} style={[styles.activeChip, { backgroundColor: theme.card, borderColor: theme.primary }]}>
-                  <Text style={[styles.activeChipText, { color: theme.primary }]}>
-                    Status: {STATUS_MAP[s]?.label || s}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() =>
-                      setSelectedStatusFilters((prev) => prev.filter((item) => item !== s))
-                    }
-                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                  >
-                    <Ionicons name="close" size={14} color={theme.primary} style={{ marginLeft: 4 }} />
-                  </TouchableOpacity>
-                </View>
-              ))}
-
-              {selectedAmountFilters.map((a) => (
-                <View key={a} style={[styles.activeChip, { backgroundColor: theme.card, borderColor: theme.primary }]}>
-                  <Text style={[styles.activeChipText, { color: theme.primary }]}>
-                    Amount: {a.replace('_', ' ')}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() =>
-                      setSelectedAmountFilters((prev) => prev.filter((item) => item !== a))
-                    }
-                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                  >
-                    <Ionicons name="close" size={14} color={theme.primary} style={{ marginLeft: 4 }} />
-                  </TouchableOpacity>
-                </View>
-              ))}
-
-              <TouchableOpacity onPress={clearAllFilters} style={styles.clearAllBtn}>
-                <Text style={[styles.clearAllText, { color: theme.primary }]}>Clear All</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        )}
-
-        {/* ── Product Requests List ── */}
-        <View style={styles.listContainer}>
-          {isRequestsLoading ? (
-            <VendorProductRequestsSkeleton count={3} />
-          ) : requestsError ? (
-            <View style={[styles.emptyContainer, { backgroundColor: theme.card, borderColor: '#EF4444' }]}>
-              <View style={[styles.emptyIconCircle, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
-                <Ionicons name="alert-circle-outline" size={32} color="#EF4444" />
-              </View>
-              <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Unable to Load Requests</Text>
-              <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
-                There was a problem communicating with the studio product requests server.
-              </Text>
-              <TouchableOpacity
-                style={[styles.emptyResetBtn, { backgroundColor: theme.primary }]}
-                onPress={() => refetchRequests()}
-              >
-                <Text style={styles.emptyResetText}>Retry Connection</Text>
-              </TouchableOpacity>
-            </View>
-          ) : filteredRequests.length === 0 ? (
-            <View style={[styles.emptyContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
-              <View style={styles.emptyIconCircle}>
-                <Ionicons name="file-tray-outline" size={32} color={theme.primary} />
-              </View>
-              <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>No product requests found</Text>
-              <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
-                {searchQuery || activeFilterCount > 0 || selectedStatusTab !== 'ALL'
-                  ? 'Try clearing your filters or changing your search criteria.'
-                  : 'Customizable product orders will appear here automatically.'}
-              </Text>
-              {(activeFilterCount > 0 || selectedStatusTab !== 'ALL' || searchQuery) && (
-                <TouchableOpacity
-                  style={[styles.emptyResetBtn, { backgroundColor: theme.primary }]}
-                  onPress={() => {
-                    setSelectedStatusTab('ALL');
-                    clearAllFilters();
-                    setSearchQuery('');
-                  }}
-                >
-                  <Text style={styles.emptyResetText}>Reset All Filters</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          ) : (
-            filteredRequests.map((item) => {
-              const statusCfg = STATUS_MAP[item.status] || {
-                label: item.status,
-                color: '#666',
-                bgLight: '#EEE',
-                bgDark: '#333',
-                dotColor: '#666',
-              };
-
-              const canStart = item.status === 'PRODUCTION_PENDING';
-              const canProgress = item.status === 'IN_PRODUCTION' || item.status === 'PRODUCTION_DELAYED';
-              const canReady = item.status === 'IN_PRODUCTION' || item.status === 'PRODUCTION_DELAYED';
-
-              const createdDateFormatted = new Date(item.createdAt).toLocaleDateString('en-NG', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric',
-              });
-
-              return (
-                <View
-                  key={item.id}
-                  style={[
-                    styles.requestCard,
-                    { backgroundColor: theme.card, borderColor: theme.border },
-                  ]}
-                >
-                  {/* Card Header */}
-                  <View style={styles.cardHeader}>
-                    <Image
-                      source={{ uri: item.productImage }}
-                      style={styles.productThumbnail}
-                      resizeMode="cover"
-                    />
-                    <View style={styles.cardHeaderInfo}>
-                      <View style={styles.titleStatusRow}>
-                        <Text style={[styles.productNameText, { color: theme.textPrimary }]} numberOfLines={1}>
-                          {item.productName}
-                        </Text>
-                        <View
-                          style={[
-                            styles.statusBadge,
-                            { backgroundColor: isDark ? statusCfg.bgDark : statusCfg.bgLight },
-                          ]}
-                        >
-                          <View style={[styles.statusDotSmall, { backgroundColor: statusCfg.dotColor }]} />
-                          <Text style={[styles.statusBadgeText, { color: statusCfg.color }]}>
-                            {statusCfg.label}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <View style={styles.metaRow}>
-                        <Text style={[styles.requestNumberText, { color: theme.textSecondary }]}>
-                          {item.requestNumber}
-                        </Text>
-                        <Text style={[styles.metaDivider, { color: theme.border }]}>•</Text>
-                        <Text style={[styles.dateText, { color: theme.textSecondary }]}>
-                          {createdDateFormatted}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* Customer & Financial Breakdown */}
-                  <View style={[styles.cardDivider, { backgroundColor: theme.border }]} />
-
-                  <View style={styles.cardMetaGrid}>
-                    <View style={styles.metaCol}>
-                      <Text style={[styles.metaColLabel, { color: theme.textSecondary }]}>Customer</Text>
-                      <Text style={[styles.metaColValue, { color: theme.textPrimary }]} numberOfLines={1}>
-                        {item.customerName}
-                      </Text>
-                      <Text style={[styles.customerEmailText, { color: theme.textSecondary }]} numberOfLines={1}>
-                        {item.customerEmail}
-                      </Text>
-                    </View>
-
-                    <View style={styles.metaColRight}>
-                      <Text style={[styles.metaColLabel, { color: theme.textSecondary }]}>Order Total</Text>
-                      <Text style={[styles.orderAmountValue, { color: theme.primary }]}>
-                        {formatPrice(item.orderAmount, currencyCode, exchangeRate)}
-                      </Text>
-                      <Text style={[styles.quantityText, { color: theme.textSecondary }]}>
-                        Qty: {item.quantity}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Customization Teaser */}
-                  {item.customizationData?.measurements && (
-                    <View style={[styles.specsTeaserBox, { backgroundColor: isDark ? '#222' : '#FFFBF4', borderColor: theme.border }]}>
-                      <View style={styles.specsTeaserHeader}>
-                        <Ionicons name="resize-outline" size={13} color="#D1995A" style={{ marginRight: 4 }} />
-                        <Text style={styles.specsTeaserTitle}>Custom Measurements Provided:</Text>
-                      </View>
-                      <Text style={[styles.specsTeaserSummary, { color: theme.textPrimary }]} numberOfLines={1}>
-                        {Object.entries(item.customizationData.measurements)
-                          .map(([k, v]) => `${k}: ${v}"`)
-                          .join('  |  ')}
-                      </Text>
-                    </View>
-                  )}
-
-                  {/* Progress Updates Teaser */}
-                  {item.progressUpdates && item.progressUpdates.length > 0 && (
-                    <View style={styles.progressTeaserRow}>
-                      <Ionicons name="images-outline" size={14} color="#662502" style={{ marginRight: 6 }} />
-                      <Text style={[styles.progressTeaserText, { color: theme.textSecondary }]}>
-                        {item.progressUpdates.length} workshop update{item.progressUpdates.length > 1 ? 's' : ''} logged
-                      </Text>
-                    </View>
-                  )}
-
-                  {/* Action Buttons Row */}
-                  <View style={styles.cardActionsRow}>
-                    <TouchableOpacity
-                      style={[styles.inspectButton, { backgroundColor: theme.card, borderColor: theme.border }]}
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        setActiveRequest(item);
-                        setInspectModalVisible(true);
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="eye-outline" size={15} color={theme.textPrimary} style={{ marginRight: 4 }} />
-                      <Text style={[styles.inspectButtonText, { color: theme.textPrimary }]} numberOfLines={1}>
-                        Inspect
-                      </Text>
-                    </TouchableOpacity>
-
-                    {canStart && (
-                      <TouchableOpacity
-                        style={[styles.primaryActionBtn, { backgroundColor: '#662502' }]}
-                        onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                          setActiveRequest(item);
-                          setStartModalVisible(true);
-                        }}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons name="play" size={14} color="#FFF" style={{ marginRight: 4 }} />
-                        <Text style={styles.primaryActionBtnText} numberOfLines={1}>
-                          Start Production
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-
-                    {canProgress && (
-                      <TouchableOpacity
-                        style={[styles.secondaryActionBtn, { backgroundColor: '#FCF4E1', borderColor: '#D1995A' }]}
-                        onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                          setActiveRequest(item);
-                          setProgressModalVisible(true);
-                        }}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons name="camera-outline" size={14} color="#662502" style={{ marginRight: 4 }} />
-                        <Text style={[styles.secondaryActionBtnText, { color: '#662502' }]} numberOfLines={1}>
-                          Update
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-
-                    {canReady && (
-                      <TouchableOpacity
-                        style={[styles.successActionBtn, { backgroundColor: '#006F00' }]}
-                        onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                          setActiveRequest(item);
-                          setReadyModalVisible(true);
-                        }}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons name="checkmark-done" size={14} color="#FFF" style={{ marginRight: 4 }} />
-                        <Text style={styles.successActionBtnText} numberOfLines={1}>
-                          Mark Ready
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-              );
-            })
-          )}
-        </View>
-      </ScrollView>
+      />
 
       {/* ── MODAL 1: Multi-Select Filter Bottom Sheet ── */}
       <Modal
@@ -2108,6 +2233,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     padding: 14,
+    marginBottom: 12,
     ...Shadows.sm,
   },
   cardHeader: {
