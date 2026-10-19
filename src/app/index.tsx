@@ -1,18 +1,30 @@
 import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { useAppSelector } from '@/store';
+import { useAppSelector, useAppDispatch } from '@/store';
+import { logout } from '@/store/slices/authSlice';
 import { Colors } from '@/constants/theme';
 
 export default function IndexGateway() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const auth = useAppSelector((state) => state.auth);
-  const { activeRole, isAuthenticated, vendor, isHydrated } = auth;
+  const { activeRole, isAuthenticated, user, vendor, isHydrated } = auth;
 
   useEffect(() => {
     if (!isHydrated) return;
 
     const timer = setTimeout(() => {
+      // Guard: Block and purge ADMIN accounts from mobile app session
+      if (isAuthenticated && user?.role === 'ADMIN') {
+        dispatch(logout());
+        router.replace({
+          pathname: '/(auth)/login',
+          params: { reason: 'Admin accounts must sign in via the Ethnikraft Web Admin portal.' },
+        });
+        return;
+      }
+
       if (!isAuthenticated) {
         router.replace('/(user)');
         return;

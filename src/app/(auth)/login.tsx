@@ -69,6 +69,15 @@ export default function LoginScreen() {
         password,
       }).unwrap();
 
+      // Guard: Block ADMIN role credentials from accessing mobile application
+      if (response.user.role === 'ADMIN') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        setErrorMessage(
+          'Admin accounts must sign in via the Ethnikraft Web Admin portal. Mobile access is restricted to Customers and Artisans.'
+        );
+        return;
+      }
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       dispatch(setAuthSuccess(response));
 

@@ -47,6 +47,9 @@ export const authSlice = createSlice({
     },
     setAuthSuccess: (state, action: PayloadAction<AuthResponse>) => {
       const { user, tokens, vendor } = action.payload;
+      if (user.role === 'ADMIN') {
+        return;
+      }
       state.accessToken = tokens.access_token;
       state.user = user;
       state.vendor = vendor || null;
@@ -87,6 +90,20 @@ export const authSlice = createSlice({
         activeRole: UserRole | null;
       }>
     ) => {
+      if (action.payload.user?.role === 'ADMIN') {
+        state.accessToken = null;
+        state.user = null;
+        state.vendor = null;
+        state.isAuthenticated = false;
+        state.hasVendorAccount = false;
+        state.activeRole = 'user';
+        state.isHydrated = true;
+        StorageService.clearAll().catch((e) =>
+          console.warn('Failed to clear storage for admin on hydration', e)
+        );
+        return;
+      }
+
       state.accessToken = action.payload.token;
       state.user = action.payload.user;
       state.vendor = action.payload.vendor;
